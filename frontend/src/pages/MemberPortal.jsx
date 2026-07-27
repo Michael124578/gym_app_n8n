@@ -8,6 +8,7 @@ export default function MemberPortal() {
   const [member, setMember] = useState(null)
   const [checkIns, setCheckIns] = useState([])
   const [loading, setLoading] = useState(false)
+  const [fetchingPass, setFetchingPass] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -17,8 +18,29 @@ export default function MemberPortal() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!member) return
+
+    // Real-time subscription for check_ins table for active member
+    const channel = supabase
+      .channel(`member-checkins-${member.id}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'check_ins',
+        filter: `member_id=eq.${member.id}`
+      }, (payload) => {
+        setCheckIns((prev) => [payload.new, ...prev])
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [member])
+
   const fetchMemberData = async (emailToFetch) => {
-    setLoading(true)
+    setFetchingPass(true)
     setError('')
 
     const { data: memberData, error: memberError } = await supabase
@@ -29,7 +51,7 @@ export default function MemberPortal() {
 
     if (memberError || !memberData) {
       setError('Member profile not found. Please verify your email address.')
-      setLoading(false)
+      setFetchingPass(false)
       return
     }
 
@@ -46,7 +68,7 @@ export default function MemberPortal() {
       setCheckIns(checkInData)
     }
 
-    setLoading(false)
+    setFetchingPass(false)
   }
 
   const handleLogin = (e) => {
@@ -93,10 +115,10 @@ export default function MemberPortal() {
             </div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={fetchingPass}
               className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-3 rounded-xl transition disabled:opacity-50"
             >
-              {loading ? 'Retrieving Pass...' : 'Access My Digital Pass'}
+              {fetchingPass ? 'Retrieving Pass...' : 'Access My Digital Pass'}
             </button>
           </form>
         </div>

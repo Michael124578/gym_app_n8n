@@ -8,8 +8,32 @@ export default function QRScanner({ onScanComplete }) {
   const [loading, setLoading] = useState(false)
   const scannerRef = useRef(null)
 
+  // Web Audio API feedback generator
+  const playAudioFeedback = (isSuccess) => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      if (!AudioCtx) return
+      const ctx = new AudioCtx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.type = isSuccess ? 'sine' : 'sawtooth'
+      osc.frequency.setValueAtTime(isSuccess ? 880 : 220, ctx.currentTime) // High pitch success, low pitch failure
+      
+      gain.gain.setValueAtTime(0.15, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+
+      osc.start()
+      osc.stop(ctx.currentTime + 0.2)
+    } catch (e) {
+      console.warn('Audio feedback not supported or blocked by browser policies.')
+    }
+  }
+
   const startScanner = () => {
-    // Delay slightly to ensure the #reader DOM element exists
     setTimeout(() => {
       const scanner = new Html5QrcodeScanner('reader', {
         qrbox: { width: 250, height: 250 },
@@ -49,6 +73,7 @@ export default function QRScanner({ onScanComplete }) {
       .maybeSingle()
 
     if (memberError || !member) {
+      playAudioFeedback(false)
       setScanResult({
         success: false,
         message: 'Invalid Pass: Member record not found.'
@@ -58,6 +83,7 @@ export default function QRScanner({ onScanComplete }) {
     }
 
     if (member.status !== 'active') {
+      playAudioFeedback(false)
       setScanResult({
         success: false,
         member,
@@ -78,11 +104,13 @@ export default function QRScanner({ onScanComplete }) {
       }])
 
     if (checkInError) {
+      playAudioFeedback(false)
       setScanResult({
         success: false,
         message: `Check-in error: ${checkInError.message}`
       })
     } else {
+      playAudioFeedback(true)
       setScanResult({
         success: true,
         member,
@@ -102,7 +130,7 @@ export default function QRScanner({ onScanComplete }) {
     <div className="max-w-xl mx-auto bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl text-center">
       <div className="flex items-center justify-center space-x-2 mb-6">
         <QrCode className="h-6 w-6 text-indigo-400" />
-        <h2 className="text-xl font-bold text-white">Front Desk QR Scanner</h2>
+        <h2 className="text-xl font-bold text-white">Front Desk QR Terminal</h2>
       </div>
 
       {!scanResult && (
@@ -116,10 +144,10 @@ export default function QRScanner({ onScanComplete }) {
       )}
 
       {scanResult && (
-        <div className={`mt-6 p-5 rounded-xl border text-left flex items-start space-x-4 ${
+        <div className={`mt-6 p-5 rounded-xl border text-left flex items-start space-x-4 transition-all duration-300 ${
           scanResult.success 
-            ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200' 
-            : 'bg-rose-950/40 border-rose-500/50 text-rose-200'
+            ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200 shadow-lg shadow-emerald-500/10' 
+            : 'bg-rose-950/40 border-rose-500/50 text-rose-200 shadow-lg shadow-rose-500/10'
         }`}>
           {scanResult.success ? (
             <CheckCircle className="h-8 w-8 text-emerald-400 flex-shrink-0 mt-1" />
