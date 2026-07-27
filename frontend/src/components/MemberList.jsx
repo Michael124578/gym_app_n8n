@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Users, UserCheck, Activity, CalendarCheck, Clock, Search, RefreshCw, Edit3, X, CheckCircle } from 'lucide-react'
+import { Users, UserCheck, Activity, CalendarCheck, Clock, Search, RefreshCw, X, CheckCircle } from 'lucide-react'
 
 export default function MemberList({ refreshTrigger }) {
   const [members, setMembers] = useState([])
@@ -18,6 +18,12 @@ export default function MemberList({ refreshTrigger }) {
   const [renewAmount, setRenewAmount] = useState('50')
   const [renewDays, setRenewDays] = useState(30)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [toastMessage, setToastMessage] = useState(null)
+
+  const showToast = (msg) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(null), 3500)
+  }
 
   const fetchMembersAndStats = async () => {
     setLoading(true)
@@ -78,7 +84,6 @@ export default function MemberList({ refreshTrigger }) {
     }
   }, [refreshTrigger])
 
-  // Renew Subscription Logic
   const handleRenewSubscription = async (e) => {
     e.preventDefault()
     if (!editingMember) return
@@ -89,7 +94,6 @@ export default function MemberList({ refreshTrigger }) {
     const baseDate = currentExpiry > new Date() ? currentExpiry : new Date()
     baseDate.setDate(baseDate.getDate() + parseInt(renewDays))
 
-    // 1. Update member expiration
     await supabase
       .from('members')
       .update({
@@ -100,7 +104,6 @@ export default function MemberList({ refreshTrigger }) {
       })
       .eq('id', editingMember.id)
 
-    // 2. Log payment entry
     await supabase.from('payments').insert([
       {
         member_id: editingMember.id,
@@ -110,11 +113,11 @@ export default function MemberList({ refreshTrigger }) {
     ])
 
     setIsProcessing(false)
+    showToast(`Successfully renewed pass for ${editingMember.full_name}!`)
     setEditingMember(null)
     fetchMembersAndStats()
   }
 
-  // Filter Members
   const filteredMembers = members.filter((m) => {
     const isExpired = m.membership_end_date && new Date() > new Date(m.membership_end_date)
     const matchesSearch = m.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || m.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -131,50 +134,58 @@ export default function MemberList({ refreshTrigger }) {
 
   return (
     <div className="space-y-6">
-      {/* ANALYTICS STATS */}
+      {/* FLOATING TOAST NOTIFICATION */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-2xl border border-indigo-400/30 text-xs font-bold animate-bounce flex items-center space-x-2">
+          <CheckCircle className="h-4 w-4 text-emerald-300" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* ANALYTICS STATS WITH METRIC GLOWS */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex items-center space-x-4 shadow-xl">
-          <div className="bg-indigo-600/20 border border-indigo-500/30 p-3 rounded-xl text-indigo-400">
+        <div className="bg-slate-950/90 border border-slate-800/80 hover:border-indigo-500/30 rounded-2xl p-5 flex items-center space-x-4 shadow-xl transition-all duration-300">
+          <div className="bg-indigo-600/10 border border-indigo-500/20 p-3 rounded-2xl text-indigo-400 shadow-inner">
             <Users className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-2xl font-black text-white">{loading ? '...' : members.length}</p>
-            <p className="text-xs text-slate-400">Total Members</p>
+            <p className="text-2xl font-black text-white tracking-tight">{loading ? '...' : members.length}</p>
+            <p className="text-xs text-slate-400 font-medium">Total Roster</p>
           </div>
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex items-center space-x-4 shadow-xl">
-          <div className="bg-emerald-500/20 border border-emerald-500/30 p-3 rounded-xl text-emerald-400">
+        <div className="bg-slate-950/90 border border-slate-800/80 hover:border-emerald-500/30 rounded-2xl p-5 flex items-center space-x-4 shadow-xl transition-all duration-300">
+          <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl text-emerald-400 shadow-inner">
             <UserCheck className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-2xl font-black text-white">{loading ? '...' : activeMembersCount}</p>
-            <p className="text-xs text-slate-400">Active Memberships</p>
+            <p className="text-2xl font-black text-white tracking-tight">{loading ? '...' : activeMembersCount}</p>
+            <p className="text-xs text-slate-400 font-medium">Active Passes</p>
           </div>
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex items-center space-x-4 shadow-xl">
-          <div className="bg-sky-500/20 border border-sky-500/30 p-3 rounded-xl text-sky-400">
+        <div className="bg-slate-950/90 border border-slate-800/80 hover:border-sky-500/30 rounded-2xl p-5 flex items-center space-x-4 shadow-xl transition-all duration-300">
+          <div className="bg-sky-500/10 border border-sky-500/20 p-3 rounded-2xl text-sky-400 shadow-inner">
             <CalendarCheck className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-2xl font-black text-white">{loading ? '...' : todayCheckInsCount}</p>
-            <p className="text-xs text-slate-400">Today's Check-Ins</p>
+            <p className="text-2xl font-black text-white tracking-tight">{loading ? '...' : todayCheckInsCount}</p>
+            <p className="text-xs text-slate-400 font-medium">Today's Visits</p>
           </div>
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex items-center space-x-4 shadow-xl">
-          <div className="bg-amber-500/20 border border-amber-500/30 p-3 rounded-xl text-amber-400">
+        <div className="bg-slate-950/90 border border-slate-800/80 hover:border-amber-500/30 rounded-2xl p-5 flex items-center space-x-4 shadow-xl transition-all duration-300">
+          <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl text-amber-400 shadow-inner">
             <Clock className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-xl font-black text-white">{loading ? '...' : peakHour}</p>
-            <p className="text-xs text-slate-400">Peak Hour Today</p>
+            <p className="text-xl font-black text-white tracking-tight">{loading ? '...' : peakHour}</p>
+            <p className="text-xs text-slate-400 font-medium">Peak Hour Today</p>
           </div>
         </div>
       </div>
 
-      {/* MEMBER DIRECTORY CONTROLS */}
+      {/* MEMBER DIRECTORY CONTAINER */}
       <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center space-x-3">
@@ -192,7 +203,7 @@ export default function MemberList({ refreshTrigger }) {
               <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-500" />
               <input
                 type="text"
-                placeholder="Search by name/email..."
+                placeholder="Search name/email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition w-full sm:w-60"
@@ -260,15 +271,19 @@ export default function MemberList({ refreshTrigger }) {
                         <p className="text-xs font-mono text-slate-500">{member.email}</p>
                       </td>
                       <td className="p-4 text-xs font-semibold text-indigo-400">{member.plan_name || 'Monthly Pass'}</td>
+                      
+                      {/* GLOWING STATUS BADGES */}
                       <td className="p-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
                           member.status === 'active' && !isExpired
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm shadow-emerald-500/10'
+                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 shadow-sm shadow-rose-500/10'
                         }`}>
-                          {isExpired ? 'Expired' : member.status}
+                          <span className={`h-1.5 w-1.5 rounded-full ${member.status === 'active' && !isExpired ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`}></span>
+                          <span>{isExpired ? 'Expired' : member.status}</span>
                         </span>
                       </td>
+
                       <td className="p-4 text-xs font-mono text-slate-400">
                         {member.membership_end_date ? new Date(member.membership_end_date).toLocaleDateString() : 'N/A'}
                       </td>
@@ -290,7 +305,7 @@ export default function MemberList({ refreshTrigger }) {
         )}
       </div>
 
-      {/* RENEW SUBSCRIPTION MODAL */}
+      {/* RENEW MODAL */}
       {editingMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl text-slate-100 relative">
@@ -302,7 +317,7 @@ export default function MemberList({ refreshTrigger }) {
             </button>
 
             <h3 className="text-lg font-bold text-white mb-1">Renew Membership</h3>
-            <p className="text-xs text-slate-400 mb-4">Updating plan for <strong className="text-white">{editingMember.full_name}</strong></p>
+            <p className="text-xs text-slate-400 mb-4">Updating pass for <strong className="text-white">{editingMember.full_name}</strong></p>
 
             <form onSubmit={handleRenewSubscription} className="space-y-4">
               <div>

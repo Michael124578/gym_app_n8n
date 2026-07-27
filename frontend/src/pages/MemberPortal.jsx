@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabaseClient'
-import { User, CheckCircle, Calendar, LogOut, Search, Activity, ShieldCheck, UserPlus, Send } from 'lucide-react'
+import { User, CheckCircle, Calendar, LogOut, Search, Activity, ShieldCheck, UserPlus, Send, Maximize2, X } from 'lucide-react'
 
 export default function MemberPortal() {
   const [emailInput, setEmailInput] = useState('')
@@ -12,6 +12,9 @@ export default function MemberPortal() {
   const [loading, setLoading] = useState(false)
   const [fetchingPass, setFetchingPass] = useState(false)
   const [error, setError] = useState('')
+  
+  // Fullscreen High-Contrast Zoom Modal State
+  const [isZoomed, setIsZoomed] = useState(false)
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('gym_member_email')
@@ -135,12 +138,14 @@ export default function MemberPortal() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* PASS CARD */}
-        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 border border-slate-800 p-6 rounded-2xl shadow-xl flex flex-col justify-between">
-          <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
+        {/* HOLOGRAPHIC GYM PASS CARD */}
+        <div className="group relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/90 border border-slate-800/80 hover:border-indigo-500/40 p-6 rounded-3xl shadow-2xl transition-all duration-300 flex flex-col justify-between">
+          <div className="absolute -top-12 -right-12 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all"></div>
+
+          <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4 relative z-10">
             <div className="flex items-center space-x-2">
               <ShieldCheck className="h-4 w-4 text-indigo-400" />
-              <span className="text-xs font-bold text-indigo-400 tracking-wider">IRON GYM PASS</span>
+              <span className="text-xs font-extrabold text-indigo-400 tracking-widest uppercase">IRON GYM PASS</span>
             </div>
             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
               member.status === 'active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400'
@@ -149,24 +154,24 @@ export default function MemberPortal() {
             </span>
           </div>
 
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center relative z-10">
             <div>
-              <p className="text-lg font-bold text-white">{member.full_name}</p>
+              <p className="text-xl font-bold text-white tracking-tight">{member.full_name}</p>
               <p className="text-xs text-slate-400 font-mono mt-0.5">{member.email}</p>
-              <p className="text-[10px] text-slate-500 mt-4">
+              <p className="text-[10px] text-slate-500 mt-4 font-mono">
                 Expires: {member.membership_end_date ? new Date(member.membership_end_date).toLocaleDateString() : 'N/A'}
               </p>
             </div>
 
-            <div className="bg-white p-2.5 rounded-xl shadow-lg text-center">
+            <div className="bg-white p-2.5 rounded-2xl shadow-xl text-center cursor-pointer hover:scale-105 transition" onClick={() => setIsZoomed(true)}>
               <QRCodeSVG 
                 value={member.qr_code_token || member.id} 
-                size={110}
+                size={100}
                 bgColor="#ffffff"
                 fgColor="#0f172a"
                 level="H"
               />
-              <span className="block text-[9px] font-bold text-slate-500 mt-1 uppercase">Scan Pass</span>
+              <span className="block text-[8px] font-bold text-slate-500 mt-1 uppercase">Tap to Zoom</span>
             </div>
           </div>
         </div>
@@ -213,6 +218,31 @@ export default function MemberPortal() {
           )}
         </div>
       </div>
+
+      {/* FULLSCREEN HIGH-CONTRAST QR ZOOM MODAL */}
+      {isZoomed && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6" onClick={() => setIsZoomed(false)}>
+          <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-4 max-w-sm w-full relative" onClick={(e) => e.stopPropagation()}>
+            <button 
+              onClick={() => setIsZoomed(false)} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="text-slate-900 font-bold text-lg">{member.full_name}</h3>
+            <div className="flex justify-center p-2">
+              <QRCodeSVG value={member.qr_code_token || member.id} size={220} bgColor="#ffffff" fgColor="#000000" level="H" />
+            </div>
+            <p className="text-xs text-slate-500 font-semibold">Max Brightness • Hold directly to scanner laser</p>
+            <button 
+              onClick={() => setIsZoomed(false)}
+              className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold transition"
+            >
+              Close Terminal View
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CHECK-IN HISTORY */}
       <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
