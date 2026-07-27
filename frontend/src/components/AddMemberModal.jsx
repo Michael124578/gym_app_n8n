@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { UserPlus, X, CreditCard } from 'lucide-react'
+import { UserPlus, X, CreditCard, Lock } from 'lucide-react'
 
 export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [planName, setPlanName] = useState('Monthly Pass')
   const [amount, setAmount] = useState('50')
   const [durationDays, setDurationDays] = useState(30)
@@ -35,16 +36,37 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     setLoading(true)
     setErrorMsg('')
 
+    const cleanEmail = email.trim().toLowerCase()
+
+    // 1. Create Supabase Auth user (Stores Email & Password securely)
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password: password,
+      options: {
+        data: {
+          full_name: fullName.trim()
+        }
+      }
+    })
+
+    if (authError) {
+      setErrorMsg(`Auth Creation Failed: ${authError.message}`)
+      setLoading(false)
+      return
+    }
+
+    // Calculate Expiration Date
     const expiryDate = new Date()
     expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays))
 
-    // Insert new member
-    const { data: member, error } = await supabase
+    // 2. Insert member record linking auth_id
+    const { data: member, error: memberError } = await supabase
       .from('members')
       .insert([
         {
+          auth_id: authData.user?.id,
           full_name: fullName.trim(),
-          email: email.trim().toLowerCase(),
+          email: cleanEmail,
           status: 'active',
           plan_name: planName,
           last_payment_amount: parseFloat(amount),
@@ -54,13 +76,13 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
       .select()
       .single()
 
-    if (error) {
-      setErrorMsg(error.message)
+    if (memberError) {
+      setErrorMsg(`Database Error: ${memberError.message}`)
       setLoading(false)
       return
     }
 
-    // Insert payment record
+    // 3. Log initial payment record
     await supabase.from('payments').insert([
       {
         member_id: member.id,
@@ -72,6 +94,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     setLoading(false)
     setFullName('')
     setEmail('')
+    setPassword('')
     if (onMemberAdded) onMemberAdded(member)
     onClose()
   }
@@ -92,7 +115,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">Register New Member</h2>
-            <p className="text-xs text-slate-400">Add member profile & record subscription payment</p>
+            <p className="text-xs text-slate-400">Create login credentials & log initial subscription</p>
           </div>
         </div>
 
@@ -125,6 +148,22 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">Set Account Password</label>
+            <div className="relative">
+              <input
+                type="password"
+                required
+                minLength={6}
+                placeholder="Minimum 6 characters"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+              />
+              <Lock className="absolute right-3 top-3 h-4 w-4 text-slate-600" />
+            </div>
           </div>
 
           <div>
@@ -179,7 +218,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
               className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition disabled:opacity-50 flex items-center space-x-1"
             >
               <CreditCard className="h-3.5 w-3.5 mr-1" />
-              <span>{loading ? 'Processing...' : 'Register & Log Payment'}</span>
+              <span>{loading ? 'Creating Credentials...' : 'Register Member & Log Payment'}</span>
             </button>
           </div>
         </form>

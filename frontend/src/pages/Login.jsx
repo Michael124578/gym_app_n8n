@@ -14,14 +14,16 @@ export default function Login({ onLoginSuccess }) {
     setErrorMsg(null)
     setLoading(true)
 
-    // Admin authentication check
+    const cleanEmail = email.trim().toLowerCase()
+
+    // Strict Single Admin Credentials Check
     if (roleMode === 'admin') {
-      if (password === '1234' || password === 'admin123') {
+      if (cleanEmail === 'admin@irongym.com' && password === '123456789') {
         setLoading(false)
-        if (onLoginSuccess) onLoginSuccess({ user: { email, role: 'admin' } }, 'admin')
+        if (onLoginSuccess) onLoginSuccess({ user: { email: cleanEmail, role: 'admin' } }, 'admin')
         return
       } else {
-        setErrorMsg('Invalid Staff Security PIN or Password')
+        setErrorMsg('Invalid Admin Email or Security Password.')
         setLoading(false)
         return
       }
@@ -29,7 +31,7 @@ export default function Login({ onLoginSuccess }) {
 
     // Member Authentication via Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       password,
     })
 
