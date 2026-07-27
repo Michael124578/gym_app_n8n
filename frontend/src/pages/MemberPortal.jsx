@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabaseClient'
-import { User, CheckCircle, Calendar, LogOut, Search, Activity, ShieldCheck } from 'lucide-react'
+import { User, CheckCircle, Calendar, LogOut, Search, Activity, ShieldCheck, UserPlus, Send } from 'lucide-react'
 
 export default function MemberPortal() {
   const [emailInput, setEmailInput] = useState('')
   const [member, setMember] = useState(null)
   const [checkIns, setCheckIns] = useState([])
+  const [guestName, setGuestName] = useState('')
+  const [generatedGuestPass, setGeneratedGuestPass] = useState(null)
   const [loading, setLoading] = useState(false)
   const [fetchingPass, setFetchingPass] = useState(false)
   const [error, setError] = useState('')
@@ -17,27 +19,6 @@ export default function MemberPortal() {
       fetchMemberData(savedEmail)
     }
   }, [])
-
-  useEffect(() => {
-    if (!member) return
-
-    // Real-time subscription for check_ins table for active member
-    const channel = supabase
-      .channel(`member-checkins-${member.id}`)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'check_ins',
-        filter: `member_id=eq.${member.id}`
-      }, (payload) => {
-        setCheckIns((prev) => [payload.new, ...prev])
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [member])
 
   const fetchMemberData = async (emailToFetch) => {
     setFetchingPass(true)
@@ -64,18 +45,29 @@ export default function MemberPortal() {
       .eq('member_id', memberData.id)
       .order('checked_in_at', { ascending: false })
 
-    if (checkInData) {
-      setCheckIns(checkInData)
-    }
-
+    if (checkInData) setCheckIns(checkInData)
     setFetchingPass(false)
   }
 
-  const handleLogin = (e) => {
+  const handleGenerateGuestPass = async (e) => {
     e.preventDefault()
-    if (emailInput) {
-      fetchMemberData(emailInput)
+    if (!guestName.trim()) return
+
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('guest_passes')
+      .insert([{
+        host_member_id: member.id,
+        guest_name: guestName.trim()
+      }])
+      .select()
+      .single()
+
+    if (!error && data) {
+      setGeneratedGuestPass(data)
+      setGuestName('')
     }
+    setLoading(false)
   }
 
   const handleLogout = () => {
@@ -101,7 +93,7 @@ export default function MemberPortal() {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); if (emailInput) fetchMemberData(emailInput) }} className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
               <input
@@ -162,7 +154,7 @@ export default function MemberPortal() {
               <p className="text-lg font-bold text-white">{member.full_name}</p>
               <p className="text-xs text-slate-400 font-mono mt-0.5">{member.email}</p>
               <p className="text-[10px] text-slate-500 mt-4">
-                Joined: {new Date(member.created_at).toLocaleDateString()}
+                Expires: {member.membership_end_date ? new Date(member.membership_end_date).toLocaleDateString() : 'N/A'}
               </p>
             </div>
 
@@ -179,29 +171,46 @@ export default function MemberPortal() {
           </div>
         </div>
 
-        {/* METRICS OVERVIEW */}
-        <div className="space-y-4">
-          <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex items-center space-x-4">
-            <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl text-emerald-400">
-              <CheckCircle className="h-6 w-6" />
+        {/* GUEST PASS GENERATOR */}
+        <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center space-x-2 mb-3">
+              <UserPlus className="h-5 w-5 text-indigo-400" />
+              <h3 className="text-sm font-bold text-white">Generate 24-Hour Guest Pass</h3>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{checkIns.length}</p>
-              <p className="text-xs text-slate-400">Total Recorded Check-Ins</p>
-            </div>
+            <p className="text-xs text-slate-400 mb-4">Invite a workout partner. Valid for 1-time gate access.</p>
+
+            <form onSubmit={handleGenerateGuestPass} className="space-y-3">
+              <input
+                type="text"
+                required
+                placeholder="Guest Full Name"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2.5 rounded-xl transition flex items-center justify-center space-x-1"
+              >
+                <Send className="h-3.5 w-3.5 mr-1" />
+                <span>Issue Guest Pass</span>
+              </button>
+            </form>
           </div>
 
-          <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex items-center space-x-4">
-            <div className="bg-indigo-500/10 border border-indigo-500/20 p-3 rounded-xl text-indigo-400">
-              <Calendar className="h-6 w-6" />
+          {generatedGuestPass && (
+            <div className="mt-4 p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-indigo-200">Guest: {generatedGuestPass.guest_name}</p>
+                <p className="text-[10px] text-slate-400 font-mono">Token: {generatedGuestPass.pass_token.substring(0, 8)}...</p>
+              </div>
+              <div className="bg-white p-1 rounded-lg">
+                <QRCodeSVG value={generatedGuestPass.pass_token} size={48} />
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-bold text-white">
-                {checkIns.length > 0 ? new Date(checkIns[0].checked_in_at).toLocaleString() : 'No Check-Ins Yet'}
-              </p>
-              <p className="text-xs text-slate-400">Last Session Entry</p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -222,7 +231,7 @@ export default function MemberPortal() {
               <div key={item.id} className="p-3 bg-slate-900 border border-slate-800/80 rounded-xl flex justify-between items-center text-xs">
                 <div className="flex items-center space-x-2.5">
                   <CheckCircle className="h-4 w-4 text-emerald-400" />
-                  <span className="font-medium text-slate-200">Front Desk Check-In</span>
+                  <span className="font-medium text-slate-200">{item.notes || 'Front Desk Check-In'}</span>
                 </div>
                 <span className="text-slate-500 font-mono">
                   {new Date(item.checked_in_at).toLocaleString()}
