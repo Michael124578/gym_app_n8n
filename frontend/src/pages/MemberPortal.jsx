@@ -1,0 +1,215 @@
+import React, { useState, useEffect } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
+import { supabase } from '../lib/supabaseClient'
+import { User, CheckCircle, Calendar, LogOut, Search, Activity, ShieldCheck } from 'lucide-react'
+
+export default function MemberPortal() {
+  const [emailInput, setEmailInput] = useState('')
+  const [member, setMember] = useState(null)
+  const [checkIns, setCheckIns] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('gym_member_email')
+    if (savedEmail) {
+      fetchMemberData(savedEmail)
+    }
+  }, [])
+
+  const fetchMemberData = async (emailToFetch) => {
+    setLoading(true)
+    setError('')
+
+    const { data: memberData, error: memberError } = await supabase
+      .from('members')
+      .select('*')
+      .eq('email', emailToFetch.trim().toLowerCase())
+      .single()
+
+    if (memberError || !memberData) {
+      setError('Member profile not found. Please verify your email address.')
+      setLoading(false)
+      return
+    }
+
+    setMember(memberData)
+    localStorage.setItem('gym_member_email', memberData.email)
+
+    const { data: checkInData } = await supabase
+      .from('check_ins')
+      .select('*')
+      .eq('member_id', memberData.id)
+      .order('checked_in_at', { ascending: false })
+
+    if (checkInData) {
+      setCheckIns(checkInData)
+    }
+
+    setLoading(false)
+  }
+
+  const handleLogin = (e) => {
+    e.preventDefault()
+    if (emailInput) {
+      fetchMemberData(emailInput)
+    }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('gym_member_email')
+    setMember(null)
+    setCheckIns([])
+    setEmailInput('')
+  }
+
+  if (!member) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-slate-950 border border-slate-800 p-8 rounded-2xl shadow-2xl text-center">
+          <div className="bg-indigo-600/20 border border-indigo-500/30 p-3 rounded-2xl w-fit mx-auto mb-4 text-indigo-400">
+            <User className="h-8 w-8" />
+          </div>
+          <h2 className="text-xl font-bold text-white tracking-tight">Member Portal</h2>
+          <p className="text-xs text-slate-400 mt-1 mb-6">Enter your registered email to access your digital pass</p>
+
+          {error && (
+            <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+              <input
+                type="email"
+                required
+                placeholder="registered@email.com"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-3 rounded-xl transition disabled:opacity-50"
+            >
+              {loading ? 'Retrieving Pass...' : 'Access My Digital Pass'}
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex justify-between items-center bg-slate-950 border border-slate-800 p-6 rounded-2xl">
+        <div>
+          <h2 className="text-xl font-bold text-white">Welcome, {member.full_name}!</h2>
+          <p className="text-xs text-slate-400">Member ID: {member.id.substring(0, 8)}...</p>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center space-x-2 text-xs font-semibold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl transition"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Logout</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* PASS CARD */}
+        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 border border-slate-800 p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+          <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
+            <div className="flex items-center space-x-2">
+              <ShieldCheck className="h-4 w-4 text-indigo-400" />
+              <span className="text-xs font-bold text-indigo-400 tracking-wider">IRON GYM PASS</span>
+            </div>
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+              member.status === 'active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400'
+            }`}>
+              {member.status}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-lg font-bold text-white">{member.full_name}</p>
+              <p className="text-xs text-slate-400 font-mono mt-0.5">{member.email}</p>
+              <p className="text-[10px] text-slate-500 mt-4">
+                Joined: {new Date(member.created_at).toLocaleDateString()}
+              </p>
+            </div>
+
+            <div className="bg-white p-2.5 rounded-xl shadow-lg text-center">
+              <QRCodeSVG 
+                value={member.qr_code_token || member.id} 
+                size={110}
+                bgColor="#ffffff"
+                fgColor="#0f172a"
+                level="H"
+              />
+              <span className="block text-[9px] font-bold text-slate-500 mt-1 uppercase">Scan Pass</span>
+            </div>
+          </div>
+        </div>
+
+        {/* METRICS OVERVIEW */}
+        <div className="space-y-4">
+          <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex items-center space-x-4">
+            <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl text-emerald-400">
+              <CheckCircle className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">{checkIns.length}</p>
+              <p className="text-xs text-slate-400">Total Recorded Check-Ins</p>
+            </div>
+          </div>
+
+          <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex items-center space-x-4">
+            <div className="bg-indigo-500/10 border border-indigo-500/20 p-3 rounded-xl text-indigo-400">
+              <Calendar className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">
+                {checkIns.length > 0 ? new Date(checkIns[0].checked_in_at).toLocaleString() : 'No Check-Ins Yet'}
+              </p>
+              <p className="text-xs text-slate-400">Last Session Entry</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CHECK-IN HISTORY */}
+      <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
+        <h3 className="text-sm font-bold text-white mb-4 flex items-center space-x-2">
+          <Activity className="h-4 w-4 text-indigo-400" />
+          <span>Attendance Log</span>
+        </h3>
+
+        {checkIns.length === 0 ? (
+          <p className="text-xs text-slate-500 py-4 text-center border border-dashed border-slate-800 rounded-xl">
+            No check-ins recorded yet. Show your QR pass at the front desk terminal!
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {checkIns.map((item) => (
+              <div key={item.id} className="p-3 bg-slate-900 border border-slate-800/80 rounded-xl flex justify-between items-center text-xs">
+                <div className="flex items-center space-x-2.5">
+                  <CheckCircle className="h-4 w-4 text-emerald-400" />
+                  <span className="font-medium text-slate-200">Front Desk Check-In</span>
+                </div>
+                <span className="text-slate-500 font-mono">
+                  {new Date(item.checked_in_at).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,23 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+
+# Production build outputs
+dist/
+build/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE & OS System files
+.DS_Store
+.vscode/
+.idea/
+
+# Logs & Docker volumes
+*.log
+docker-data/
