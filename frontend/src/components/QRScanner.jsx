@@ -26,22 +26,24 @@ export default function QRScanner({ onScanComplete }) {
     }
   }, [])
 
-  const processCheckIn = async (memberId) => {
-    setLoading(true)
+  const processCheckIn = async (scannedValue) => {
+    setLoading(true);
+    setScanResult(null);
 
+    // Search Supabase checking BOTH 'id' and 'qr_code_token'
     const { data: member, error: memberError } = await supabase
       .from('members')
       .select('*')
-      .eq('id', memberId)
-      .single()
+      .or(`id.eq.${scannedValue},qr_code_token.eq.${scannedValue}`)
+      .maybeSingle();
 
     if (memberError || !member) {
       setScanResult({
         success: false,
         message: 'Invalid Pass: Member record not found.'
-      })
-      setLoading(false)
-      return
+      });
+      setLoading(false);
+      return;
     }
 
     if (member.status !== 'active') {
@@ -49,30 +51,36 @@ export default function QRScanner({ onScanComplete }) {
         success: false,
         member,
         message: `Entry Denied: Member status is "${member.status}".`
-      })
-      setLoading(false)
-      return
+      });
+      setLoading(false);
+      return;
     }
 
+    // Log check-in entry
     const { error: checkInError } = await supabase
       .from('check_ins')
-      .insert([{ member_id: member.id, status: 'success' }])
+      .insert([{ 
+        member_id: member.id, 
+        status: 'success',
+        access_granted: true,
+        notes: 'Access Granted'
+      }]);
 
     if (checkInError) {
       setScanResult({
         success: false,
         message: `Check-in error: ${checkInError.message}`
-      })
+      });
     } else {
       setScanResult({
         success: true,
         member,
         message: `Access Granted! Welcome, ${member.full_name}.`
-      })
-      if (onScanComplete) onScanComplete()
+      });
+      if (onScanComplete) onScanComplete();
     }
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   return (
     <div className="max-w-xl mx-auto bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl text-center">
