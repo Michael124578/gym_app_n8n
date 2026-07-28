@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts'
-import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react'
+import { TrendingUp, DollarSign, Activity } from 'lucide-react'
 
 export default function AdminAnalytics() {
   const [hourlyTraffic, setHourlyTraffic] = useState([])
@@ -17,7 +17,7 @@ export default function AdminAnalytics() {
   const fetchAnalytics = async () => {
     setLoading(true)
 
-    // 1. Fetch Check-ins for Hourly Traffic Heatmap
+    // 1. Fetch Check-ins for Traffic Heatmap
     const { data: checkIns } = await supabase.from('check_ins').select('checked_in_at')
     const hoursCount = Array(24).fill(0)
     checkIns?.forEach((ci) => {
@@ -25,36 +25,28 @@ export default function AdminAnalytics() {
       hoursCount[hour] += 1
     })
     
-    // Format for 12-hour display
-    const formattedTraffic = hoursCount.map((count, hour) => ({
+    setHourlyTraffic(hoursCount.map((count, hour) => ({
       hourLabel: `${hour % 12 || 12}${hour >= 12 ? 'PM' : 'AM'}`,
       visits: count
-    }))
-    setHourlyTraffic(formattedTraffic)
+    })))
 
-    // 2. Fetch Payments for Revenue Growth Chart
-    const { data: payments } = await supabase.from('payments').select('amount, paid_at, plan_name')
-    let sumRevenue = 0
-    const revenueByMonth = {}
+    // 2. Fetch Payments for Revenue Chart
+    const { data: payments } = await supabase.from('payments').select('amount, paid_at')
+    let sumRev = 0
+    const revByMonth = {}
 
     payments?.forEach((p) => {
-      sumRevenue += Number(p.amount)
-      const date = new Date(p.paid_at)
-      const monthKey = date.toLocaleString('default', { month: 'short' })
-      revenueByMonth[monthKey] = (revenueByMonth[monthKey] || 0) + Number(p.amount)
+      sumRev += Number(p.amount)
+      const dateKey = new Date(p.paid_at).toLocaleString('default', { month: 'short' })
+      revByMonth[dateKey] = (revByMonth[dateKey] || 0) + Number(p.amount)
     })
 
-    setTotalRevenue(sumRevenue)
-    const formattedRevenue = Object.keys(revenueByMonth).map(month => ({
-      month,
-      revenue: revenueByMonth[month]
-    }))
-    setMonthlyRevenue(formattedRevenue)
+    setTotalRevenue(sumRev)
+    setMonthlyRevenue(Object.keys(revByMonth).map(month => ({ month, revenue: revByMonth[month] })))
 
-    // 3. Fetch Members for Retention Rate Pie
+    // 3. Fetch Retention Ratios
     const { data: members } = await supabase.from('members').select('status, membership_end_date')
-    let active = 0
-    let expired = 0
+    let active = 0, expired = 0
 
     members?.forEach((m) => {
       const isExpired = m.membership_end_date && new Date() > new Date(m.membership_end_date)
@@ -71,53 +63,53 @@ export default function AdminAnalytics() {
   }
 
   if (loading) {
-    return <div className="p-8 text-center text-slate-500 animate-pulse">Loading Analytics Data...</div>
+    return <div className="p-8 text-center text-slate-500 font-bold animate-pulse">Loading Analytics Matrix...</div>
   }
+
+  const activeCount = retentionStats[0]?.value || 0
+  const totalMembers = activeCount + (retentionStats[1]?.value || 0)
+  const retentionPercent = totalMembers > 0 ? Math.round((activeCount / totalMembers) * 100) : 0
+  const peakHour = hourlyTraffic.reduce((max, cur) => cur.visits > max.visits ? cur : max, { visits: 0, hourLabel: 'N/A' }).hourLabel
 
   return (
     <div className="space-y-6">
-      {/* SUMMARY BAR */}
+      {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex items-center space-x-4">
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center space-x-4 shadow-xl">
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
             <DollarSign className="h-6 w-6" />
           </div>
           <div>
             <p className="text-2xl font-black text-white">${totalRevenue.toLocaleString()}</p>
-            <p className="text-xs text-slate-400 font-medium">Total Lifetime Revenue</p>
+            <p className="text-xs text-slate-400 font-medium">Total Revenue Logged</p>
           </div>
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex items-center space-x-4">
-          <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400">
+        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center space-x-4 shadow-xl">
+          <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400">
             <TrendingUp className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-2xl font-black text-white">
-              {retentionStats[0]?.value ? Math.round((retentionStats[0].value / (retentionStats[0].value + retentionStats[1].value)) * 100) : 0}%
-            </p>
+            <p className="text-2xl font-black text-white">{retentionPercent}%</p>
             <p className="text-xs text-slate-400 font-medium">Member Retention Rate</p>
           </div>
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex items-center space-x-4">
-          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
+        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center space-x-4 shadow-xl">
+          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-400">
             <Activity className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-2xl font-black text-white">
-              {hourlyTraffic.reduce((max, cur) => cur.visits > max.visits ? cur : max, { visits: 0, hourLabel: 'N/A' }).hourLabel}
-            </p>
+            <p className="text-2xl font-black text-white">{peakHour}</p>
             <p className="text-xs text-slate-400 font-medium">Peak Gate Hour</p>
           </div>
         </div>
       </div>
 
-      {/* CHARTS GRID */}
+      {/* REVENUE AREA CHART & RETENTION PIE */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* REVENUE GROWTH AREA CHART */}
         <div className="lg:col-span-2 bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
-          <h3 className="text-sm font-bold text-white mb-4">Revenue Trends ($)</h3>
+          <h3 className="text-sm font-bold text-white mb-4">Revenue Growth ($)</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyRevenue}>
@@ -136,9 +128,8 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        {/* RETENTION PIE CHART */}
         <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col justify-between">
-          <h3 className="text-sm font-bold text-white mb-2">Member Retention Breakdown</h3>
+          <h3 className="text-sm font-bold text-white mb-2">Member Retention Ratio</h3>
           <div className="h-48 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -164,9 +155,9 @@ export default function AdminAnalytics() {
         </div>
       </div>
 
-      {/* HOURLY TRAFFIC HEATMAP BAR CHART */}
+      {/* HOURLY TRAFFIC HEATMAP */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
-        <h3 className="text-sm font-bold text-white mb-4">Check-In Peak Hours (Traffic Heatmap)</h3>
+        <h3 className="text-sm font-bold text-white mb-4">Check-In Traffic Heatmap</h3>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={hourlyTraffic}>

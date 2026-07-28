@@ -44,11 +44,11 @@ export default function MemberPortal({ session, onLogout }) {
     }
   }, [session])
 
-  // Setup Real-time Listener for instant notifications
+  // Setup Real-time Listeners for instant push notifications
   useEffect(() => {
     if (!member?.id) return
 
-    // Realtime listener for member profile updates (e.g. extension by Admin)
+    // Realtime listener for member updates (e.g. extension by Admin)
     const profileChannel = supabase
       .channel(`realtime-member-${member.id}`)
       .on(
@@ -56,12 +56,12 @@ export default function MemberPortal({ session, onLogout }) {
         { event: 'UPDATE', schema: 'public', table: 'members', filter: `id=eq.${member.id}` },
         (payload) => {
           setMember(payload.new)
-          showToast('🎉 Your membership status or profile was updated!')
+          showToast(' Your membership pass or profile details were updated!')
         }
       )
       .subscribe()
 
-    // Realtime listener for guest pass usage
+    // Realtime listener for guest pass scans
     const guestChannel = supabase
       .channel(`realtime-guest-${member.id}`)
       .on(
@@ -69,7 +69,7 @@ export default function MemberPortal({ session, onLogout }) {
         { event: 'UPDATE', schema: 'public', table: 'guest_passes', filter: `host_member_id=eq.${member.id}` },
         (payload) => {
           if (payload.new.is_used) {
-            showToast(`🚀 Your guest ${payload.new.guest_name} just checked in!`)
+            showToast(` Your guest ${payload.new.guest_name} just checked in!`)
           }
         }
       )
@@ -104,7 +104,7 @@ export default function MemberPortal({ session, onLogout }) {
     setLoading(false)
   }
 
-  // Calculate Consecutive Day Streak
+  // Calculate Consecutive Days Workout Streak
   const calculateStreak = () => {
     if (!checkIns.length) return 0
     const dates = [...new Set(checkIns.map(c => new Date(c.checked_in_at).toDateString()))]
@@ -123,7 +123,7 @@ export default function MemberPortal({ session, onLogout }) {
     return streak
   }
 
-  // Export Digital Pass to PNG Image
+  // Export Pass View to PNG Image
   const handleDownloadPass = async () => {
     if (!cardRef.current) return
     try {
@@ -135,6 +135,36 @@ export default function MemberPortal({ session, onLogout }) {
     } catch (err) {
       showError('Failed to export pass image.')
     }
+  }
+
+  // Render 30-Day Attendance Grid
+  const render30DayHeatmap = () => {
+    const days = []
+    const checkInDates = new Set(
+      checkIns.map(c => new Date(c.checked_in_at).toISOString().split('T')[0])
+    )
+
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      const hasCheckedIn = checkInDates.has(dateStr)
+
+      days.push(
+        <div
+          key={dateStr}
+          title={`${dateStr}: ${hasCheckedIn ? 'Checked In' : 'No visit'}`}
+          className={`h-7 w-7 rounded-lg flex items-center justify-center text-[9px] font-bold transition ${
+            hasCheckedIn
+              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+              : 'bg-slate-900 border border-slate-800 text-slate-600'
+          }`}
+        >
+          {d.getDate()}
+        </div>
+      )
+    }
+    return days
   }
 
   // Unified Save Profile Handler (Name + Password)
@@ -372,6 +402,17 @@ export default function MemberPortal({ session, onLogout }) {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* 30-DAY ATTENDANCE HEATMAP */}
+      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
+        <div className="flex items-center space-x-2 mb-4">
+          <CalendarCheck className="h-5 w-5 text-emerald-400" />
+          <h3 className="text-sm font-bold text-white">30-Day Attendance Grid</h3>
+        </div>
+        <div className="flex flex-wrap gap-2 justify-between">
+          {render30DayHeatmap()}
         </div>
       </div>
 

@@ -2,20 +2,22 @@ import React, { useState, useEffect } from 'react'
 import AddMemberModal from './components/AddMemberModal'
 import MemberList from './components/MemberList'
 import QRScanner from './components/QRScanner'
+import AdminAnalytics from './components/AdminAnalytics'
 import MemberPortal from './pages/MemberPortal'
 import Login from './pages/Login'
+import Navbar from './components/Navbar'
+import Sidebar from './components/Sidebar'
 import { supabase } from './lib/supabaseClient'
-import { ShieldCheck, Lock, QrCode, PlusCircle, LogOut } from 'lucide-react'
 
 export default function App() {
   const [session, setSession] = useState(null)
   const [role, setRole] = useState(null) // 'member' or 'admin'
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [activeAdminTab, setActiveAdminTab] = useState('members')
+  const [activeAdminTab, setActiveAdminTab] = useState('members') // 'members' | 'scanner' | 'analytics'
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
-    // Listen for Supabase auth state changes
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSession(session)
@@ -44,85 +46,62 @@ export default function App() {
     setRole(null)
   }
 
-  // If not logged in, show the sleek Login page
   if (!session && !role) {
     return <Login onLoginSuccess={handleLoginSuccess} />
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* TOP BAR */}
-        <div className="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
-          <div className="flex items-center space-x-3">
-            <div className="bg-indigo-600 p-2 rounded-xl">
-              <QrCode className="h-6 w-6 text-white" />
-            </div>
-            <h1 className="text-xl font-black tracking-tight text-white">IRON GYM</h1>
-          </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex">
+      {/* SIDEBAR NAVIGATION */}
+      <Sidebar
+        activeTab={role === 'admin' ? activeAdminTab : 'portal'}
+        setActiveTab={role === 'admin' ? setActiveAdminTab : () => {}}
+        role={role}
+        onRegisterClick={() => setIsModalOpen(true)}
+        onLogout={handleLogout}
+        isOpen={isSidebarOpen}
+        setIsOpen={setIsSidebarOpen}
+      />
 
-          <button
-            onClick={handleLogout}
-            className="flex items-center space-x-2 text-xs font-semibold text-slate-400 hover:text-rose-400 bg-slate-950 border border-slate-800 px-4 py-2 rounded-xl transition"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Sign Out</span>
-          </button>
-        </div>
+      {/* MAIN VIEW AREA OFFSET FOR SIDEBAR */}
+      <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
+        <Navbar
+          title="IRON GYM"
+          subtitle={role === 'admin' ? 'SYSTEM TERMINAL' : 'MEMBER ACCESS'}
+          role={role}
+          onLogout={handleLogout}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        />
 
-        {/* ADMIN VIEW */}
-        {role === 'admin' && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex space-x-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
-                <button
-                  onClick={() => setActiveAdminTab('members')}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
-                    activeAdminTab === 'members' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Roster
-                </button>
-                <button
-                  onClick={() => setActiveAdminTab('scanner')}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
-                    activeAdminTab === 'scanner' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  QR Terminal
-                </button>
-              </div>
-
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-semibold transition"
-              >
-                <PlusCircle className="h-4 w-4" />
-                <span>Register Member</span>
-              </button>
-            </div>
-
-            <main>
+        <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1">
+          {/* ADMIN CONTENT SWITCHER */}
+          {role === 'admin' && (
+            <div className="space-y-6">
               {activeAdminTab === 'members' && (
                 <MemberList refreshTrigger={refreshTrigger} />
               )}
+
               {activeAdminTab === 'scanner' && (
                 <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />
               )}
-            </main>
 
-            <AddMemberModal
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-              onMemberAdded={() => setRefreshTrigger((prev) => prev + 1)}
-            />
-          </div>
-        )}
+              {activeAdminTab === 'analytics' && (
+                <AdminAnalytics />
+              )}
 
-        {/* MEMBER VIEW */}
-        {role === 'member' && (
-          <MemberPortal session={session} onLogout={handleLogout} />
-        )}
+              <AddMemberModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onMemberAdded={() => setRefreshTrigger((prev) => prev + 1)}
+              />
+            </div>
+          )}
+
+          {/* MEMBER PORTAL VIEW */}
+          {role === 'member' && (
+            <MemberPortal session={session} onLogout={handleLogout} />
+          )}
+        </main>
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { UserPlus, X, CreditCard, Lock } from 'lucide-react'
+import { UserPlus, X, CreditCard, Lock, AlertCircle } from 'lucide-react'
 
 export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [fullName, setFullName] = useState('')
@@ -11,7 +11,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [durationDays, setDurationDays] = useState(30)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-  
+
   const handlePlanChange = (plan) => {
     setPlanName(plan)
     if (plan === 'Day Pass') {
@@ -36,38 +36,32 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
 
     const cleanEmail = email.trim().toLowerCase()
 
-    // 1. Capture current Admin session to prevent auto-logout
-    const { data: { session: adminSession } } = await supabase.auth.getSession()
+    try {
+      // 1. Capture Current Admin Auth Session
+      const { data: { session: adminSession } } = await supabase.auth.getSession()
 
-    // 2. Create Auth User
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password: password,
-      options: {
-        data: { full_name: fullName.trim() }
+      // 2. Sign up New User in Auth Engine
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: password,
+        options: { data: { full_name: fullName.trim() } }
+      })
+
+      // 3. Immediately Restore Admin Session
+      if (adminSession) {
+        await supabase.auth.setSession(adminSession)
       }
-    })
 
-    // 3. FORCE RESTORE ADMIN SESSION immediately
-    if (adminSession) {
-      await supabase.auth.setSession(adminSession)
-    }
+      if (authError) throw new Error(`Auth Creation: ${authError.message}`)
 
-    if (authError) {
-      setErrorMsg(`Auth Creation Failed: ${authError.message}`)
-      setLoading(false)
-      return
-    }
+      // 4. Calculate Expiry Date
+      const expiryDate = new Date()
+      expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays))
 
-    // Calculate expiry date
-    const expiryDate = new Date()
-    expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays))
-
-    // 4. Insert Member Profile
-    const { data: member, error: memberError } = await supabase
-      .from('members')
-      .insert([
-        {
+      // 5. Insert Profile into public.members
+      const { data: member, error: memberError } = await supabase
+        .from('members')
+        .insert([{
           auth_id: authData.user?.id,
           full_name: fullName.trim(),
           email: cleanEmail,
@@ -75,39 +69,36 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
           plan_name: planName,
           last_payment_amount: parseFloat(amount),
           membership_end_date: expiryDate.toISOString()
-        }
-      ])
-      .select()
-      .single()
+        }])
+        .select()
+        .single()
 
-    if (memberError) {
-      setErrorMsg(`Database Error: ${memberError.message}`)
-      setLoading(false)
-      return
-    }
+      if (memberError) throw new Error(`Profile Insertion: ${memberError.message}`)
 
-    // 5. Log Payment
-    await supabase.from('payments').insert([
-      {
+      // 6. Log Financial Transaction
+      await supabase.from('payments').insert([{
         member_id: member.id,
         amount: parseFloat(amount),
         plan_name: planName
-      }
-    ])
+      }])
 
-    setLoading(false)
-    setFullName('')
-    setEmail('')
-    setPassword('')
-    if (onMemberAdded) onMemberAdded(member)
-    onClose()
+      setFullName('')
+      setEmail('')
+      setPassword('')
+      if (onMemberAdded) onMemberAdded(member)
+      onClose()
+    } catch (err) {
+      setErrorMsg(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl text-slate-100 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-100 relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-white transition"
@@ -116,48 +107,49 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
         </button>
 
         <div className="flex items-center space-x-3 mb-6">
-          <div className="bg-indigo-600/20 border border-indigo-500/30 p-2.5 rounded-xl text-indigo-400">
+          <div className="bg-indigo-600/20 border border-indigo-500/30 p-2.5 rounded-2xl text-indigo-400">
             <UserPlus className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Register New Member</h2>
-            <p className="text-xs text-slate-400">Create login credentials & log initial subscription</p>
+            <h2 className="text-lg font-black text-white">Register Member</h2>
+            <p className="text-xs text-slate-400">Create access credentials & initial payment</p>
           </div>
         </div>
 
         {errorMsg && (
-          <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg">
-            {errorMsg}
+          <div className="mb-4 p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl flex items-center space-x-2">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">Full Name</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Full Name</label>
             <input
               type="text"
               required
               placeholder="e.g. Michael Nagi"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">Email Address</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Email Address</label>
             <input
               type="email"
               required
               placeholder="e.g. michael@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">Set Account Password</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Account Password</label>
             <div className="relative">
               <input
                 type="password"
@@ -166,45 +158,45 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
                 placeholder="Minimum 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
               />
-              <Lock className="absolute right-3 top-3 h-4 w-4 text-slate-600" />
+              <Lock className="absolute right-3.5 top-3 h-4 w-4 text-slate-600" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">Membership Plan</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Membership Plan</label>
             <select
               value={planName}
               onChange={(e) => handlePlanChange(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
             >
-              <option value="Day Pass">Day Pass ($10)</option>
-              <option value="Monthly Pass">Monthly Pass ($50)</option>
-              <option value="3-Month VIP">3-Month VIP ($130)</option>
-              <option value="Annual Pass">Annual Pass ($450)</option>
+              <option value="Day Pass">Day Pass ($10 / 1 Day)</option>
+              <option value="Monthly Pass">Monthly Pass ($50 / 30 Days)</option>
+              <option value="3-Month VIP">3-Month VIP ($130 / 90 Days)</option>
+              <option value="Annual Pass">Annual Pass ($450 / 365 Days)</option>
             </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Amount Collected ($)</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Amount ($)</label>
               <input
                 type="number"
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition font-mono"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Duration (Days)</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Duration (Days)</label>
               <input
                 type="number"
                 required
                 value={durationDays}
                 onChange={(e) => setDurationDays(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition font-mono"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition"
               />
             </div>
           </div>
@@ -214,17 +206,17 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition"
+              className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition disabled:opacity-50 flex items-center space-x-1"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition disabled:opacity-50 flex items-center space-x-1"
             >
-              <CreditCard className="h-3.5 w-3.5 mr-1" />
-              <span>{loading ? 'Creating Credentials...' : 'Register Member & Log Payment'}</span>
+              <CreditCard className="h-4 w-4 mr-1" />
+              <span>{loading ? 'Creating Pass...' : 'Register & Log Payment'}</span>
             </button>
           </div>
         </form>

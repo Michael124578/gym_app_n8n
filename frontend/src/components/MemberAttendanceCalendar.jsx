@@ -5,7 +5,6 @@ import { toPng } from 'html-to-image'
 export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
   const cardRef = useRef(null)
 
-  // 1. Calculate Workout Streak (Consecutive Days with at least 1 check-in)
   const calculateStreak = () => {
     if (!checkIns.length) return 0
     const dates = [...new Set(checkIns.map(c => new Date(c.checked_in_at).toDateString()))]
@@ -24,9 +23,8 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
     return streak
   }
 
-  // 2. Export Card to PNG Image
   const handleDownloadPass = async () => {
-    if (cardRef.current === null) return
+    if (!cardRef.current) return
     try {
       const dataUrl = await toPng(cardRef.current, { cacheBust: true })
       const link = document.createElement('a')
@@ -38,7 +36,6 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
     }
   }
 
-  // 3. Render 30-Day Activity Heatmap Grid
   const render30DayHeatmap = () => {
     const days = []
     const checkInDates = new Set(
@@ -68,31 +65,30 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
     return days
   }
 
-  const currentStreak = calculateStreak()
+  const streak = calculateStreak()
 
   return (
     <div className="space-y-6">
-      {/* STREAK & PASS DOWNLOAD HEADER */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
+        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-xl">
           <div className="flex items-center space-x-3">
             <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl text-amber-400">
               <Flame className="h-6 w-6 animate-pulse" />
             </div>
             <div>
-              <p className="text-2xl font-black text-white">{currentStreak} Days</p>
+              <p className="text-2xl font-black text-white">{streak} Days</p>
               <p className="text-xs text-slate-400 font-medium">Active Gym Streak 🔥</p>
             </div>
           </div>
           <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-            {currentStreak > 3 ? 'On Fire!' : 'Keep Going!'}
+            {streak > 3 ? 'On Fire!' : 'Keep Going!'}
           </span>
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
+        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-xl">
           <div>
             <h4 className="text-sm font-bold text-white">Offline Pass Card</h4>
-            <p className="text-xs text-slate-400">Save your pass to your device gallery</p>
+            <p className="text-xs text-slate-400">Save pass image to device gallery</p>
           </div>
           <button
             onClick={handleDownloadPass}
@@ -104,8 +100,7 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
         </div>
       </div>
 
-      {/* 30-DAY ATTENDANCE HEATMAP */}
-      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
+      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
         <div className="flex items-center space-x-2 mb-4">
           <CalendarCheck className="h-5 w-5 text-emerald-400" />
           <h3 className="text-sm font-bold text-white">30-Day Attendance Grid</h3>

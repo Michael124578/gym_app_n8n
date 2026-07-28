@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { QrCode, Lock, User, KeyRound, ShieldAlert, ArrowRight } from 'lucide-react'
+import { QrCode, Lock, User, KeyRound, ShieldAlert, ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react'
 
 export default function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [roleMode, setRoleMode] = useState('member') // 'member' or 'admin'
   const [errorMsg, setErrorMsg] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -44,6 +45,13 @@ export default function Login({ onLoginSuccess }) {
     }
   }
 
+  // Quick fill demo admin credentials
+  const fillDemoAdmin = () => {
+    setEmail('admin@irongym.com')
+    setPassword('123456789')
+    setErrorMsg(null)
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans relative overflow-hidden">
       {/* AMBIENT BACKGROUND GLOWS */}
@@ -53,7 +61,7 @@ export default function Login({ onLoginSuccess }) {
       <div className="max-w-md w-full bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 p-8 rounded-3xl shadow-2xl relative z-10">
         {/* BRAND HEADER */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center bg-gradient-to-tr from-indigo-600 to-violet-500 p-3.5 rounded-2xl shadow-lg shadow-indigo-500/25 mb-4">
+          <div className="inline-flex items-center justify-center bg-gradient-to-tr from-indigo-600 to-violet-500 p-3.5 rounded-2xl shadow-lg shadow-indigo-500/25 mb-4 animate-pulse">
             <QrCode className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">IRON GYM</h1>
@@ -89,6 +97,20 @@ export default function Login({ onLoginSuccess }) {
           </button>
         </div>
 
+        {/* DEMO QUICK FILL BADGE FOR ADMIN */}
+        {roleMode === 'admin' && (
+          <div className="mb-4 flex justify-end">
+            <button
+              type="button"
+              onClick={fillDemoAdmin}
+              className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 px-2.5 py-1 rounded-full transition flex items-center space-x-1"
+            >
+              <Sparkles className="h-3 w-3 mr-0.5" />
+              <span>Fill Admin Demo Credentials</span>
+            </button>
+          </div>
+        )}
+
         {/* ERROR NOTIFICATION */}
         {errorMsg && (
           <div className="mb-6 p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl flex items-center space-x-2 animate-shake">
@@ -117,14 +139,20 @@ export default function Login({ onLoginSuccess }) {
             </label>
             <div className="relative">
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl pl-4 pr-10 py-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
                 placeholder={roleMode === 'admin' ? 'Enter PIN (e.g., 1234)' : '••••••••'}
               />
-              <KeyRound className="absolute right-3.5 top-3.5 h-4 w-4 text-slate-600" />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-300 transition"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
 
