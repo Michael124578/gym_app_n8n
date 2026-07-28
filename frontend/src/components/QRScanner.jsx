@@ -39,6 +39,27 @@ export default function QRScanner({ onScanComplete }) {
   const processCheckIn = async (scannedValue, isManual = false) => {
     setLoading(true)
 
+    let memberQueryId = scannedValue
+
+    // Parse dynamic TOTP pass format: PASS-{idPrefix}-{timeStep}-{tokenPart}
+    if (scannedValue.startsWith('PASS-')) {
+      const parts = scannedValue.split('-')
+      if (parts.length >= 4) {
+        const scannedTimeStep = parseInt(parts[2], 10)
+        const currentEpoch = Math.floor(Date.now() / 1000)
+        const currentTimeStep = Math.floor(currentEpoch / 30)
+
+        // Enforce 30s timestamp validity with 1-step grace window
+        if (Math.abs(currentTimeStep - scannedTimeStep) > 1) {
+          playAudioFeedback(false)
+          setScanResult({ success: false, message: 'Expired dynamic pass QR code. Please scan active screen.' })
+          setLoading(false)
+          return
+        }
+        memberQueryId = parts[1]
+      }
+    }
+
     // 1. Guest Pass Verification
     const { data: guestPass } = await supabase
       .from('guest_passes')
@@ -75,11 +96,20 @@ export default function QRScanner({ onScanComplete }) {
     }
 
     // 2. Member Pass Verification
-    const { data: member } = await supabase
+    let { data: member } = await supabase
       .from('members')
       .select('*')
       .or(`id.eq.${scannedValue},qr_code_token.eq.${scannedValue}`)
       .maybeSingle()
+
+    // Fallback search for ID prefix from TOTP token
+    if (!member && scannedValue.startsWith('PASS-')) {
+      const { data: prefixMatches } = await supabase
+        .from('members')
+        .select('*')
+      
+      member = prefixMatches?.find(m => m.id.startsWith(memberQueryId)) || null
+    }
 
     if (!member) {
       playAudioFeedback(false)
@@ -106,7 +136,7 @@ export default function QRScanner({ onScanComplete }) {
       member_id: member.id, 
       status: 'success',
       access_granted: true,
-      notes: isManual ? 'Manual Staff Override' : 'QR Scan Granted',
+      notes: isManual ? 'Manual Staff Override' : 'Dynamic QR Scan Granted',
       is_manual_override: isManual,
       authorized_by: isManual ? 'Staff Operator' : 'QR Terminal'
     }])
