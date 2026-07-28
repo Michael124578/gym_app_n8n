@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabaseClient'
 import { 
   QrCode, ShieldCheck, ArrowRight, Lock, Mail, 
   Dumbbell, Sparkles, ChevronRight, Flame, Zap, 
-  CheckCircle2, Users, Trophy, QrCode as QrIcon, KeyRound 
+  CheckCircle2, Users, Trophy, KeyRound, Activity, 
+  ShieldAlert, Eye, EyeOff, Layers, Radio
 } from 'lucide-react'
 
 export default function Login({ onLoginSuccess }) {
@@ -11,14 +12,16 @@ export default function Login({ onLoginSuccess }) {
   const [isLoading, setIsLoading] = useState(true)
   const [loadingProgress, setLoadingProgress] = useState(0)
 
-  // Auth State
+  // Auth Modal State
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [authRole, setAuthRole] = useState('member') // 'member' | 'admin'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  // 1. Keyboard ESC Listener to Close Modal
+  // 1. Physical Keyboard ESC Listener
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' || e.key === 'Esc') {
@@ -35,26 +38,33 @@ export default function Login({ onLoginSuccess }) {
     }
   }, [isAuthModalOpen])
 
-  // 2. Simulated Intro Loading Animation
+  // 2. High-Speed Preloader Progress
   useEffect(() => {
     const interval = setInterval(() => {
       setLoadingProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval)
-          setTimeout(() => setIsLoading(false), 300)
+          setTimeout(() => setIsLoading(false), 250)
           return 100
         }
-        return prev + 5
+        return prev + 6
       })
-    }, 25)
+    }, 20)
 
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-fill Test Admin Credentials
+  // Auto-fill Handlers
   const handleAutoFillAdmin = () => {
+    setAuthRole('admin')
     setEmail('michael.nagui.kiriakos@gmail.com')
-    setPassword('123456') // Replace with your test admin password if different
+    setPassword('123456')
+  }
+
+  const handleOpenAuth = (role = 'member') => {
+    setAuthRole(role)
+    setErrorMsg('')
+    setIsAuthModalOpen(true)
   }
 
   const handleLogin = async (e) => {
@@ -73,47 +83,51 @@ export default function Login({ onLoginSuccess }) {
       if (error) throw error
 
       const user = data.user
-      let role = 'member'
+      let detectedRole = 'member'
       if (user.email === 'michael.nagui.kiriakos@gmail.com' || user.email.includes('admin')) {
-        role = 'admin'
+        detectedRole = 'admin'
       }
 
-      onLoginSuccess(data.session, role)
+      onLoginSuccess(data.session, detectedRole)
     } catch (err) {
-      setErrorMsg(err.message || 'Invalid credentials. Please try again.')
+      setErrorMsg(err.message || 'Authentication failed. Please verify credentials.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  // PRELOADER
+  // CINEMATIC PRELOADER
   if (isLoading) {
     return (
       <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 select-none overflow-hidden">
-        <div className="absolute w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-3xl animate-pulse" />
-        
+        <div className="absolute w-[600px] h-[600px] bg-indigo-600/15 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute w-[400px] h-[400px] bg-violet-600/10 rounded-full blur-2xl animate-ping opacity-20" />
+
         <div className="relative z-10 flex flex-col items-center max-w-sm w-full text-center">
-          <div className="bg-gradient-to-tr from-indigo-600 to-violet-500 p-4 rounded-2xl shadow-2xl shadow-indigo-500/30 mb-6 animate-bounce">
-            <QrCode className="h-10 w-10 text-white" />
+          <div className="relative mb-8">
+            <div className="absolute -inset-2 bg-gradient-to-r from-indigo-500 to-violet-600 rounded-2xl blur opacity-75 animate-pulse" />
+            <div className="relative bg-slate-900 border border-slate-700/80 p-5 rounded-2xl shadow-2xl">
+              <QrCode className="h-12 w-12 text-indigo-400 animate-bounce" />
+            </div>
           </div>
 
-          <h1 className="text-3xl font-black tracking-widest text-white uppercase mb-1">
+          <h1 className="text-4xl font-black tracking-widest text-white uppercase mb-1">
             IRON <span className="text-indigo-500">GYM</span>
           </h1>
           <p className="text-xs font-mono tracking-widest uppercase text-slate-400 mb-8">
-            Loading System Modules...
+            Initializing Gate Engine & Authentication...
           </p>
 
-          <div className="w-full bg-slate-900 border border-slate-800 h-2 rounded-full overflow-hidden mb-3">
+          <div className="w-full bg-slate-900 border border-slate-800 h-2.5 rounded-full overflow-hidden p-0.5 mb-3 shadow-inner">
             <div 
-              className="bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-400 h-full transition-all duration-75 ease-out rounded-full"
+              className="bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-400 h-full transition-all duration-75 ease-out rounded-full shadow-lg shadow-indigo-500/50"
               style={{ width: `${loadingProgress}%` }}
             />
           </div>
 
           <div className="flex justify-between w-full text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-            <span>Gate Engine</span>
-            <span>{loadingProgress}%</span>
+            <span>Terminal Core</span>
+            <span className="text-indigo-400 font-bold">{loadingProgress}%</span>
           </div>
         </div>
       </div>
@@ -123,79 +137,148 @@ export default function Login({ onLoginSuccess }) {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans relative overflow-x-hidden">
       
-      {/* NAVIGATION BAR */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 px-6 py-4">
+      {/* GLOWING AMBIENT BACKGROUND */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-[800px] h-[500px] bg-indigo-600/10 rounded-full blur-[140px]" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[500px] bg-violet-600/10 rounded-full blur-[140px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:32px_32px] opacity-25" />
+      </div>
+
+      {/* TOP NAVIGATION BAR */}
+      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-2xl border-b border-slate-800/80 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="bg-indigo-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-600/30">
+            <div className="bg-gradient-to-tr from-indigo-600 to-violet-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-600/30">
               <QrCode className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xl font-black tracking-tight text-white uppercase">
-              IRON <span className="text-indigo-500">GYM</span>
-            </span>
+            <div>
+              <span className="text-xl font-black tracking-tight text-white uppercase block leading-none">
+                IRON <span className="text-indigo-500">GYM</span>
+              </span>
+              <span className="text-[9px] font-mono text-slate-400 tracking-widest uppercase">System v2.4</span>
+            </div>
           </div>
 
           <nav className="hidden md:flex items-center space-x-8 text-xs font-bold uppercase tracking-wider text-slate-300">
             <a href="#programs" className="hover:text-indigo-400 transition">Programs</a>
             <a href="#facilities" className="hover:text-indigo-400 transition">Facilities</a>
             <a href="#plans" className="hover:text-indigo-400 transition">Plans</a>
-            <a href="#passes" className="hover:text-indigo-400 transition">Passes</a>
+            <a href="#passes" className="hover:text-indigo-400 transition">Digital Pass</a>
           </nav>
 
-          <button
-            onClick={() => setIsAuthModalOpen(true)}
-            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl transition shadow-lg shadow-indigo-600/20"
-          >
-            Portal Sign In
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => handleOpenAuth('admin')}
+              className="hidden sm:flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
+            >
+              <ShieldCheck className="h-4 w-4 text-indigo-400" />
+              <span>Staff Login</span>
+            </button>
+
+            <button
+              onClick={() => handleOpenAuth('member')}
+              className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center space-x-2"
+            >
+              <span>Member Sign In</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* HERO SECTION */}
-      <section className="relative py-24 px-6 overflow-hidden">
-        <div 
-          className="absolute inset-0 z-0 bg-cover bg-center opacity-25"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070')` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-950/90 to-slate-950" />
+      <section className="relative py-24 px-6 z-10">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          <div className="lg:col-span-7">
+            <div className="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/30 px-4 py-2 rounded-full text-indigo-400 text-xs font-bold uppercase tracking-widest mb-6">
+              <Flame className="h-4 w-4 text-indigo-400 animate-pulse" />
+              <span>Automated Gate Access & Analytics</span>
+            </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/30 px-4 py-1.5 rounded-full text-indigo-400 text-xs font-bold uppercase tracking-widest mb-6">
-            <Flame className="h-4 w-4 text-indigo-400 animate-pulse" />
-            <span>Next-Gen Fitness Ecosystem</span>
+            <h1 className="text-5xl sm:text-7xl font-black uppercase tracking-tight leading-[0.92] text-white mb-6">
+              FORGE YOUR <br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-violet-400 to-white">
+                ULTIMATE FORM.
+              </span>
+            </h1>
+
+            <p className="text-slate-400 text-sm sm:text-base max-w-xl font-normal leading-relaxed mb-8">
+              Instant QR turnstile authorization, real-time activity tracking, automated membership passes, and elite conditioning programs.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-10">
+              <button
+                onClick={() => handleOpenAuth('member')}
+                className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider px-8 py-4 rounded-2xl shadow-xl shadow-indigo-600/30 transition flex items-center justify-center space-x-2 group"
+              >
+                <span>Member Portal</span>
+                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+              </button>
+
+              <button
+                onClick={() => handleOpenAuth('admin')}
+                className="bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 font-bold text-xs uppercase tracking-wider px-7 py-4 rounded-2xl transition flex items-center justify-center space-x-2"
+              >
+                <ShieldCheck className="h-4 w-4 text-indigo-400" />
+                <span>Admin Terminal</span>
+              </button>
+            </div>
+
+            {/* LIVE METRICS STATS BAR */}
+            <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-900">
+              <div>
+                <span className="block text-2xl font-black text-white">24/7</span>
+                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Gate Access</span>
+              </div>
+              <div>
+                <span className="block text-2xl font-black text-indigo-400">0.2s</span>
+                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">QR Scan Speed</span>
+              </div>
+              <div>
+                <span className="block text-2xl font-black text-white">100%</span>
+                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Automated</span>
+              </div>
+            </div>
           </div>
 
-          <h1 className="text-5xl sm:text-7xl font-black uppercase tracking-tight leading-[0.95] text-white mb-6">
-            DOMINATE YOUR <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-violet-400 to-white">
-              POTENTIAL.
-            </span>
-          </h1>
+          {/* HERO PREVIEW CARD */}
+          <div className="lg:col-span-5 relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-3xl blur-xl opacity-30 animate-pulse" />
+            <div className="relative bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-xl text-emerald-400">
+                    <Radio className="h-4 w-4 animate-pulse" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-white uppercase block">Gate Terminal #01</span>
+                    <span className="text-[10px] font-mono text-emerald-400 uppercase">System Online</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono bg-slate-800 text-slate-400 px-2.5 py-1 rounded-lg">MAIN BRANCH</span>
+              </div>
 
-          <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-normal leading-relaxed mb-8">
-            Automated contactless gate access, high-intensity training programs, world-class equipment, and instant QR pass credentials.
-          </p>
+              <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-6 flex flex-col items-center text-center mb-6">
+                <div className="bg-white p-3 rounded-2xl shadow-xl mb-4">
+                  <QrCode className="h-28 w-28 text-slate-950" />
+                </div>
+                <span className="text-xs font-mono text-indigo-400 uppercase font-bold tracking-wider">SCAN TO AUTHORIZE</span>
+                <span className="text-[11px] text-slate-400 mt-1">Place pass code near turnstile camera</span>
+              </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider px-8 py-4 rounded-2xl shadow-xl shadow-indigo-600/30 transition flex items-center justify-center space-x-2 group"
-            >
-              <span>Access Member Portal</span>
-              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition" />
-            </button>
-            <a
-              href="#plans"
-              className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-bold text-xs uppercase tracking-wider px-8 py-4 rounded-2xl transition flex items-center justify-center"
-            >
-              View Memberships
-            </a>
+              <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-950/50 p-3 rounded-xl border border-slate-800/50">
+                <span className="flex items-center"><Activity className="h-3.5 w-3.5 text-indigo-400 mr-2" /> Live Realtime Sync</span>
+                <span className="font-mono text-indigo-400 font-bold">ACTIVE</span>
+              </div>
+            </div>
           </div>
+
         </div>
       </section>
 
       {/* SECTION 1: PROGRAMS */}
-      <section id="programs" className="py-20 px-6 border-t border-slate-900 bg-slate-950">
+      <section id="programs" className="py-20 px-6 border-t border-slate-900 bg-slate-950/50 relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="mb-12">
             <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold">01 // Training Protocols</span>
@@ -204,11 +287,11 @@ export default function Login({ onLoginSuccess }) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { title: 'Hypertrophy & Strength', desc: 'Progressive overload training tailored for max power output and muscle adaptation.', tag: 'Elite Lifting', icon: Dumbbell },
-              { title: 'High-Intensity Conditioning', desc: 'Caloric torching circuit protocols designed for cardiovascular endurance.', tag: 'Endurance', icon: Zap },
-              { title: 'Athletic Performance', desc: 'Explosive plyometrics and mobility routines engineered for competitive athletes.', tag: 'Agility & Speed', icon: Trophy }
+              { title: 'Hypertrophy & Power', desc: 'Heavy resistance protocols built for maximal strength and muscle adaptation.', tag: 'Resistance', icon: Dumbbell },
+              { title: 'High-Intensity Conditioning', desc: 'Caloric torching circuit protocols designed for peak stamina.', tag: 'Endurance', icon: Zap },
+              { title: 'Athletic Agility', desc: 'Explosive plyometrics and mobility routines engineered for performance.', tag: 'Performance', icon: Trophy }
             ].map((prog, idx) => (
-              <div key={idx} className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 hover:border-indigo-500/50 transition duration-300 group relative overflow-hidden">
+              <div key={idx} className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 hover:border-indigo-500/50 transition duration-300 group">
                 <div className="bg-indigo-600/10 border border-indigo-500/20 p-3 rounded-2xl text-indigo-400 w-fit mb-5 group-hover:bg-indigo-600 group-hover:text-white transition duration-300">
                   <prog.icon className="h-6 w-6" />
                 </div>
@@ -222,7 +305,7 @@ export default function Login({ onLoginSuccess }) {
       </section>
 
       {/* SECTION 2: FACILITIES */}
-      <section id="facilities" className="py-20 px-6 border-t border-slate-900 bg-slate-900/30">
+      <section id="facilities" className="py-20 px-6 border-t border-slate-900 bg-slate-950 relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="mb-12">
             <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold">02 // Club Infrastructure</span>
@@ -232,9 +315,9 @@ export default function Login({ onLoginSuccess }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { name: 'Hammer Strength Zone', detail: 'Plate-loaded custom machinery', img: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?q=80&w=600' },
-              { name: 'Olympic Lifting Platforms', detail: 'Calibrated bumper plates & barbells', img: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600' },
-              { name: 'Recovery & Cryo Lounge', detail: 'Infrared saunas & cold plunges', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=600' },
-              { name: '24/7 Smart Gate Access', detail: 'Instant QR turnstile authorization', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600' }
+              { name: 'Olympic Platforms', detail: 'Calibrated bumper plates & barbells', img: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600' },
+              { name: 'Recovery Lounge', detail: 'Infrared saunas & cold plunges', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=600' },
+              { name: '24/7 Smart Access', detail: 'Instant turnstile authorization', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600' }
             ].map((fac, idx) => (
               <div key={idx} className="relative rounded-3xl overflow-hidden group h-64 border border-slate-800">
                 <img src={fac.img} alt={fac.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-60" />
@@ -249,7 +332,7 @@ export default function Login({ onLoginSuccess }) {
       </section>
 
       {/* SECTION 3: PLANS */}
-      <section id="plans" className="py-20 px-6 border-t border-slate-900 bg-slate-950">
+      <section id="plans" className="py-20 px-6 border-t border-slate-900 bg-slate-950/50 relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold">03 // Membership Tiers</span>
@@ -259,7 +342,7 @@ export default function Login({ onLoginSuccess }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { name: 'Day Pass', price: '$10', period: '/ single day', features: ['Full facility access for 24h', 'Instant QR code generated', 'Locker & shower access'] },
-              { name: 'Monthly Pass', price: '$50', period: '/ month', featured: true, features: ['Unlimited 24/7 club access', 'Member app & QR access', 'Guest pass eligibility', 'Free initial fitness assessment'] },
+              { name: 'Monthly Pass', price: '$50', period: '/ month', featured: true, features: ['Unlimited 24/7 club access', 'Member portal & QR pass', 'Guest pass eligibility', 'Free initial fitness assessment'] },
               { name: 'Annual VIP Pass', price: '$450', period: '/ year', features: ['All Monthly benefits included', '2 Months FREE savings', 'Complimentary guest passes', 'Recovery lounge access'] }
             ].map((plan, idx) => (
               <div 
@@ -294,7 +377,7 @@ export default function Login({ onLoginSuccess }) {
                 </div>
 
                 <button
-                  onClick={() => setIsAuthModalOpen(true)}
+                  onClick={() => handleOpenAuth('member')}
                   className={`w-full font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition ${
                     plan.featured
                       ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-600/30'
@@ -310,66 +393,109 @@ export default function Login({ onLoginSuccess }) {
       </section>
 
       {/* SECTION 4: PASSES */}
-      <section id="passes" className="py-20 px-6 border-t border-slate-900 bg-slate-900/20">
+      <section id="passes" className="py-20 px-6 border-t border-slate-900 bg-slate-950 relative z-10">
         <div className="max-w-5xl mx-auto bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-12 relative overflow-hidden">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
             <div className="max-w-md">
-              <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold">04 // Digital Access System</span>
+              <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold">04 // Access Credentials</span>
               <h2 className="text-2xl sm:text-3xl font-black uppercase text-white mt-1 mb-3">INSTANT DIGITAL PASSES</h2>
               <p className="text-xs text-slate-300 leading-relaxed">
-                No keycards, no hassle. Every registered member receives an encrypted, real-time QR token synced directly to their mobile portal for seamless front desk entry.
+                No keycards required. Every active member gets an encrypted QR credential synced directly to their phone.
               </p>
             </div>
 
-            <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl flex flex-col items-center text-center max-w-xs w-full shadow-2xl">
-              <div className="bg-white p-3 rounded-xl mb-3 shadow-lg">
-                <QrIcon className="h-24 w-24 text-slate-950" />
+            <button
+              onClick={() => handleOpenAuth('member')}
+              className="bg-slate-950 border border-slate-800 hover:border-indigo-500/50 p-6 rounded-2xl flex flex-col items-center text-center max-w-xs w-full shadow-2xl transition group"
+            >
+              <div className="bg-white p-3 rounded-xl mb-3 shadow-lg group-hover:scale-105 transition">
+                <QrCode className="h-20 w-20 text-slate-950" />
               </div>
-              <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest">Active Member Pass</span>
-              <span className="text-xs font-bold text-white uppercase mt-0.5">Scan At Front Desk</span>
-            </div>
+              <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest">Generate Pass</span>
+              <span className="text-xs font-bold text-white uppercase mt-0.5">Click to Open Portal</span>
+            </button>
           </div>
         </div>
       </section>
 
       {/* FOOTER */}
       <footer className="border-t border-slate-900 py-8 px-6 text-center text-xs text-slate-500 font-mono">
-        © {new Date().getFullYear()} IRON GYM. Built for peak physical performance.
+        © {new Date().getFullYear()} IRON GYM. Automated Gate Engine & Portal Systems.
       </footer>
 
-      {/* AUTH MODAL OVERLAY */}
+      {/* ==========================================
+          DYNAMIC LOGIN AUTH MODAL OVERLAY
+         ========================================== */}
       {isAuthModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xl p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-slate-100 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-slate-100 relative animate-in fade-in zoom-in-95 duration-150">
             
-            {/* ESC Close Button */}
+            {/* ESC Key Badge & Close Button */}
             <button
               onClick={() => setIsAuthModalOpen(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white transition text-xs font-mono bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white transition text-[11px] font-mono bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 flex items-center space-x-1"
             >
-              ESC
+              <span>ESC</span>
             </button>
 
+            {/* Role Switcher Tabs */}
+            <div className="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 mb-6">
+              <button
+                type="button"
+                onClick={() => setAuthRole('member')}
+                className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
+                  authRole === 'member'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Member Portal
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthRole('admin')}
+                className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
+                  authRole === 'admin'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Staff / Admin
+              </button>
+            </div>
+
             {/* Modal Header */}
-            <div className="text-center mb-6">
-              <div className="inline-flex bg-gradient-to-tr from-indigo-600 to-violet-500 p-3 rounded-2xl shadow-lg shadow-indigo-600/30 mb-3">
-                <QrCode className="h-6 w-6 text-white" />
+            <div className="text-center mb-5">
+              <div className="inline-flex bg-gradient-to-tr from-indigo-600 to-violet-500 p-3 rounded-2xl shadow-lg shadow-indigo-600/30 mb-2">
+                {authRole === 'admin' ? (
+                  <ShieldCheck className="h-6 w-6 text-white" />
+                ) : (
+                  <QrCode className="h-6 w-6 text-white" />
+                )}
               </div>
-              <h2 className="text-xl font-black uppercase text-white tracking-tight">Sign In To Terminal</h2>
-              <p className="text-xs text-slate-400 mt-1">Enter your credentials to access your portal</p>
+              <h2 className="text-xl font-black uppercase text-white tracking-tight">
+                {authRole === 'admin' ? 'Staff Terminal Access' : 'Member Portal Access'}
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {authRole === 'admin' 
+                  ? 'Authorized gym staff & system admin login' 
+                  : 'Log in to view your active QR pass & billing'}
+              </p>
             </div>
 
             {/* Quick Auto-Fill Admin Test Account Button */}
-            <button
-              type="button"
-              onClick={handleAutoFillAdmin}
-              className="w-full mb-4 py-2 px-3 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/50 rounded-xl text-[11px] font-semibold text-indigo-300 flex items-center justify-center space-x-2 transition"
-            >
-              <KeyRound className="h-3.5 w-3.5 text-indigo-400" />
-              <span>Auto-Fill Admin Credentials</span>
-            </button>
+            {authRole === 'admin' && (
+              <button
+                type="button"
+                onClick={handleAutoFillAdmin}
+                className="w-full mb-4 py-2 px-3 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/50 rounded-xl text-[11px] font-semibold text-indigo-300 flex items-center justify-center space-x-2 transition"
+              >
+                <KeyRound className="h-3.5 w-3.5 text-indigo-400" />
+                <span>Auto-Fill Test Admin Credentials</span>
+              </button>
+            )}
 
-            {/* Error Alert */}
+            {/* Error Message Alert */}
             {errorMsg && (
               <div className="mb-4 p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl text-center">
                 {errorMsg}
@@ -397,14 +523,21 @@ export default function Login({ onLoginSuccess }) {
                 <label className="block text-xs font-semibold text-slate-400 mb-1">Password</label>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-10 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
                   />
                   <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-300 transition"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
