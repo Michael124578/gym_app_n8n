@@ -82,6 +82,21 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
         plan_name: planName
       }])
 
+      // 7. Dispatch Welcome Email via Nodemailer API Endpoint
+      try {
+        await fetch('/api/send-welcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: cleanEmail,
+            full_name: fullName.trim(),
+            plan_name: planName
+          })
+        })
+      } catch (emailErr) {
+        console.warn('Welcome email dispatch warning:', emailErr)
+      }
+
       setFullName('')
       setEmail('')
       setPassword('')
