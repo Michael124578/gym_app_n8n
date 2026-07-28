@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Users, UserCheck, Activity, CalendarCheck, Clock, Search, RefreshCw, X, CheckCircle } from 'lucide-react'
+import { Users, UserCheck, Activity, CalendarCheck, Clock, Search, RefreshCw, X, CheckCircle, Trash2 } from 'lucide-react'
 
 export default function MemberList({ refreshTrigger }) {
   const [members, setMembers] = useState([])
@@ -84,6 +84,28 @@ export default function MemberList({ refreshTrigger }) {
     }
   }, [refreshTrigger])
 
+  const handleDeleteMember = async (member) => {
+    if (!window.confirm(`Are you sure you want to delete ${member.full_name}? This will remove their credentials and history.`)) return
+
+    if (member.auth_id) {
+      // Calls the Supabase Edge Function to delete user from auth.users (cascading to public.members)
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { auth_id: member.auth_id }
+      })
+
+      if (error) {
+        alert(`Failed to delete user: ${error.message}`)
+        return
+      }
+    } else {
+      // Fallback: Delete directly from members table if auth_id was missing
+      await supabase.from('members').delete().eq('id', member.id)
+    }
+
+    showToast(`Deleted ${member.full_name}`)
+    fetchMembersAndStats()
+  }
+
   const handleRenewSubscription = async (e) => {
     e.preventDefault()
     if (!editingMember) return
@@ -142,7 +164,7 @@ export default function MemberList({ refreshTrigger }) {
         </div>
       )}
 
-      {/* ANALYTICS STATS WITH METRIC GLOWS */}
+      {/* ANALYTICS STATS */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-slate-950/90 border border-slate-800/80 hover:border-indigo-500/30 rounded-2xl p-5 flex items-center space-x-4 shadow-xl transition-all duration-300">
           <div className="bg-indigo-600/10 border border-indigo-500/20 p-3 rounded-2xl text-indigo-400 shadow-inner">
@@ -272,7 +294,6 @@ export default function MemberList({ refreshTrigger }) {
                       </td>
                       <td className="p-4 text-xs font-semibold text-indigo-400">{member.plan_name || 'Monthly Pass'}</td>
                       
-                      {/* GLOWING STATUS BADGES */}
                       <td className="p-4">
                         <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
                           member.status === 'active' && !isExpired
@@ -287,13 +308,21 @@ export default function MemberList({ refreshTrigger }) {
                       <td className="p-4 text-xs font-mono text-slate-400">
                         {member.membership_end_date ? new Date(member.membership_end_date).toLocaleDateString() : 'N/A'}
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 text-right space-x-2">
                         <button
                           onClick={() => setEditingMember(member)}
                           className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-200 hover:text-white text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1"
                         >
                           <RefreshCw className="h-3 w-3 mr-1" />
                           <span>Renew / Edit</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => handleDeleteMember(member)}
+                          className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-600 border border-rose-500/20 text-rose-400 hover:text-white text-xs font-semibold rounded-lg transition inline-flex items-center"
+                          title="Delete Member"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </td>
                     </tr>

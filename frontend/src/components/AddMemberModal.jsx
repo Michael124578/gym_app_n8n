@@ -11,9 +11,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [durationDays, setDurationDays] = useState(30)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-
-  if (!isOpen) return null
-
+  
   const handlePlanChange = (plan) => {
     setPlanName(plan)
     if (plan === 'Day Pass') {
@@ -38,14 +36,12 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
 
     const cleanEmail = email.trim().toLowerCase()
 
-    // 1. Create Supabase Auth user (Stores Email & Password securely)
+    // 1. Create Auth User in Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: cleanEmail,
       password: password,
       options: {
-        data: {
-          full_name: fullName.trim()
-        }
+        data: { full_name: fullName.trim() }
       }
     })
 
@@ -55,11 +51,11 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
       return
     }
 
-    // Calculate Expiration Date
+    // Calculate expiry date
     const expiryDate = new Date()
     expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays))
 
-    // 2. Insert member record linking auth_id
+    // 2. Insert Member Profile in public.members linked by auth_id
     const { data: member, error: memberError } = await supabase
       .from('members')
       .insert([
@@ -82,7 +78,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
       return
     }
 
-    // 3. Log initial payment record
+    // 3. Log Payment
     await supabase.from('payments').insert([
       {
         member_id: member.id,
@@ -98,6 +94,8 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     if (onMemberAdded) onMemberAdded(member)
     onClose()
   }
+
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
