@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabaseClient'
 import { 
   User, CheckCircle, Calendar, LogOut, ShieldCheck, UserPlus, Send, 
-  Activity, X, KeyRound, Edit3, Save, Lock, AlertCircle 
+  Activity, X, KeyRound, Settings, Save, Lock, AlertCircle, Clock, Award,
+  Flame, Download, CalendarCheck
 } from 'lucide-react'
+import { toPng } from 'html-to-image'
 
 export default function MemberPortal({ session, onLogout }) {
   const [member, setMember] = useState(null)
@@ -14,15 +16,17 @@ export default function MemberPortal({ session, onLogout }) {
   const [loading, setLoading] = useState(false)
   const [isZoomed, setIsZoomed] = useState(false)
 
-  // Profile Edit State
+  // Profile Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editName, setEditName] = useState('')
-  const [isEditingName, setIsEditingName] = useState(false)
   const [newPassword, setNewPassword] = useState('')
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   
   // Feedback Toast
   const [toastMessage, setToastMessage] = useState(null)
   const [errorMessage, setErrorMessage] = useState(null)
+
+  const cardRef = useRef(null)
 
   const showToast = (msg) => {
     setToastMessage(msg)
@@ -39,6 +43,43 @@ export default function MemberPortal({ session, onLogout }) {
       fetchMemberData(session.user.email)
     }
   }, [session])
+
+  // Setup Real-time Listener for instant notifications
+  useEffect(() => {
+    if (!member?.id) return
+
+    // Realtime listener for member profile updates (e.g. extension by Admin)
+    const profileChannel = supabase
+      .channel(`realtime-member-${member.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'members', filter: `id=eq.${member.id}` },
+        (payload) => {
+          setMember(payload.new)
+          showToast('🎉 Your membership status or profile was updated!')
+        }
+      )
+      .subscribe()
+
+    // Realtime listener for guest pass usage
+    const guestChannel = supabase
+      .channel(`realtime-guest-${member.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'guest_passes', filter: `host_member_id=eq.${member.id}` },
+        (payload) => {
+          if (payload.new.is_used) {
+            showToast(`🚀 Your guest ${payload.new.guest_name} just checked in!`)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(profileChannel)
+      supabase.removeChannel(guestChannel)
+    }
+  }, [member?.id])
 
   const fetchMemberData = async (userEmail) => {
     setLoading(true)
@@ -63,51 +104,87 @@ export default function MemberPortal({ session, onLogout }) {
     setLoading(false)
   }
 
-  // Update Full Name in public.members
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault()
-    if (!editName.trim() || editName === member.full_name) {
-      setIsEditingName(false)
-      return
+  // Calculate Consecutive Day Streak
+  const calculateStreak = () => {
+    if (!checkIns.length) return 0
+    const dates = [...new Set(checkIns.map(c => new Date(c.checked_in_at).toDateString()))]
+    let streak = 0
+    let today = new Date()
+
+    for (let i = 0; i < dates.length; i++) {
+      const checkDate = new Date(dates[i])
+      const diffDays = Math.floor((today - checkDate) / (1000 * 60 * 60 * 24))
+      if (diffDays <= streak + 1) {
+        streak++
+      } else {
+        break
+      }
     }
+    return streak
+  }
 
-    setLoading(true)
-    const { error } = await supabase
-      .from('members')
-      .update({ full_name: editName.trim() })
-      .eq('id', member.id)
-
-    setLoading(false)
-
-    if (error) {
-      showError(`Profile Update Failed: ${error.message}`)
-    } else {
-      setMember({ ...member, full_name: editName.trim() })
-      setIsEditingName(false)
-      showToast('Profile updated successfully!')
+  // Export Digital Pass to PNG Image
+  const handleDownloadPass = async () => {
+    if (!cardRef.current) return
+    try {
+      const dataUrl = await toPng(cardRef.current, { cacheBust: true })
+      const link = document.createElement('a')
+      link.download = `${member.full_name.replace(/\s+/g, '_')}_IronGym_Pass.png`
+      link.href = dataUrl
+      link.click()
+    } catch (err) {
+      showError('Failed to export pass image.')
     }
   }
 
-  // Update Password in Supabase Auth
-  const handleUpdatePassword = async (e) => {
+  // Unified Save Profile Handler (Name + Password)
+  const handleSaveProfile = async (e) => {
     e.preventDefault()
-    if (!newPassword || newPassword.length < 6) {
-      showError('Password must be at least 6 characters long.')
-      return
+    setIsSaving(true)
+    setErrorMessage(null)
+
+    let hasChanges = false
+
+    if (editName.trim() && editName.trim() !== member.full_name) {
+      const { error: nameError } = await supabase
+        .from('members')
+        .update({ full_name: editName.trim() })
+        .eq('id', member.id)
+
+      if (nameError) {
+        showError(`Failed to update name: ${nameError.message}`)
+        setIsSaving(false)
+        return
+      }
+      setMember({ ...member, full_name: editName.trim() })
+      hasChanges = true
     }
 
-    setIsUpdatingPassword(true)
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    })
+    if (newPassword) {
+      if (newPassword.length < 6) {
+        showError('Password must be at least 6 characters.')
+        setIsSaving(false)
+        return
+      }
 
-    setIsUpdatingPassword(false)
+      const { error: passError } = await supabase.auth.updateUser({
+        password: newPassword
+      })
 
-    if (error) {
-      showError(`Password Update Failed: ${error.message}`)
-    } else {
+      if (passError) {
+        showError(`Failed to update password: ${passError.message}`)
+        setIsSaving(false)
+        return
+      }
       setNewPassword('')
-      showToast('Account password updated successfully!')
+      hasChanges = true
+    }
+
+    setIsSaving(false)
+    setIsEditModalOpen(false)
+
+    if (hasChanges) {
+      showToast('Profile & security updated successfully!')
     }
   }
 
@@ -140,6 +217,8 @@ export default function MemberPortal({ session, onLogout }) {
 
   if (!member) return null
 
+  const streak = calculateStreak()
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* FLOATING TOAST NOTIFICATIONS */}
@@ -157,28 +236,77 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       )}
 
-      {/* HEADER BANNER */}
-      <div className="flex justify-between items-center bg-slate-950 border border-slate-800 p-6 rounded-2xl shadow-xl">
+      {/* TOP HEADER WITH ACTIONS */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white">Welcome, {member.full_name}!</h2>
-          <p className="text-xs text-slate-400 font-mono mt-0.5">Member ID: {member.id.substring(0, 8)}...</p>
+          <div className="flex items-center space-x-2">
+            <h2 className="text-2xl font-black text-white tracking-tight">{member.full_name}</h2>
+            <span className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+              {member.plan_name || 'Member'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 font-mono mt-1">ID: {member.id.substring(0, 8)}...</p>
         </div>
-        <button
-          onClick={onLogout}
-          className="flex items-center space-x-2 text-xs font-semibold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl transition"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Logout</span>
-        </button>
+
+        {/* TOP RIGHT BUTTON GROUP */}
+        <div className="flex items-center space-x-3 w-full sm:w-auto">
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-indigo-300 hover:text-white bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 px-4 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/10"
+          >
+            <Settings className="h-4 w-4" />
+            <span>Edit Profile</span>
+          </button>
+
+          <button
+            onClick={onLogout}
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-800 hover:border-rose-500/30 px-4 py-2.5 rounded-xl transition-all duration-200"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+
+      {/* STREAK & EXPORT BANNER */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl text-amber-400">
+              <Flame className="h-6 w-6 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-2xl font-black text-white">{streak} Days</p>
+              <p className="text-xs text-slate-400 font-medium">Active Gym Streak 🔥</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+            {streak > 3 ? 'On Fire!' : 'Keep Going!'}
+          </span>
+        </div>
+
+        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-bold text-white">Offline Pass Card</h4>
+            <p className="text-xs text-slate-400">Save your pass image to local gallery</p>
+          </div>
+          <button
+            onClick={handleDownloadPass}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition shadow-lg shadow-indigo-600/20"
+          >
+            <Download className="h-4 w-4" />
+            <span>Save Pass Image</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* DIGITAL PASS CARD */}
-        <div className="group relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/90 border border-slate-800/80 p-6 rounded-3xl shadow-2xl flex flex-col justify-between">
+        {/* DIGITAL PASS CARD (EXPORT TARGET) */}
+        <div ref={cardRef} className="group relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/90 border border-slate-800/80 p-6 rounded-3xl shadow-2xl flex flex-col justify-between">
           <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
             <div className="flex items-center space-x-2">
               <ShieldCheck className="h-4 w-4 text-indigo-400" />
-              <span className="text-xs font-extrabold text-indigo-400 tracking-widest uppercase">IRON GYM PASS</span>
+              <span className="text-xs font-extrabold text-indigo-400 tracking-widest uppercase">IRON GYM DIGITAL PASS</span>
             </div>
             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
               member.status === 'active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400'
@@ -193,7 +321,7 @@ export default function MemberPortal({ session, onLogout }) {
               <p className="text-xs text-indigo-300 font-semibold mt-1">{member.plan_name || 'Monthly Pass'}</p>
               <p className="text-xs text-slate-400 font-mono mt-0.5">{member.email}</p>
               <p className="text-[10px] text-slate-500 mt-4 font-mono">
-                Expires: {member.membership_end_date ? new Date(member.membership_end_date).toLocaleDateString() : 'N/A'}
+                Hold to gate scanner to unlock entry
               </p>
             </div>
 
@@ -205,7 +333,7 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
 
         {/* GUEST PASS GENERATOR */}
-        <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
+        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl flex flex-col justify-between">
           <div>
             <div className="flex items-center space-x-2 mb-3">
               <UserPlus className="h-5 w-5 text-indigo-400" />
@@ -247,108 +375,103 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       </div>
 
-      {/* MEMBER EDITABLE PROFILE & SECURITY SECTION */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* EDIT PROFILE DETAILS */}
-        <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <User className="h-5 w-5 text-indigo-400" />
-              <h3 className="text-sm font-bold text-white">Personal Information</h3>
-            </div>
-            {!isEditingName && (
-              <button
-                onClick={() => setIsEditingName(true)}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center space-x-1"
-              >
-                <Edit3 className="h-3.5 w-3.5" />
-                <span>Edit</span>
-              </button>
-            )}
-          </div>
+      {/* CHECK-IN HISTORY TIMELINE */}
+      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
+        <div className="flex items-center space-x-2 mb-4">
+          <Clock className="h-5 w-5 text-indigo-400" />
+          <h3 className="text-sm font-bold text-white">Recent Check-In Activity</h3>
+        </div>
 
-          {isEditingName ? (
-            <form onSubmit={handleUpdateProfile} className="space-y-3">
+        {checkIns.length === 0 ? (
+          <p className="text-xs text-slate-500 text-center py-6 border border-dashed border-slate-800 rounded-2xl">
+            No check-in history recorded yet. Scan your pass at the gym gate!
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {checkIns.slice(0, 5).map((ci) => (
+              <div key={ci.id} className="flex justify-between items-center bg-slate-900/60 border border-slate-800/80 px-4 py-3 rounded-2xl">
+                <div className="flex items-center space-x-3">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="text-xs font-bold text-slate-200">{ci.notes || 'Gym Entry Granted'}</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {new Date(ci.checked_in_at).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* EDIT PROFILE MODAL */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-100">
+            <button
+              onClick={() => setIsEditModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="bg-indigo-600/20 border border-indigo-500/30 p-2.5 rounded-xl text-indigo-400">
+                <Settings className="h-6 w-6" />
+              </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Full Name</label>
+                <h3 className="text-lg font-bold text-white">Edit Profile & Credentials</h3>
+                <p className="text-xs text-slate-400">Update display name and password</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name</label>
                 <input
                   type="text"
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 transition"
                 />
               </div>
-              <div className="flex space-x-2 justify-end">
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">New Password (Optional)</label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    minLength={6}
+                    placeholder="Leave blank to keep current password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 transition"
+                  />
+                  <KeyRound className="absolute right-3.5 top-2.5 h-4 w-4 text-slate-600" />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => { setEditName(member.full_name); setIsEditingName(false); }}
-                  className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg flex items-center space-x-1"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1 disabled:opacity-50"
                 >
-                  <Save className="h-3.5 w-3.5" />
-                  <span>Save</span>
+                  <Save className="h-4 w-4 mr-1" />
+                  <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
             </form>
-          ) : (
-            <div className="space-y-2 text-xs">
-              <div>
-                <p className="text-slate-500 font-medium">Full Name</p>
-                <p className="text-slate-200 font-bold">{member.full_name}</p>
-              </div>
-              <div>
-                <p className="text-slate-500 font-medium">Email Address (Read-Only)</p>
-                <p className="text-slate-400 font-mono">{member.email}</p>
-              </div>
-              <div>
-                <p className="text-slate-500 font-medium">Active Membership Plan</p>
-                <p className="text-indigo-400 font-semibold">{member.plan_name || 'Monthly Pass'}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* SECURITY & PASSWORD UPDATE */}
-        <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl space-y-4">
-          <div className="flex items-center space-x-2">
-            <Lock className="h-5 w-5 text-indigo-400" />
-            <h3 className="text-sm font-bold text-white">Security & Password</h3>
           </div>
-
-          <form onSubmit={handleUpdatePassword} className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">New Password</label>
-              <div className="relative">
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  placeholder="At least 6 characters"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-                />
-                <KeyRound className="absolute right-3 top-2.5 h-4 w-4 text-slate-600" />
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={isUpdatingPassword}
-              className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold py-2.5 rounded-xl transition flex items-center justify-center space-x-1"
-            >
-              <Lock className="h-3.5 w-3.5 mr-1 text-slate-400" />
-              <span>{isUpdatingPassword ? 'Updating...' : 'Update Account Password'}</span>
-            </button>
-          </form>
         </div>
-      </div>
+      )}
 
       {/* FULLSCREEN QR ZOOM MODAL */}
       {isZoomed && (
