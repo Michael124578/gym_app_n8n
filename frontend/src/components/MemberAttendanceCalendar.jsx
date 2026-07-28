@@ -5,17 +5,34 @@ import { toPng } from 'html-to-image'
 export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
   const cardRef = useRef(null)
 
+  const formatLocalDate = (dateObj) => {
+    const year = dateObj.getFullYear()
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+    const day = String(dateObj.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   const calculateStreak = () => {
     if (!checkIns.length) return 0
-    const dates = [...new Set(checkIns.map(c => new Date(c.checked_in_at).toDateString()))]
+    const setOfDates = new Set(checkIns.map(c => formatLocalDate(new Date(c.checked_in_at))))
+    
     let streak = 0
-    let today = new Date()
+    let curr = new Date()
 
-    for (let i = 0; i < dates.length; i++) {
-      const checkDate = new Date(dates[i])
-      const diffDays = Math.floor((today - checkDate) / (1000 * 60 * 60 * 24))
-      if (diffDays <= streak + 1) {
+    while (true) {
+      const dateStr = formatLocalDate(curr)
+      if (setOfDates.has(dateStr)) {
         streak++
+        curr.setDate(curr.getDate() - 1)
+      } else if (streak === 0) {
+        // Check if yesterday had a checkin to allow streak continuity prior to today's visit
+        curr.setDate(curr.getDate() - 1)
+        if (setOfDates.has(formatLocalDate(curr))) {
+          streak++
+          curr.setDate(curr.getDate() - 1)
+        } else {
+          break
+        }
       } else {
         break
       }
@@ -28,7 +45,7 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
     try {
       const dataUrl = await toPng(cardRef.current, { cacheBust: true })
       const link = document.createElement('a')
-      link.download = `${member.full_name.replace(/\s+/g, '_')}_IronGym_Pass.png`
+      link.download = `${(member?.full_name || 'Member').replace(/\s+/g, '_')}_IronGym_Pass.png`
       link.href = dataUrl
       link.click()
     } catch (err) {
@@ -39,13 +56,13 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
   const render30DayHeatmap = () => {
     const days = []
     const checkInDates = new Set(
-      checkIns.map(c => new Date(c.checked_in_at).toISOString().split('T')[0])
+      checkIns.map(c => formatLocalDate(new Date(c.checked_in_at)))
     )
 
     for (let i = 29; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().split('T')[0]
+      const dateStr = formatLocalDate(d)
       const hasCheckedIn = checkInDates.has(dateStr)
 
       days.push(
@@ -68,7 +85,7 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
   const streak = calculateStreak()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={cardRef}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-xl">
           <div className="flex items-center space-x-3">

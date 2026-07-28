@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Users, UserCheck, Activity, CalendarCheck, Clock, Search, RefreshCw, X, CheckCircle, Trash2 } from 'lucide-react'
 
@@ -23,7 +23,7 @@ export default function MemberList({ refreshTrigger }) {
     setTimeout(() => setToastMessage(null), 3500)
   }
 
-  const fetchMembersAndStats = async () => {
+  const fetchMembersAndStats = useCallback(async () => {
     setLoading(true)
 
     const { data: memberData } = await supabase
@@ -65,7 +65,7 @@ export default function MemberList({ refreshTrigger }) {
     }
 
     setLoading(false)
-  }
+  }, [])
 
   useEffect(() => {
     fetchMembersAndStats()
@@ -78,9 +78,9 @@ export default function MemberList({ refreshTrigger }) {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(memberChannel)
+      memberChannel.unsubscribe()
     }
-  }, [refreshTrigger])
+  }, [refreshTrigger, fetchMembersAndStats])
 
   const handleDeleteMember = async (member) => {
     if (!window.confirm(`Are you sure you want to delete ${member.full_name}? This will remove their credentials and history.`)) return
@@ -110,7 +110,7 @@ export default function MemberList({ refreshTrigger }) {
 
     const currentExpiry = new Date(editingMember.membership_end_date || new Date())
     const baseDate = currentExpiry > new Date() ? currentExpiry : new Date()
-    baseDate.setDate(baseDate.getDate() + parseInt(renewDays))
+    baseDate.setDate(baseDate.getDate() + parseInt(renewDays, 10))
 
     await supabase
       .from('members')

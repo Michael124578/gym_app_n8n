@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { UserPlus, X, CreditCard, Lock, AlertCircle } from 'lucide-react'
+import { UserPlus, CreditCard, Lock, AlertCircle } from 'lucide-react'
 
 export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [fullName, setFullName] = useState('')
@@ -12,33 +12,25 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  // ESC key handler to dismiss modal
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' || e.key === 'Esc') {
-        onClose()
-      }
+      if (e.key === 'Escape' || e.key === 'Esc') onClose()
     }
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown)
-    }
+    if (isOpen) window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
 
   const handlePlanChange = (plan) => {
     setPlanName(plan)
-    if (plan === 'Day Pass') {
-      setAmount('10')
-      setDurationDays(1)
-    } else if (plan === 'Monthly Pass') {
-      setAmount('50')
-      setDurationDays(30)
-    } else if (plan === '3-Month VIP') {
-      setAmount('130')
-      setDurationDays(90)
-    } else if (plan === 'Annual Pass') {
-      setAmount('450')
-      setDurationDays(365)
+    const presets = {
+      'Day Pass': { amount: '10', days: 1 },
+      'Monthly Pass': { amount: '50', days: 30 },
+      '3-Month VIP': { amount: '130', days: 90 },
+      'Annual Pass': { amount: '450', days: 365 }
+    }
+    if (presets[plan]) {
+      setAmount(presets[plan].amount)
+      setDurationDays(presets[plan].days)
     }
   }
 
@@ -50,27 +42,30 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     const cleanEmail = email.trim().toLowerCase()
 
     try {
-      const { data: { session: adminSession } } = await supabase.auth.getSession()
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: password,
-        options: { data: { full_name: fullName.trim() } }
+      // 1. Create Auth user via admin endpoint / function to protect active admin session
+      const { data: authData, error: authError } = await supabase.functions.invoke('create-member-user', {
+        body: { email: cleanEmail, password, fullName: fullName.trim() }
       })
 
-      if (adminSession) {
-        await supabase.auth.setSession(adminSession)
+      // Fallback to direct sign-up if edge function is unconfigured
+      let userId = authData?.user?.id
+      if (authError || !userId) {
+        const { data: fallbackAuth, error: fallbackError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: password,
+          options: { data: { full_name: fullName.trim() } }
+        })
+        if (fallbackError) throw new Error(`Auth Creation: ${fallbackError.message}`)
+        userId = fallbackAuth.user?.id
       }
 
-      if (authError) throw new Error(`Auth Creation: ${authError.message}`)
-
       const expiryDate = new Date()
-      expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays))
+      expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays, 10))
 
       const { data: member, error: memberError } = await supabase
         .from('members')
         .insert([{
-          auth_id: authData.user?.id,
+          auth_id: userId,
           full_name: fullName.trim(),
           email: cleanEmail,
           status: 'active',
@@ -89,19 +84,11 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
         plan_name: planName
       }])
 
-      try {
-        await fetch('/api/send-welcome', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: cleanEmail,
-            full_name: fullName.trim(),
-            plan_name: planName
-          })
-        })
-      } catch (emailErr) {
-        console.warn('Welcome email dispatch warning:', emailErr)
-      }
+      fetch('/api/send-welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, full_name: fullName.trim(), plan_name: planName })
+      }).catch(err => console.warn('Welcome email dispatch warning:', err))
 
       setFullName('')
       setEmail('')

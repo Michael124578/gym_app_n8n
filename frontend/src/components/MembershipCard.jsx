@@ -21,12 +21,14 @@ export default function MembershipCard({ member }) {
         <div className="space-y-1">
           <h3 className="text-lg font-bold text-white tracking-tight">{member.full_name}</h3>
           <p className="text-xs text-slate-400 font-mono">{member.email}</p>
-          <p className="text-[10px] text-slate-500 pt-2 font-mono">ID: {member.id.substring(0, 8)}...</p>
+          <p className="text-[10px] text-slate-500 pt-2 font-mono">
+            ID: {member.id ? `${member.id.substring(0, 8)}...` : 'N/A'}
+          </p>
         </div>
 
         <div className="bg-white p-2.5 rounded-2xl shadow-inner group-hover:scale-105 transition duration-300">
           <QRCodeSVG 
-            value={member.qr_code_token || member.id} 
+            value={member.qr_code_token || member.id || ''} 
             size={96}
             bgColor="#ffffff"
             fgColor="#0f172a"

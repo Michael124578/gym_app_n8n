@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabaseClient'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   CheckCircle, LogOut, ShieldCheck, UserPlus, Send, 
   X, Settings, Save, KeyRound, AlertCircle, Clock,
-  Flame, Download, CalendarCheck, Users, Dumbbell, Plus, Trash2, Bell
+  Flame, Download, CalendarCheck, Users, Dumbbell, Plus, Trash2, Zap, Sparkles
 } from 'lucide-react'
 import { toPng } from 'html-to-image'
 
@@ -17,7 +18,7 @@ export default function MemberPortal({ session, onLogout }) {
   const [loading, setLoading] = useState(false)
   const [isZoomed, setIsZoomed] = useState(false)
 
-  // Occupancy State
+  // Live Occupancy
   const [activeOccupancy, setActiveOccupancy] = useState(0)
   const maxCapacity = 100
 
@@ -27,7 +28,7 @@ export default function MemberPortal({ session, onLogout }) {
   const [weightKg, setWeightKg] = useState('')
   const [reps, setReps] = useState('')
 
-  // Profile Edit Modal
+  // Edit Profile
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editName, setEditName] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -42,10 +43,8 @@ export default function MemberPortal({ session, onLogout }) {
   const showToast = (msg) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3500)
-    
-    // Request & Dispatch Web Push Notification if granted
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('IRON GYM Alert', { body: msg, icon: '/favicon.ico' })
+      new Notification('IRON GYM', { body: msg })
     }
   }
 
@@ -54,7 +53,6 @@ export default function MemberPortal({ session, onLogout }) {
     setTimeout(() => setErrorMessage(null), 4000)
   }
 
-  // Request Web Push Permission on Load
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
@@ -71,30 +69,21 @@ export default function MemberPortal({ session, onLogout }) {
   useEffect(() => {
     if (!member?.id) return
 
-    // Realtime member changes
     const profileChannel = supabase
       .channel(`realtime-member-${member.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'members', filter: `id=eq.${member.id}` },
-        (payload) => {
-          setMember(payload.new)
-          showToast(' Your membership pass or profile details were updated!')
-        }
-      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'members', filter: `id=eq.${member.id}` }, (payload) => {
+        setMember(payload.new)
+        showToast('Membership pass updated!')
+      })
       .subscribe()
 
-    // Realtime workouts
     const workoutChannel = supabase
       .channel(`realtime-workouts-${member.id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'workouts', filter: `member_id=eq.${member.id}` },
-        () => fetchWorkouts(member.id)
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'workouts', filter: `member_id=eq.${member.id}` }, () => {
+        fetchWorkouts(member.id)
+      })
       .subscribe()
 
-    // Realtime checkins for occupancy
     const checkInChannel = supabase
       .channel('realtime-occupancy-member')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'check_ins' }, () => {
@@ -175,7 +164,7 @@ export default function MemberPortal({ session, onLogout }) {
     setExerciseName('')
     setWeightKg('')
     setReps('')
-    showToast('New PR/Workout logged successfully!')
+    showToast('⚡ Set logged successfully!')
     fetchWorkouts(member.id)
   }
 
@@ -214,9 +203,7 @@ export default function MemberPortal({ session, onLogout }) {
 
   const render30DayHeatmap = () => {
     const days = []
-    const checkInDates = new Set(
-      checkIns.map(c => new Date(c.checked_in_at).toISOString().split('T')[0])
-    )
+    const checkInDates = new Set(checkIns.map(c => new Date(c.checked_in_at).toISOString().split('T')[0]))
 
     for (let i = 29; i >= 0; i--) {
       const d = new Date()
@@ -225,17 +212,18 @@ export default function MemberPortal({ session, onLogout }) {
       const hasCheckedIn = checkInDates.has(dateStr)
 
       days.push(
-        <div
+        <motion.div
           key={dateStr}
+          whileHover={{ scale: 1.2 }}
           title={`${dateStr}: ${hasCheckedIn ? 'Checked In' : 'No visit'}`}
-          className={`h-7 w-7 rounded-lg flex items-center justify-center text-[9px] font-bold transition ${
+          className={`h-8 w-8 rounded-xl flex items-center justify-center text-[10px] font-bold transition ${
             hasCheckedIn
-              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-              : 'bg-slate-900 border border-slate-800 text-slate-600'
+              ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/30'
+              : 'bg-slate-900 border border-slate-800/80 text-slate-600'
           }`}
         >
           {d.getDate()}
-        </div>
+        </motion.div>
       )
     }
     return days
@@ -244,46 +232,20 @@ export default function MemberPortal({ session, onLogout }) {
   const handleSaveProfile = async (e) => {
     e.preventDefault()
     setIsSaving(true)
-    setErrorMessage(null)
-
-    let hasChanges = false
 
     if (editName.trim() && editName.trim() !== member.full_name) {
-      const { error: nameError } = await supabase
-        .from('members')
-        .update({ full_name: editName.trim() })
-        .eq('id', member.id)
-
-      if (nameError) {
-        showError(`Failed to update name: ${nameError.message}`)
-        setIsSaving(false)
-        return
-      }
+      await supabase.from('members').update({ full_name: editName.trim() }).eq('id', member.id)
       setMember({ ...member, full_name: editName.trim() })
-      hasChanges = true
     }
 
     if (newPassword) {
-      if (newPassword.length < 6) {
-        showError('Password must be at least 6 characters.')
-        setIsSaving(false)
-        return
-      }
-
-      const { error: passError } = await supabase.auth.updateUser({ password: newPassword })
-
-      if (passError) {
-        showError(`Failed to update password: ${passError.message}`)
-        setIsSaving(false)
-        return
-      }
+      await supabase.auth.updateUser({ password: newPassword })
       setNewPassword('')
-      hasChanges = true
     }
 
     setIsSaving(false)
     setIsEditModalOpen(false)
-    if (hasChanges) showToast('Profile & security updated successfully!')
+    showToast('Profile updated!')
   }
 
   const handleGenerateGuestPass = async (e) => {
@@ -300,15 +262,15 @@ export default function MemberPortal({ session, onLogout }) {
     if (data) {
       setGeneratedGuestPass(data)
       setGuestName('')
-      showToast(`Guest pass issued for ${data.guest_name}`)
+      showToast(`Guest pass created for ${data.guest_name}`)
     }
     setLoading(false)
   }
 
   if (loading && !member) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center text-slate-400 text-sm font-medium animate-pulse">
-        Loading member pass credentials...
+      <div className="min-h-[50vh] flex items-center justify-center text-slate-400 text-sm font-mono animate-pulse">
+        Initializing Member Terminal...
       </div>
     )
   }
@@ -319,133 +281,132 @@ export default function MemberPortal({ session, onLogout }) {
   const occupancyPercent = Math.min(100, Math.round((activeOccupancy / maxCapacity) * 100))
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* FLOATING TOASTS */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-2xl border border-indigo-400/30 text-xs font-bold animate-bounce flex items-center space-x-2">
-          <CheckCircle className="h-4 w-4 text-emerald-300" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="max-w-5xl mx-auto space-y-6">
+      
+      {/* TOAST ALERTS */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-3 rounded-2xl shadow-2xl border border-indigo-400/30 text-xs font-bold flex items-center space-x-2">
+            <Sparkles className="h-4 w-4 text-emerald-300" />
+            <span>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {errorMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-2xl border border-rose-400/30 text-xs font-bold flex items-center space-x-2">
-          <AlertCircle className="h-4 w-4 text-rose-200" />
-          <span>{errorMessage}</span>
-        </div>
-      )}
-
-      {/* TOP HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl gap-4">
+      {/* MEMBER HEADER */}
+      <div className="glass-panel p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <h2 className="text-2xl font-black text-white tracking-tight">{member.full_name}</h2>
-            <span className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
-              {member.plan_name || 'Member'}
+          <div className="flex items-center space-x-3">
+            <h2 className="text-3xl font-black text-white uppercase tracking-tight">{member.full_name}</h2>
+            <span className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-[10px] font-mono font-bold px-3 py-1 rounded-full uppercase">
+              {member.plan_name || 'Member Pass'}
             </span>
           </div>
-          <p className="text-xs text-slate-400 font-mono mt-1">ID: {member.id.substring(0, 8)}...</p>
+          <p className="text-xs text-slate-400 font-mono mt-1">TOKEN ID: {member.id}</p>
         </div>
 
         <div className="flex items-center space-x-3 w-full sm:w-auto">
           <button
             onClick={() => setIsEditModalOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-indigo-300 hover:text-white bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 px-4 py-2.5 rounded-xl transition-all"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-indigo-300 hover:text-white bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 px-4 py-3 rounded-2xl transition"
           >
             <Settings className="h-4 w-4" />
-            <span>Edit Profile</span>
+            <span>Edit Credentials</span>
           </button>
 
           <button
             onClick={onLogout}
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-800 hover:border-rose-500/30 px-4 py-2.5 rounded-xl transition-all"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-800 hover:border-rose-500/30 px-4 py-3 rounded-2xl transition"
           >
             <LogOut className="h-4 w-4" />
-            <span>Sign Out</span>
+            <span>Exit</span>
           </button>
         </div>
       </div>
 
-      {/* LIVE OCCUPANCY & STREAK BANNER */}
+      {/* METRICS & LIVE CAPACITY */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Occupancy Card */}
-        <div className="md:col-span-2 bg-slate-950 border border-slate-800 p-5 rounded-3xl flex flex-col justify-between">
+        <div className="md:col-span-2 glass-panel p-5 rounded-3xl flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5 text-indigo-400" />
-              <h4 className="text-sm font-bold text-white uppercase tracking-wider">Live Gym Capacity</h4>
+              <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wider">LIVE GYM OCCUPANCY</h4>
             </div>
             <span className="text-xs font-mono text-indigo-400 font-bold">{activeOccupancy} / {maxCapacity} ({occupancyPercent}%)</span>
           </div>
-          <div className="w-full bg-slate-900 border border-slate-800 h-3 rounded-full overflow-hidden p-0.5">
-            <div 
-              className={`h-full rounded-full transition-all duration-500 ${
-                occupancyPercent > 80 ? 'bg-rose-500' : occupancyPercent > 50 ? 'bg-amber-500' : 'bg-emerald-500'
+
+          <div className="w-full bg-slate-950 border border-slate-800 h-3.5 rounded-full overflow-hidden p-0.5">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${occupancyPercent}%` }}
+              transition={{ duration: 1 }}
+              className={`h-full rounded-full ${
+                occupancyPercent > 80 ? 'bg-rose-500' : occupancyPercent > 50 ? 'bg-amber-500' : 'bg-gradient-to-r from-emerald-500 to-teal-400'
               }`}
-              style={{ width: `${occupancyPercent}%` }}
             />
           </div>
-          <p className="text-[10px] text-slate-500 font-mono mt-2">Auto-updated via gate check-ins & 90m decay</p>
+          <p className="text-[10px] text-slate-500 font-mono mt-2">Real-time gate check-ins & 90-minute auto decay</p>
         </div>
 
-        {/* Gym Streak */}
-        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
+        <div className="glass-panel p-5 rounded-3xl flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl text-amber-400">
-              <Flame className="h-6 w-6 animate-pulse" />
+              <Flame className="h-7 w-7 animate-pulse" />
             </div>
             <div>
-              <p className="text-2xl font-black text-white">{streak} Days</p>
-              <p className="text-xs text-slate-400 font-medium">Gym Streak 🔥</p>
+              <p className="text-3xl font-black text-white">{streak}</p>
+              <p className="text-xs text-slate-400 font-medium">Day Workout Streak 🔥</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* DIGITAL PASS CARD & GUEST GENERATOR */}
+      {/* HOLOGRAPHIC DIGITAL PASS & GUEST GENERATOR */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div ref={cardRef} className="group relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/90 border border-slate-800/80 p-6 rounded-3xl shadow-2xl flex flex-col justify-between">
+        <div ref={cardRef} className="holo-card p-6 rounded-3xl flex flex-col justify-between shadow-2xl relative overflow-hidden">
           <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
             <div className="flex items-center space-x-2">
-              <ShieldCheck className="h-4 w-4 text-indigo-400" />
-              <span className="text-xs font-extrabold text-indigo-400 tracking-widest uppercase">IRON GYM DIGITAL PASS</span>
+              <ShieldCheck className="h-5 w-5 text-indigo-400" />
+              <span className="text-xs font-black tracking-widest text-indigo-300 uppercase">IRON GYM DIGITAL PASS</span>
             </div>
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-              member.status === 'active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400'
-            }`}>
+            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
               {member.status}
             </span>
           </div>
 
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-xl font-bold text-white tracking-tight">{member.full_name}</p>
+              <p className="text-2xl font-black text-white uppercase tracking-tight">{member.full_name}</p>
               <p className="text-xs text-indigo-300 font-semibold mt-1">{member.plan_name || 'Monthly Pass'}</p>
               <p className="text-xs text-slate-400 font-mono mt-0.5">{member.email}</p>
               <button
                 onClick={handleDownloadPass}
                 className="mt-4 text-[10px] font-bold text-indigo-400 hover:text-white inline-flex items-center space-x-1"
               >
-                <Download className="h-3 w-3" />
-                <span>Save Image</span>
+                <Download className="h-3.5 w-3.5" />
+                <span>Save Pass PNG</span>
               </button>
             </div>
 
-            <div className="bg-white p-2.5 rounded-2xl shadow-xl text-center cursor-pointer hover:scale-105 transition" onClick={() => setIsZoomed(true)}>
+            <motion.div 
+              whileHover={{ scale: 1.08 }} 
+              onClick={() => setIsZoomed(true)}
+              className="bg-white p-3 rounded-2xl shadow-2xl cursor-pointer"
+            >
               <QRCodeSVG value={member.qr_code_token || member.id} size={100} bgColor="#ffffff" fgColor="#0f172a" level="H" />
-              <span className="block text-[8px] font-bold text-slate-500 mt-1 uppercase">Tap to Zoom</span>
-            </div>
+              <span className="block text-[8px] font-bold text-slate-500 mt-1 uppercase text-center">Tap to Zoom</span>
+            </motion.div>
           </div>
         </div>
 
         {/* GUEST PASS GENERATOR */}
-        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl flex flex-col justify-between">
+        <div className="glass-panel p-6 rounded-3xl flex flex-col justify-between">
           <div>
-            <div className="flex items-center space-x-2 mb-3">
+            <div className="flex items-center space-x-2 mb-2">
               <UserPlus className="h-5 w-5 text-indigo-400" />
-              <h3 className="text-sm font-bold text-white">Generate 24-Hour Guest Pass</h3>
+              <h3 className="text-sm font-bold text-white uppercase">Issue Guest Access Pass</h3>
             </div>
-            <p className="text-xs text-slate-400 mb-4">Invite a workout partner. Valid for 1-time gate access.</p>
+            <p className="text-xs text-slate-400 mb-4">Grant a 24-hour single-use QR pass to a workout partner.</p>
 
             <form onSubmit={handleGenerateGuestPass} className="space-y-3">
               <input
@@ -454,12 +415,12 @@ export default function MemberPortal({ session, onLogout }) {
                 placeholder="Guest Full Name"
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2.5 rounded-xl transition flex items-center justify-center space-x-1"
+                className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold py-3 rounded-xl transition flex items-center justify-center space-x-1 shadow-lg shadow-indigo-600/30"
               >
                 <Send className="h-3.5 w-3.5 mr-1" />
                 <span>Issue Guest Pass</span>
@@ -481,18 +442,18 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       </div>
 
-      {/* WORKOUT SPLIT & PR LOGGER SECTION */}
-      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl space-y-6">
+      {/* WORKOUT SPLIT & PR TRACKER */}
+      <div className="glass-panel p-6 rounded-3xl space-y-6">
         <div className="flex items-center space-x-2">
           <Dumbbell className="h-5 w-5 text-indigo-400" />
-          <h3 className="text-base font-bold text-white">Personal Best & Workout Logger</h3>
+          <h3 className="text-base font-black text-white uppercase">Personal Record (PR) Tracker</h3>
         </div>
 
         <form onSubmit={handleLogWorkout} className="grid grid-cols-1 sm:grid-cols-5 gap-3">
           <select
             value={splitType}
             onChange={(e) => setSplitType(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
           >
             <option value="Push">Push</option>
             <option value="Pull">Pull</option>
@@ -507,7 +468,7 @@ export default function MemberPortal({ session, onLogout }) {
             placeholder="Exercise (e.g. Bench Press)"
             value={exerciseName}
             onChange={(e) => setExerciseName(e.target.value)}
-            className="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            className="sm:col-span-2 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
           />
 
           <input
@@ -516,32 +477,31 @@ export default function MemberPortal({ session, onLogout }) {
             placeholder="Weight (kg)"
             value={weightKg}
             onChange={(e) => setWeightKg(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+            className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
           />
 
           <button
             type="submit"
-            className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-xl transition flex items-center justify-center space-x-1"
+            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold py-2.5 rounded-xl transition flex items-center justify-center space-x-1 shadow-lg shadow-indigo-600/30"
           >
             <Plus className="h-4 w-4" />
-            <span>Log Set</span>
+            <span>Log PR</span>
           </button>
         </form>
 
-        {/* WORKOUT PR LOG TABLE */}
         {workouts.length === 0 ? (
-          <p className="text-xs text-slate-500 text-center py-4 border border-dashed border-slate-800 rounded-xl">
-            No PRs logged yet. Start tracking your lifts above!
+          <p className="text-xs text-slate-500 text-center py-6 border border-dashed border-slate-800 rounded-2xl font-mono">
+            No personal best sets logged yet. Log your top lift above!
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-400">
-              <thead className="bg-slate-900 text-slate-300 uppercase text-[10px] font-mono border-b border-slate-800">
+              <thead className="bg-slate-950 text-slate-300 uppercase text-[10px] font-mono border-b border-slate-800">
                 <tr>
                   <th className="p-3">Split</th>
                   <th className="p-3">Exercise</th>
-                  <th className="p-3">Weight (kg)</th>
-                  <th className="p-3">Logged Date</th>
+                  <th className="p-3">Top Weight</th>
+                  <th className="p-3">Date</th>
                   <th className="p-3 text-right">Action</th>
                 </tr>
               </thead>
@@ -549,11 +509,11 @@ export default function MemberPortal({ session, onLogout }) {
                 {workouts.map((w) => (
                   <tr key={w.id} className="hover:bg-slate-900/40 transition">
                     <td className="p-3">
-                      <span className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-md font-bold">
+                      <span className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2.5 py-0.5 rounded-md font-bold text-[10px]">
                         {w.split_type}
                       </span>
                     </td>
-                    <td className="p-3 font-semibold text-white">{w.exercise_name}</td>
+                    <td className="p-3 font-bold text-white">{w.exercise_name}</td>
                     <td className="p-3 font-mono text-emerald-400 font-bold">{w.weight_kg} kg</td>
                     <td className="p-3 font-mono text-slate-500">{new Date(w.logged_at).toLocaleDateString()}</td>
                     <td className="p-3 text-right">
@@ -572,25 +532,22 @@ export default function MemberPortal({ session, onLogout }) {
         )}
       </div>
 
-      {/* 30-DAY ATTENDANCE HEATMAP */}
-      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
+      {/* 30-DAY ATTENDANCE GRID */}
+      <div className="glass-panel p-6 rounded-3xl">
         <div className="flex items-center space-x-2 mb-4">
           <CalendarCheck className="h-5 w-5 text-emerald-400" />
-          <h3 className="text-sm font-bold text-white">30-Day Attendance Grid</h3>
+          <h3 className="text-sm font-bold text-white uppercase">30-Day Check-In Heatmap</h3>
         </div>
         <div className="flex flex-wrap gap-2 justify-between">
           {render30DayHeatmap()}
         </div>
       </div>
 
-      {/* EDIT PROFILE MODAL */}
+      {/* EDIT MODAL */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-100">
-            <button
-              onClick={() => setIsEditModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white transition"
-            >
+            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition">
               <X className="h-5 w-5" />
             </button>
 
@@ -642,7 +599,7 @@ export default function MemberPortal({ session, onLogout }) {
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1 disabled:opacity-50"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1"
                 >
                   <Save className="h-4 w-4 mr-1" />
                   <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
@@ -653,21 +610,21 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       )}
 
-      {/* FULLSCREEN QR ZOOM MODAL */}
+      {/* FULLSCREEN QR MODAL */}
       {isZoomed && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6" onClick={() => setIsZoomed(false)}>
           <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-4 max-w-sm w-full relative" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setIsZoomed(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition">
               <X className="h-5 w-5" />
             </button>
-            <h3 className="text-slate-900 font-bold text-lg">{member.full_name}</h3>
+            <h3 className="text-slate-900 font-bold text-lg uppercase">{member.full_name}</h3>
             <div className="flex justify-center p-2">
               <QRCodeSVG value={member.qr_code_token || member.id} size={220} bgColor="#ffffff" fgColor="#000000" level="H" />
             </div>
-            <p className="text-xs text-slate-500 font-semibold">Max Brightness • Hold directly to scanner laser</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Hold directly to scanner</p>
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

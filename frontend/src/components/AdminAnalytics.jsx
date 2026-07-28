@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts'
 import { TrendingUp, DollarSign, Activity } from 'lucide-react'
@@ -10,43 +10,42 @@ export default function AdminAnalytics() {
   const [totalRevenue, setTotalRevenue] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchAnalytics()
-  }, [])
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     setLoading(true)
 
-    const { data: checkIns } = await supabase.from('check_ins').select('checked_in_at')
+    const [{ data: checkIns }, { data: payments }, { data: members }] = await Promise.all([
+      supabase.from('check_ins').select('checked_in_at'),
+      supabase.from('payments').select('amount, paid_at'),
+      supabase.from('members').select('status, membership_end_date')
+    ])
+
     const hoursCount = Array(24).fill(0)
     checkIns?.forEach((ci) => {
       const hour = new Date(ci.checked_in_at).getHours()
       hoursCount[hour] += 1
     })
-    
+
     setHourlyTraffic(hoursCount.map((count, hour) => ({
       hourLabel: `${hour % 12 || 12}${hour >= 12 ? 'PM' : 'AM'}`,
       visits: count
     })))
 
-    const { data: payments } = await supabase.from('payments').select('amount, paid_at')
     let sumRev = 0
     const revByMonth = {}
-
     payments?.forEach((p) => {
-      sumRev += Number(p.amount)
-      const dateKey = new Date(p.paid_at).toLocaleString('default', { month: 'short' })
-      revByMonth[dateKey] = (revByMonth[dateKey] || 0) + Number(p.amount)
+      const amt = Number(p.amount) || 0
+      sumRev += amt
+      const dateKey = new Date(p.paid_at).toLocaleString('default', { month: 'short', year: '2-digit' })
+      revByMonth[dateKey] = (revByMonth[dateKey] || 0) + amt
     })
 
     setTotalRevenue(sumRev)
     setMonthlyRevenue(Object.keys(revByMonth).map(month => ({ month, revenue: revByMonth[month] })))
 
-    const { data: members } = await supabase.from('members').select('status, membership_end_date')
     let active = 0, expired = 0
-
+    const now = new Date()
     members?.forEach((m) => {
-      const isExpired = m.membership_end_date && new Date() > new Date(m.membership_end_date)
+      const isExpired = m.membership_end_date && now > new Date(m.membership_end_date)
       if (m.status === 'active' && !isExpired) active++
       else expired++
     })
@@ -57,7 +56,11 @@ export default function AdminAnalytics() {
     ])
 
     setLoading(false)
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchAnalytics()
+  }, [fetchAnalytics])
 
   if (loading) {
     return <div className="p-8 text-center text-slate-500 font-bold animate-pulse">Loading Analytics Matrix...</div>
