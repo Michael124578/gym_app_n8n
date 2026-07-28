@@ -1,7 +1,7 @@
 import React from 'react'
 import { 
   Users, QrCode, BarChart3, PlusCircle, LogOut, Shield, 
-  X, User 
+  X, User, Wrench, Dumbbell 
 } from 'lucide-react'
 
 export default function Sidebar({ 
@@ -17,10 +17,13 @@ export default function Sidebar({
     { id: 'members', label: 'Member Roster', icon: Users },
     { id: 'scanner', label: 'QR Gate Scanner', icon: QrCode },
     { id: 'analytics', label: 'Analytics & Revenue', icon: BarChart3 },
+    { id: 'maintenance', label: 'Equipment & Repairs', icon: Wrench },
+    { id: 'trainers', label: 'PT & Coaching', icon: Dumbbell },
   ]
 
   const memberNavItems = [
     { id: 'portal', label: 'Digital Pass & Portal', icon: User },
+    { id: 'maintenance', label: 'Report Machine Issue', icon: Wrench },
   ]
 
   const navItems = role === 'admin' ? adminNavItems : memberNavItems

@@ -3,6 +3,8 @@ import AddMemberModal from './components/AddMemberModal'
 import MemberList from './components/MemberList'
 import QRScanner from './components/QRScanner'
 import AdminAnalytics from './components/AdminAnalytics'
+import EquipmentMaintenance from './components/EquipmentMaintenance'
+import TrainerManagement from './components/TrainerManagement'
 import MemberPortal from './pages/MemberPortal'
 import Login from './pages/Login'
 import Navbar from './components/Navbar'
@@ -65,8 +67,8 @@ export default function App() {
 
       {/* SIDEBAR NAVIGATION */}
       <Sidebar
-        activeTab={role === 'admin' ? activeAdminTab : 'portal'}
-        setActiveTab={role === 'admin' ? setActiveAdminTab : () => {}}
+        activeTab={activeAdminTab}
+        setActiveTab={setActiveAdminTab}
         role={role}
         onRegisterClick={() => setIsModalOpen(true)}
         onLogout={handleLogout}
@@ -85,7 +87,7 @@ export default function App() {
         />
 
         <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1">
-          {/* ADMIN CONTENT SWITCHER */}
+          {/* ADMIN & STAFF CONTENT SWITCHER */}
           {role === 'admin' && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {activeAdminTab === 'members' && (
@@ -100,6 +102,15 @@ export default function App() {
                 <AdminAnalytics />
               )}
 
+              {/* NEW FEATURES INTEGRATED HERE */}
+              {activeAdminTab === 'maintenance' && (
+                <EquipmentMaintenance userRole={role} />
+              )}
+
+              {activeAdminTab === 'trainers' && (
+                <TrainerManagement />
+              )}
+
               <AddMemberModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -110,8 +121,12 @@ export default function App() {
 
           {/* MEMBER PORTAL VIEW */}
           {role === 'member' && (
-            <div className="animate-in fade-in duration-300">
-              <MemberPortal session={session} onLogout={handleLogout} />
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {activeAdminTab === 'maintenance' ? (
+                <EquipmentMaintenance userRole={role} />
+              ) : (
+                <MemberPortal session={session} onLogout={handleLogout} />
+              )}
             </div>
           )}
         </main>
