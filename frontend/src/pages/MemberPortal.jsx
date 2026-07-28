@@ -4,25 +4,36 @@ import { supabase } from '../lib/supabaseClient'
 import { 
   CheckCircle, LogOut, ShieldCheck, UserPlus, Send, 
   X, Settings, Save, KeyRound, AlertCircle, Clock,
-  Flame, Download, CalendarCheck
+  Flame, Download, CalendarCheck, Users, Dumbbell, Plus, Trash2, Bell
 } from 'lucide-react'
 import { toPng } from 'html-to-image'
 
 export default function MemberPortal({ session, onLogout }) {
   const [member, setMember] = useState(null)
   const [checkIns, setCheckIns] = useState([])
+  const [workouts, setWorkouts] = useState([])
   const [guestName, setGuestName] = useState('')
   const [generatedGuestPass, setGeneratedGuestPass] = useState(null)
   const [loading, setLoading] = useState(false)
   const [isZoomed, setIsZoomed] = useState(false)
 
-  // Profile Edit Modal State
+  // Occupancy State
+  const [activeOccupancy, setActiveOccupancy] = useState(0)
+  const maxCapacity = 100
+
+  // Workout Logger Form State
+  const [splitType, setSplitType] = useState('Push')
+  const [exerciseName, setExerciseName] = useState('')
+  const [weightKg, setWeightKg] = useState('')
+  const [reps, setReps] = useState('')
+
+  // Profile Edit Modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editName, setEditName] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   
-  // Feedback Toast
+  // Toasts
   const [toastMessage, setToastMessage] = useState(null)
   const [errorMessage, setErrorMessage] = useState(null)
 
@@ -31,6 +42,11 @@ export default function MemberPortal({ session, onLogout }) {
   const showToast = (msg) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3500)
+    
+    // Request & Dispatch Web Push Notification if granted
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('IRON GYM Alert', { body: msg, icon: '/favicon.ico' })
+    }
   }
 
   const showError = (msg) => {
@@ -38,15 +54,24 @@ export default function MemberPortal({ session, onLogout }) {
     setTimeout(() => setErrorMessage(null), 4000)
   }
 
+  // Request Web Push Permission on Load
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
   useEffect(() => {
     if (session?.user?.email) {
       fetchMemberData(session.user.email)
+      fetchOccupancy()
     }
   }, [session])
 
   useEffect(() => {
     if (!member?.id) return
 
+    // Realtime member changes
     const profileChannel = supabase
       .channel(`realtime-member-${member.id}`)
       .on(
@@ -59,22 +84,28 @@ export default function MemberPortal({ session, onLogout }) {
       )
       .subscribe()
 
-    const guestChannel = supabase
-      .channel(`realtime-guest-${member.id}`)
+    // Realtime workouts
+    const workoutChannel = supabase
+      .channel(`realtime-workouts-${member.id}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'guest_passes', filter: `host_member_id=eq.${member.id}` },
-        (payload) => {
-          if (payload.new.is_used) {
-            showToast(` Your guest ${payload.new.guest_name} just checked in!`)
-          }
-        }
+        { event: '*', schema: 'public', table: 'workouts', filter: `member_id=eq.${member.id}` },
+        () => fetchWorkouts(member.id)
       )
+      .subscribe()
+
+    // Realtime checkins for occupancy
+    const checkInChannel = supabase
+      .channel('realtime-occupancy-member')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'check_ins' }, () => {
+        fetchOccupancy()
+      })
       .subscribe()
 
     return () => {
       supabase.removeChannel(profileChannel)
-      supabase.removeChannel(guestChannel)
+      supabase.removeChannel(workoutChannel)
+      supabase.removeChannel(checkInChannel)
     }
   }, [member?.id])
 
@@ -97,8 +128,60 @@ export default function MemberPortal({ session, onLogout }) {
         .order('checked_in_at', { ascending: false })
 
       if (checkInData) setCheckIns(checkInData)
+      fetchWorkouts(memberData.id)
     }
     setLoading(false)
+  }
+
+  const fetchOccupancy = async () => {
+    const ninetyMinsAgo = new Date(Date.now() - 90 * 60 * 1000).toISOString()
+    const { data } = await supabase
+      .from('check_ins')
+      .select('id')
+      .eq('access_granted', true)
+      .is('checked_out_at', null)
+      .gte('checked_in_at', ninetyMinsAgo)
+
+    if (data) setActiveOccupancy(data.length)
+  }
+
+  const fetchWorkouts = async (memberId) => {
+    const { data } = await supabase
+      .from('workouts')
+      .select('*')
+      .eq('member_id', memberId)
+      .order('logged_at', { ascending: false })
+
+    if (data) setWorkouts(data)
+  }
+
+  const handleLogWorkout = async (e) => {
+    e.preventDefault()
+    if (!exerciseName.trim() || !weightKg) return
+
+    const { error } = await supabase.from('workouts').insert([{
+      member_id: member.id,
+      split_type: splitType,
+      exercise_name: exerciseName.trim(),
+      weight_kg: parseFloat(weightKg),
+      reps: parseInt(reps || '1')
+    }])
+
+    if (error) {
+      showError(`Workout Log Error: ${error.message}`)
+      return
+    }
+
+    setExerciseName('')
+    setWeightKg('')
+    setReps('')
+    showToast('New PR/Workout logged successfully!')
+    fetchWorkouts(member.id)
+  }
+
+  const handleDeleteWorkout = async (id) => {
+    await supabase.from('workouts').delete().eq('id', id)
+    fetchWorkouts(member.id)
   }
 
   const calculateStreak = () => {
@@ -110,11 +193,8 @@ export default function MemberPortal({ session, onLogout }) {
     for (let i = 0; i < dates.length; i++) {
       const checkDate = new Date(dates[i])
       const diffDays = Math.floor((today - checkDate) / (1000 * 60 * 60 * 24))
-      if (diffDays <= streak + 1) {
-        streak++
-      } else {
-        break
-      }
+      if (diffDays <= streak + 1) streak++
+      else break
     }
     return streak
   }
@@ -190,9 +270,7 @@ export default function MemberPortal({ session, onLogout }) {
         return
       }
 
-      const { error: passError } = await supabase.auth.updateUser({
-        password: newPassword
-      })
+      const { error: passError } = await supabase.auth.updateUser({ password: newPassword })
 
       if (passError) {
         showError(`Failed to update password: ${passError.message}`)
@@ -205,10 +283,7 @@ export default function MemberPortal({ session, onLogout }) {
 
     setIsSaving(false)
     setIsEditModalOpen(false)
-
-    if (hasChanges) {
-      showToast('Profile & security updated successfully!')
-    }
+    if (hasChanges) showToast('Profile & security updated successfully!')
   }
 
   const handleGenerateGuestPass = async (e) => {
@@ -241,9 +316,11 @@ export default function MemberPortal({ session, onLogout }) {
   if (!member) return null
 
   const streak = calculateStreak()
+  const occupancyPercent = Math.min(100, Math.round((activeOccupancy / maxCapacity) * 100))
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* FLOATING TOASTS */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-2xl border border-indigo-400/30 text-xs font-bold animate-bounce flex items-center space-x-2">
           <CheckCircle className="h-4 w-4 text-emerald-300" />
@@ -258,6 +335,7 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       )}
 
+      {/* TOP HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl gap-4">
         <div>
           <div className="flex items-center space-x-2">
@@ -272,7 +350,7 @@ export default function MemberPortal({ session, onLogout }) {
         <div className="flex items-center space-x-3 w-full sm:w-auto">
           <button
             onClick={() => setIsEditModalOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-indigo-300 hover:text-white bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 px-4 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/10"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-indigo-300 hover:text-white bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 px-4 py-2.5 rounded-xl transition-all"
           >
             <Settings className="h-4 w-4" />
             <span>Edit Profile</span>
@@ -280,7 +358,7 @@ export default function MemberPortal({ session, onLogout }) {
 
           <button
             onClick={onLogout}
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-800 hover:border-rose-500/30 px-4 py-2.5 rounded-xl transition-all duration-200"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-800 hover:border-rose-500/30 px-4 py-2.5 rounded-xl transition-all"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign Out</span>
@@ -288,7 +366,29 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* LIVE OCCUPANCY & STREAK BANNER */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Occupancy Card */}
+        <div className="md:col-span-2 bg-slate-950 border border-slate-800 p-5 rounded-3xl flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <Users className="h-5 w-5 text-indigo-400" />
+              <h4 className="text-sm font-bold text-white uppercase tracking-wider">Live Gym Capacity</h4>
+            </div>
+            <span className="text-xs font-mono text-indigo-400 font-bold">{activeOccupancy} / {maxCapacity} ({occupancyPercent}%)</span>
+          </div>
+          <div className="w-full bg-slate-900 border border-slate-800 h-3 rounded-full overflow-hidden p-0.5">
+            <div 
+              className={`h-full rounded-full transition-all duration-500 ${
+                occupancyPercent > 80 ? 'bg-rose-500' : occupancyPercent > 50 ? 'bg-amber-500' : 'bg-emerald-500'
+              }`}
+              style={{ width: `${occupancyPercent}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-slate-500 font-mono mt-2">Auto-updated via gate check-ins & 90m decay</p>
+        </div>
+
+        {/* Gym Streak */}
         <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl text-amber-400">
@@ -296,29 +396,13 @@ export default function MemberPortal({ session, onLogout }) {
             </div>
             <div>
               <p className="text-2xl font-black text-white">{streak} Days</p>
-              <p className="text-xs text-slate-400 font-medium">Active Gym Streak 🔥</p>
+              <p className="text-xs text-slate-400 font-medium">Gym Streak 🔥</p>
             </div>
           </div>
-          <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-            {streak > 3 ? 'On Fire!' : 'Keep Going!'}
-          </span>
-        </div>
-
-        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
-          <div>
-            <h4 className="text-sm font-bold text-white">Offline Pass Card</h4>
-            <p className="text-xs text-slate-400">Save pass image to device gallery</p>
-          </div>
-          <button
-            onClick={handleDownloadPass}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition shadow-lg shadow-indigo-600/20"
-          >
-            <Download className="h-4 w-4" />
-            <span>Save Pass Image</span>
-          </button>
         </div>
       </div>
 
+      {/* DIGITAL PASS CARD & GUEST GENERATOR */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div ref={cardRef} className="group relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/90 border border-slate-800/80 p-6 rounded-3xl shadow-2xl flex flex-col justify-between">
           <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
@@ -338,9 +422,13 @@ export default function MemberPortal({ session, onLogout }) {
               <p className="text-xl font-bold text-white tracking-tight">{member.full_name}</p>
               <p className="text-xs text-indigo-300 font-semibold mt-1">{member.plan_name || 'Monthly Pass'}</p>
               <p className="text-xs text-slate-400 font-mono mt-0.5">{member.email}</p>
-              <p className="text-[10px] text-slate-500 mt-4 font-mono">
-                Hold to gate scanner to unlock entry
-              </p>
+              <button
+                onClick={handleDownloadPass}
+                className="mt-4 text-[10px] font-bold text-indigo-400 hover:text-white inline-flex items-center space-x-1"
+              >
+                <Download className="h-3 w-3" />
+                <span>Save Image</span>
+              </button>
             </div>
 
             <div className="bg-white p-2.5 rounded-2xl shadow-xl text-center cursor-pointer hover:scale-105 transition" onClick={() => setIsZoomed(true)}>
@@ -350,6 +438,7 @@ export default function MemberPortal({ session, onLogout }) {
           </div>
         </div>
 
+        {/* GUEST PASS GENERATOR */}
         <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl flex flex-col justify-between">
           <div>
             <div className="flex items-center space-x-2 mb-3">
@@ -392,6 +481,98 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       </div>
 
+      {/* WORKOUT SPLIT & PR LOGGER SECTION */}
+      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl space-y-6">
+        <div className="flex items-center space-x-2">
+          <Dumbbell className="h-5 w-5 text-indigo-400" />
+          <h3 className="text-base font-bold text-white">Personal Best & Workout Logger</h3>
+        </div>
+
+        <form onSubmit={handleLogWorkout} className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+          <select
+            value={splitType}
+            onChange={(e) => setSplitType(e.target.value)}
+            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+          >
+            <option value="Push">Push</option>
+            <option value="Pull">Pull</option>
+            <option value="Legs">Legs</option>
+            <option value="Cardio">Cardio</option>
+            <option value="Full Body">Full Body</option>
+          </select>
+
+          <input
+            type="text"
+            required
+            placeholder="Exercise (e.g. Bench Press)"
+            value={exerciseName}
+            onChange={(e) => setExerciseName(e.target.value)}
+            className="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+          />
+
+          <input
+            type="number"
+            required
+            placeholder="Weight (kg)"
+            value={weightKg}
+            onChange={(e) => setWeightKg(e.target.value)}
+            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+          />
+
+          <button
+            type="submit"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-xl transition flex items-center justify-center space-x-1"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Log Set</span>
+          </button>
+        </form>
+
+        {/* WORKOUT PR LOG TABLE */}
+        {workouts.length === 0 ? (
+          <p className="text-xs text-slate-500 text-center py-4 border border-dashed border-slate-800 rounded-xl">
+            No PRs logged yet. Start tracking your lifts above!
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-400">
+              <thead className="bg-slate-900 text-slate-300 uppercase text-[10px] font-mono border-b border-slate-800">
+                <tr>
+                  <th className="p-3">Split</th>
+                  <th className="p-3">Exercise</th>
+                  <th className="p-3">Weight (kg)</th>
+                  <th className="p-3">Logged Date</th>
+                  <th className="p-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {workouts.map((w) => (
+                  <tr key={w.id} className="hover:bg-slate-900/40 transition">
+                    <td className="p-3">
+                      <span className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-md font-bold">
+                        {w.split_type}
+                      </span>
+                    </td>
+                    <td className="p-3 font-semibold text-white">{w.exercise_name}</td>
+                    <td className="p-3 font-mono text-emerald-400 font-bold">{w.weight_kg} kg</td>
+                    <td className="p-3 font-mono text-slate-500">{new Date(w.logged_at).toLocaleDateString()}</td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => handleDeleteWorkout(w.id)}
+                        className="text-slate-500 hover:text-rose-400 transition p-1"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 30-DAY ATTENDANCE HEATMAP */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
         <div className="flex items-center space-x-2 mb-4">
           <CalendarCheck className="h-5 w-5 text-emerald-400" />
@@ -402,33 +583,7 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       </div>
 
-      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
-        <div className="flex items-center space-x-2 mb-4">
-          <Clock className="h-5 w-5 text-indigo-400" />
-          <h3 className="text-sm font-bold text-white">Recent Check-In Activity</h3>
-        </div>
-
-        {checkIns.length === 0 ? (
-          <p className="text-xs text-slate-500 text-center py-6 border border-dashed border-slate-800 rounded-2xl">
-            No check-in history recorded yet. Scan your pass at the gym gate!
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {checkIns.slice(0, 5).map((ci) => (
-              <div key={ci.id} className="flex justify-between items-center bg-slate-900/60 border border-slate-800/80 px-4 py-3 rounded-2xl">
-                <div className="flex items-center space-x-3">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-xs font-bold text-slate-200">{ci.notes || 'Gym Entry Granted'}</span>
-                </div>
-                <span className="text-[10px] font-mono text-slate-400">
-                  {new Date(ci.checked_in_at).toLocaleString()}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
+      {/* EDIT PROFILE MODAL */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-100">
@@ -498,6 +653,7 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       )}
 
+      {/* FULLSCREEN QR ZOOM MODAL */}
       {isZoomed && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6" onClick={() => setIsZoomed(false)}>
           <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-4 max-w-sm w-full relative" onClick={(e) => e.stopPropagation()}>

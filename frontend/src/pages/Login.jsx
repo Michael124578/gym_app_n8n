@@ -202,7 +202,7 @@ export default function Login({ onLoginSuccess }) {
             <h1 className="text-5xl sm:text-7xl font-black uppercase tracking-tight leading-[0.92] text-white mb-6">
               FORGE YOUR <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-violet-400 to-white">
-                ULTIMATE FORM.
+                ULTIMATE FORM
               </span>
             </h1>
 
@@ -283,7 +283,7 @@ export default function Login({ onLoginSuccess }) {
       {/* SECTION 1: PROGRAMS */}
       <section id="programs" className="py-20 px-6 border-t border-slate-900 bg-slate-950/50 relative z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-12">
+          <div className="text-center mb-12">
             <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold">01 // Training Protocols</span>
             <h2 className="text-3xl sm:text-4xl font-black uppercase text-white mt-1">PROGRAMS</h2>
           </div>
@@ -310,7 +310,7 @@ export default function Login({ onLoginSuccess }) {
       {/* SECTION 2: FACILITIES */}
       <section id="facilities" className="py-20 px-6 border-t border-slate-900 bg-slate-950 relative z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-12">
+          <div className="text-center mb-12">
             <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold">02 // Club Infrastructure</span>
             <h2 className="text-3xl sm:text-4xl font-black uppercase text-white mt-1">FACILITIES</h2>
           </div>
@@ -337,7 +337,7 @@ export default function Login({ onLoginSuccess }) {
       {/* SECTION 3: PLANS */}
       <section id="plans" className="py-20 px-6 border-t border-slate-900 bg-slate-950/50 relative z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold">03 // Membership Tiers</span>
             <h2 className="text-3xl sm:text-5xl font-black uppercase text-white mt-1">MEMBERSHIP PLANS</h2>
           </div>
