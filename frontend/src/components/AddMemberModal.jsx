@@ -36,7 +36,10 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
 
     const cleanEmail = email.trim().toLowerCase()
 
-    // 1. Create Auth User in Supabase Auth
+    // 1. Capture current Admin session to prevent auto-logout
+    const { data: { session: adminSession } } = await supabase.auth.getSession()
+
+    // 2. Create Auth User
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: cleanEmail,
       password: password,
@@ -44,6 +47,11 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
         data: { full_name: fullName.trim() }
       }
     })
+
+    // 3. FORCE RESTORE ADMIN SESSION immediately
+    if (adminSession) {
+      await supabase.auth.setSession(adminSession)
+    }
 
     if (authError) {
       setErrorMsg(`Auth Creation Failed: ${authError.message}`)
@@ -55,7 +63,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     const expiryDate = new Date()
     expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays))
 
-    // 2. Insert Member Profile in public.members linked by auth_id
+    // 4. Insert Member Profile
     const { data: member, error: memberError } = await supabase
       .from('members')
       .insert([
@@ -78,7 +86,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
       return
     }
 
-    // 3. Log Payment
+    // 5. Log Payment
     await supabase.from('payments').insert([
       {
         member_id: member.id,
