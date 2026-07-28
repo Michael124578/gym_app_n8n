@@ -71,7 +71,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
           membership_end_date: expiryDate.toISOString()
         }])
         .select()
-        .single()
+        .maybeSingle()
 
       if (memberError) throw new Error(`Profile Insertion: ${memberError.message}`)
 

@@ -87,7 +87,7 @@ export default function MemberPortal({ session, onLogout }) {
       .from('members')
       .select('*')
       .eq('email', userEmail.toLowerCase())
-      .single()
+      .maybeSingle()
 
     if (memberData) {
       setMember(memberData)
@@ -227,7 +227,7 @@ export default function MemberPortal({ session, onLogout }) {
       .from('guest_passes')
       .insert([{ host_member_id: member.id, guest_name: guestName.trim() }])
       .select()
-      .single()
+      .maybeSingle()
 
     if (data) {
       setGeneratedGuestPass(data)
