@@ -8,11 +8,9 @@ export default function MemberList({ refreshTrigger }) {
   const [peakHour, setPeakHour] = useState('N/A')
   const [loading, setLoading] = useState(true)
   
-  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all') // 'all', 'active', 'expired'
+  const [statusFilter, setStatusFilter] = useState('all')
   
-  // Edit & Renew Modal State
   const [editingMember, setEditingMember] = useState(null)
   const [renewPlan, setRenewPlan] = useState('Monthly Pass')
   const [renewAmount, setRenewAmount] = useState('50')
@@ -88,7 +86,6 @@ export default function MemberList({ refreshTrigger }) {
     if (!window.confirm(`Are you sure you want to delete ${member.full_name}? This will remove their credentials and history.`)) return
 
     if (member.auth_id) {
-      // Calls the Supabase Edge Function to delete user from auth.users (cascading to public.members)
       const { error } = await supabase.functions.invoke('delete-user', {
         body: { auth_id: member.auth_id }
       })
@@ -98,7 +95,6 @@ export default function MemberList({ refreshTrigger }) {
         return
       }
     } else {
-      // Fallback: Delete directly from members table if auth_id was missing
       await supabase.from('members').delete().eq('id', member.id)
     }
 
@@ -156,7 +152,6 @@ export default function MemberList({ refreshTrigger }) {
 
   return (
     <div className="space-y-6">
-      {/* FLOATING TOAST NOTIFICATION */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-2xl border border-indigo-400/30 text-xs font-bold animate-bounce flex items-center space-x-2">
           <CheckCircle className="h-4 w-4 text-emerald-300" />
@@ -164,7 +159,6 @@ export default function MemberList({ refreshTrigger }) {
         </div>
       )}
 
-      {/* ANALYTICS STATS */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-slate-950/90 border border-slate-800/80 hover:border-indigo-500/30 rounded-2xl p-5 flex items-center space-x-4 shadow-xl transition-all duration-300">
           <div className="bg-indigo-600/10 border border-indigo-500/20 p-3 rounded-2xl text-indigo-400 shadow-inner">
@@ -207,7 +201,6 @@ export default function MemberList({ refreshTrigger }) {
         </div>
       </div>
 
-      {/* MEMBER DIRECTORY CONTAINER */}
       <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center space-x-3">
@@ -334,7 +327,6 @@ export default function MemberList({ refreshTrigger }) {
         )}
       </div>
 
-      {/* RENEW MODAL */}
       {editingMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl text-slate-100 relative">

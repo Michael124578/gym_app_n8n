@@ -14,21 +14,26 @@ export default function App() {
   const [role, setRole] = useState(null) // 'member' or 'admin'
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [activeAdminTab, setActiveAdminTab] = useState('members') // 'members' | 'scanner' | 'analytics'
+  const [activeAdminTab, setActiveAdminTab] = useState('members')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSession(session)
-        setRole('member')
+        const isStaff = session.user?.email === 'admin@irongym.com' || session.user?.email?.includes('admin')
+        setRole(isStaff ? 'admin' : 'member')
       }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setSession(session)
-        setRole('member')
+        const isStaff = session.user?.email === 'admin@irongym.com' || session.user?.email?.includes('admin')
+        setRole(isStaff ? 'admin' : 'member')
+      } else {
+        setSession(null)
+        setRole(null)
       }
     })
 
@@ -51,7 +56,13 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex relative overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+      {/* AMBIENT BACKGROUND GLOW */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[400px] bg-indigo-600/10 rounded-full blur-[140px]" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[400px] bg-violet-600/10 rounded-full blur-[140px]" />
+      </div>
+
       {/* SIDEBAR NAVIGATION */}
       <Sidebar
         activeTab={role === 'admin' ? activeAdminTab : 'portal'}
@@ -63,8 +74,8 @@ export default function App() {
         setIsOpen={setIsSidebarOpen}
       />
 
-      {/* MAIN VIEW AREA OFFSET FOR SIDEBAR */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
+      {/* MAIN VIEW AREA */}
+      <div className="flex-1 lg:pl-64 flex flex-col min-w-0 z-10">
         <Navbar
           title="IRON GYM"
           subtitle={role === 'admin' ? 'SYSTEM TERMINAL' : 'MEMBER ACCESS'}
@@ -76,7 +87,7 @@ export default function App() {
         <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1">
           {/* ADMIN CONTENT SWITCHER */}
           {role === 'admin' && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-in fade-in duration-300">
               {activeAdminTab === 'members' && (
                 <MemberList refreshTrigger={refreshTrigger} />
               )}
@@ -99,7 +110,9 @@ export default function App() {
 
           {/* MEMBER PORTAL VIEW */}
           {role === 'member' && (
-            <MemberPortal session={session} onLogout={handleLogout} />
+            <div className="animate-in fade-in duration-300">
+              <MemberPortal session={session} onLogout={handleLogout} />
+            </div>
           )}
         </main>
       </div>

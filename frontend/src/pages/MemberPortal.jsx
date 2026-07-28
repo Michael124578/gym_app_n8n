@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabaseClient'
 import { 
-  User, CheckCircle, Calendar, LogOut, ShieldCheck, UserPlus, Send, 
-  Activity, X, KeyRound, Settings, Save, Lock, AlertCircle, Clock, Award,
+  CheckCircle, LogOut, ShieldCheck, UserPlus, Send, 
+  X, Settings, Save, KeyRound, AlertCircle, Clock,
   Flame, Download, CalendarCheck
 } from 'lucide-react'
 import { toPng } from 'html-to-image'
@@ -44,11 +44,9 @@ export default function MemberPortal({ session, onLogout }) {
     }
   }, [session])
 
-  // Setup Real-time Listeners for instant push notifications
   useEffect(() => {
     if (!member?.id) return
 
-    // Realtime listener for member updates (e.g. extension by Admin)
     const profileChannel = supabase
       .channel(`realtime-member-${member.id}`)
       .on(
@@ -61,7 +59,6 @@ export default function MemberPortal({ session, onLogout }) {
       )
       .subscribe()
 
-    // Realtime listener for guest pass scans
     const guestChannel = supabase
       .channel(`realtime-guest-${member.id}`)
       .on(
@@ -104,7 +101,6 @@ export default function MemberPortal({ session, onLogout }) {
     setLoading(false)
   }
 
-  // Calculate Consecutive Days Workout Streak
   const calculateStreak = () => {
     if (!checkIns.length) return 0
     const dates = [...new Set(checkIns.map(c => new Date(c.checked_in_at).toDateString()))]
@@ -123,7 +119,6 @@ export default function MemberPortal({ session, onLogout }) {
     return streak
   }
 
-  // Export Pass View to PNG Image
   const handleDownloadPass = async () => {
     if (!cardRef.current) return
     try {
@@ -137,7 +132,6 @@ export default function MemberPortal({ session, onLogout }) {
     }
   }
 
-  // Render 30-Day Attendance Grid
   const render30DayHeatmap = () => {
     const days = []
     const checkInDates = new Set(
@@ -167,7 +161,6 @@ export default function MemberPortal({ session, onLogout }) {
     return days
   }
 
-  // Unified Save Profile Handler (Name + Password)
   const handleSaveProfile = async (e) => {
     e.preventDefault()
     setIsSaving(true)
@@ -251,7 +244,6 @@ export default function MemberPortal({ session, onLogout }) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* FLOATING TOAST NOTIFICATIONS */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-2xl border border-indigo-400/30 text-xs font-bold animate-bounce flex items-center space-x-2">
           <CheckCircle className="h-4 w-4 text-emerald-300" />
@@ -266,7 +258,6 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       )}
 
-      {/* TOP HEADER WITH ACTIONS */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl gap-4">
         <div>
           <div className="flex items-center space-x-2">
@@ -278,7 +269,6 @@ export default function MemberPortal({ session, onLogout }) {
           <p className="text-xs text-slate-400 font-mono mt-1">ID: {member.id.substring(0, 8)}...</p>
         </div>
 
-        {/* TOP RIGHT BUTTON GROUP */}
         <div className="flex items-center space-x-3 w-full sm:w-auto">
           <button
             onClick={() => setIsEditModalOpen(true)}
@@ -298,7 +288,6 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       </div>
 
-      {/* STREAK & EXPORT BANNER */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -318,7 +307,7 @@ export default function MemberPortal({ session, onLogout }) {
         <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
           <div>
             <h4 className="text-sm font-bold text-white">Offline Pass Card</h4>
-            <p className="text-xs text-slate-400">Save your pass image to local gallery</p>
+            <p className="text-xs text-slate-400">Save pass image to device gallery</p>
           </div>
           <button
             onClick={handleDownloadPass}
@@ -331,7 +320,6 @@ export default function MemberPortal({ session, onLogout }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* DIGITAL PASS CARD (EXPORT TARGET) */}
         <div ref={cardRef} className="group relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/90 border border-slate-800/80 p-6 rounded-3xl shadow-2xl flex flex-col justify-between">
           <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
             <div className="flex items-center space-x-2">
@@ -362,7 +350,6 @@ export default function MemberPortal({ session, onLogout }) {
           </div>
         </div>
 
-        {/* GUEST PASS GENERATOR */}
         <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl flex flex-col justify-between">
           <div>
             <div className="flex items-center space-x-2 mb-3">
@@ -405,7 +392,6 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       </div>
 
-      {/* 30-DAY ATTENDANCE HEATMAP */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
         <div className="flex items-center space-x-2 mb-4">
           <CalendarCheck className="h-5 w-5 text-emerald-400" />
@@ -416,7 +402,6 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       </div>
 
-      {/* CHECK-IN HISTORY TIMELINE */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
         <div className="flex items-center space-x-2 mb-4">
           <Clock className="h-5 w-5 text-indigo-400" />
@@ -444,7 +429,6 @@ export default function MemberPortal({ session, onLogout }) {
         )}
       </div>
 
-      {/* EDIT PROFILE MODAL */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-100">
@@ -514,7 +498,6 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       )}
 
-      {/* FULLSCREEN QR ZOOM MODAL */}
       {isZoomed && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6" onClick={() => setIsZoomed(false)}>
           <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-4 max-w-sm w-full relative" onClick={(e) => e.stopPropagation()}>

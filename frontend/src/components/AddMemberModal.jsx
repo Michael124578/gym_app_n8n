@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { UserPlus, X, CreditCard, Lock, AlertCircle } from 'lucide-react'
 
@@ -11,6 +11,19 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [durationDays, setDurationDays] = useState(30)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+
+  // ESC key handler to dismiss modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        onClose()
+      }
+    }
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown)
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   const handlePlanChange = (plan) => {
     setPlanName(plan)
@@ -37,28 +50,23 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     const cleanEmail = email.trim().toLowerCase()
 
     try {
-      // 1. Capture Current Admin Auth Session
       const { data: { session: adminSession } } = await supabase.auth.getSession()
 
-      // 2. Sign up New User in Auth Engine
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: password,
         options: { data: { full_name: fullName.trim() } }
       })
 
-      // 3. Immediately Restore Admin Session
       if (adminSession) {
         await supabase.auth.setSession(adminSession)
       }
 
       if (authError) throw new Error(`Auth Creation: ${authError.message}`)
 
-      // 4. Calculate Expiry Date
       const expiryDate = new Date()
       expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays))
 
-      // 5. Insert Profile into public.members
       const { data: member, error: memberError } = await supabase
         .from('members')
         .insert([{
@@ -75,14 +83,12 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
 
       if (memberError) throw new Error(`Profile Insertion: ${memberError.message}`)
 
-      // 6. Log Financial Transaction
       await supabase.from('payments').insert([{
         member_id: member.id,
         amount: parseFloat(amount),
         plan_name: planName
       }])
 
-      // 7. Dispatch Welcome Email via Nodemailer API Endpoint
       try {
         await fetch('/api/send-welcome', {
           method: 'POST',
@@ -112,13 +118,13 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-100 relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white transition"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white transition bg-slate-800 px-2 py-1 rounded-lg text-xs font-mono"
         >
-          <X className="h-5 w-5" />
+          ESC
         </button>
 
         <div className="flex items-center space-x-3 mb-6">
@@ -228,7 +234,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition disabled:opacity-50 flex items-center space-x-1"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition disabled:opacity-50 flex items-center space-x-1 shadow-lg shadow-indigo-600/30"
             >
               <CreditCard className="h-4 w-4 mr-1" />
               <span>{loading ? 'Creating Pass...' : 'Register & Log Payment'}</span>

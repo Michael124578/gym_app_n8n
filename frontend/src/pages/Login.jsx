@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { 
   QrCode, ShieldCheck, ArrowRight, Lock, Mail, 
-  Dumbbell, Sparkles, ChevronRight, Flame, Zap, 
-  CheckCircle2, Users, Trophy, KeyRound, Activity, 
-  ShieldAlert, Eye, EyeOff, Layers, Radio
+  Dumbbell, ChevronRight, Flame, Zap, 
+  CheckCircle2, Trophy, KeyRound, Activity, 
+  Eye, EyeOff, Radio
 } from 'lucide-react'
 
 export default function Login({ onLoginSuccess }) {
@@ -21,7 +21,7 @@ export default function Login({ onLoginSuccess }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  // 1. Physical Keyboard ESC Listener
+  // Physical Keyboard ESC Listener
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' || e.key === 'Esc') {
@@ -38,7 +38,7 @@ export default function Login({ onLoginSuccess }) {
     }
   }, [isAuthModalOpen])
 
-  // 2. High-Speed Preloader Progress
+  // Preloader Progress
   useEffect(() => {
     const interval = setInterval(() => {
       setLoadingProgress((prev) => {
@@ -54,11 +54,11 @@ export default function Login({ onLoginSuccess }) {
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-fill Handlers
+  // Auto-fill Handlers with updated admin credentials
   const handleAutoFillAdmin = () => {
     setAuthRole('admin')
-    setEmail('michael.nagui.kiriakos@gmail.com')
-    setPassword('123456')
+    setEmail('admin@irongym.com')
+    setPassword('123456789')
   }
 
   const handleOpenAuth = (role = 'member') => {
@@ -84,7 +84,11 @@ export default function Login({ onLoginSuccess }) {
 
       const user = data.user
       let detectedRole = 'member'
-      if (user.email === 'michael.nagui.kiriakos@gmail.com' || user.email.includes('admin')) {
+      if (
+        user.email === 'admin@irongym.com' || 
+        user.email === 'michael.nagui.kiriakos@gmail.com' || 
+        user.email.includes('admin')
+      ) {
         detectedRole = 'admin'
       }
 
@@ -135,7 +139,7 @@ export default function Login({ onLoginSuccess }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans relative overflow-x-hidden pt-20 scroll-smooth">
       
       {/* GLOWING AMBIENT BACKGROUND */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -144,8 +148,8 @@ export default function Login({ onLoginSuccess }) {
         <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:32px_32px] opacity-25" />
       </div>
 
-      {/* TOP NAVIGATION BAR */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-2xl border-b border-slate-800/80 px-6 py-4">
+      {/* FIXED / FROZEN TOP NAVIGATION BAR */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-slate-950/90 backdrop-blur-2xl border-b border-slate-800/80 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-gradient-to-tr from-indigo-600 to-violet-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-600/30">
@@ -163,7 +167,6 @@ export default function Login({ onLoginSuccess }) {
             <a href="#programs" className="hover:text-indigo-400 transition">Programs</a>
             <a href="#facilities" className="hover:text-indigo-400 transition">Facilities</a>
             <a href="#plans" className="hover:text-indigo-400 transition">Plans</a>
-            <a href="#passes" className="hover:text-indigo-400 transition">Digital Pass</a>
           </nav>
 
           <div className="flex items-center space-x-3">
@@ -187,7 +190,7 @@ export default function Login({ onLoginSuccess }) {
       </header>
 
       {/* HERO SECTION */}
-      <section className="relative py-24 px-6 z-10">
+      <section className="relative py-20 px-6 z-10">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           
           <div className="lg:col-span-7">
@@ -392,43 +395,15 @@ export default function Login({ onLoginSuccess }) {
         </div>
       </section>
 
-      {/* SECTION 4: PASSES */}
-      <section id="passes" className="py-20 px-6 border-t border-slate-900 bg-slate-950 relative z-10">
-        <div className="max-w-5xl mx-auto bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-12 relative overflow-hidden">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
-            <div className="max-w-md">
-              <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold">04 // Access Credentials</span>
-              <h2 className="text-2xl sm:text-3xl font-black uppercase text-white mt-1 mb-3">INSTANT DIGITAL PASSES</h2>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                No keycards required. Every active member gets an encrypted QR credential synced directly to their phone.
-              </p>
-            </div>
-
-            <button
-              onClick={() => handleOpenAuth('member')}
-              className="bg-slate-950 border border-slate-800 hover:border-indigo-500/50 p-6 rounded-2xl flex flex-col items-center text-center max-w-xs w-full shadow-2xl transition group"
-            >
-              <div className="bg-white p-3 rounded-xl mb-3 shadow-lg group-hover:scale-105 transition">
-                <QrCode className="h-20 w-20 text-slate-950" />
-              </div>
-              <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest">Generate Pass</span>
-              <span className="text-xs font-bold text-white uppercase mt-0.5">Click to Open Portal</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
       {/* FOOTER */}
       <footer className="border-t border-slate-900 py-8 px-6 text-center text-xs text-slate-500 font-mono">
         © {new Date().getFullYear()} IRON GYM. Automated Gate Engine & Portal Systems.
       </footer>
 
-      {/* ==========================================
-          DYNAMIC LOGIN AUTH MODAL OVERLAY
-         ========================================== */}
+      {/* AUTH MODAL OVERLAY */}
       {isAuthModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-slate-100 relative animate-in fade-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-slate-100 relative">
             
             {/* ESC Key Badge & Close Button */}
             <button

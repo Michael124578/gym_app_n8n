@@ -1,7 +1,7 @@
 import React from 'react'
 import { 
   Users, QrCode, BarChart3, PlusCircle, LogOut, Shield, 
-  Menu, X, Sparkles, User 
+  X, User 
 } from 'lucide-react'
 
 export default function Sidebar({ 
@@ -27,7 +27,6 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Mobile Backdrop */}
       {isOpen && (
         <div 
           onClick={() => setIsOpen(false)}
@@ -35,14 +34,12 @@ export default function Sidebar({
         />
       )}
 
-      {/* Sidebar Container */}
       <aside className={`
         fixed top-0 bottom-0 left-0 z-50 w-64 bg-slate-950 border-r border-slate-800/80 
         flex flex-col justify-between p-4 transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div>
-          {/* Brand Header */}
           <div className="flex items-center justify-between px-2 py-3 mb-6">
             <div className="flex items-center space-x-3">
               <div className="bg-gradient-to-tr from-indigo-600 to-violet-500 p-2.5 rounded-2xl shadow-lg shadow-indigo-600/25">
@@ -65,7 +62,6 @@ export default function Sidebar({
             </button>
           </div>
 
-          {/* Quick Action (Admin Only) */}
           {role === 'admin' && onRegisterClick && (
             <button
               onClick={() => {
@@ -79,7 +75,6 @@ export default function Sidebar({
             </button>
           )}
 
-          {/* Navigation Links */}
           <nav className="space-y-1.5">
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
               Navigation
@@ -108,7 +103,6 @@ export default function Sidebar({
           </nav>
         </div>
 
-        {/* User Footer / Logout */}
         <div className="pt-4 border-t border-slate-800/80">
           <button
             onClick={onLogout}
@@ -118,7 +112,7 @@ export default function Sidebar({
               <LogOut className="h-4 w-4" />
               <span>Sign Out</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">v2.0</span>
+            <span className="text-[10px] font-mono opacity-60">v2.4</span>
           </button>
         </div>
       </aside>

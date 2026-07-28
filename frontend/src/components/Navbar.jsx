@@ -1,10 +1,9 @@
-import React from 'react';
-import { Menu, QrCode, LogOut, ShieldCheck, Wifi } from 'lucide-react';
+import React from 'react'
+import { Menu, QrCode, LogOut, ShieldCheck, Wifi } from 'lucide-react'
 
 export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, onToggleSidebar }) {
   return (
     <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl px-4 lg:px-8 py-3.5 flex items-center justify-between">
-      {/* Left Group */}
       <div className="flex items-center space-x-3">
         {onToggleSidebar && (
           <button
@@ -27,7 +26,6 @@ export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, o
         </div>
       </div>
 
-      {/* Center Live Badge */}
       <div className="flex items-center space-x-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-full">
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -39,7 +37,6 @@ export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, o
         </span>
       </div>
 
-      {/* Right Group */}
       <div className="flex items-center space-x-3">
         {role && (
           <span className="hidden md:inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
@@ -60,5 +57,5 @@ export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, o
         )}
       </div>
     </header>
-  );
+  )
 }

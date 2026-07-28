@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { 
-  CheckCircle, XCircle, QrCode, LogOut, Users, Activity, 
-  DollarSign, TrendingUp, UserPlus, RefreshCw, Trash2, CalendarPlus, Search 
+  CheckCircle, XCircle, QrCode, LogOut, Activity, 
+  DollarSign, TrendingUp, UserPlus, Trash2, CalendarPlus, Search 
 } from 'lucide-react'
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts'
 import AddMemberModal from './AddMemberModal'
 
 export default function AdminDashboard({ onLogout }) {
-  const [activeTab, setActiveTab] = useState('scanner') // 'scanner' | 'analytics' | 'members'
+  const [activeTab, setActiveTab] = useState('scanner')
   const [members, setMembers] = useState([])
   const [recentCheckIns, setRecentCheckIns] = useState([])
   const [scanResult, setScanResult] = useState(null)
@@ -31,8 +31,8 @@ export default function AdminDashboard({ onLogout }) {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
       osc.type = 'sine'
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime) // D5
-      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1) // A5
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime)
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1)
       gain.gain.setValueAtTime(0.2, ctx.currentTime)
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
       osc.connect(gain)
@@ -67,7 +67,6 @@ export default function AdminDashboard({ onLogout }) {
     fetchRecentCheckIns()
     fetchAnalytics()
 
-    // Realtime listeners
     const checkInChannel = supabase
       .channel('realtime-checkins')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'check_ins' }, () => {
@@ -81,7 +80,6 @@ export default function AdminDashboard({ onLogout }) {
     }
   }, [])
 
-  // QR Scanner Lifecycle
   useEffect(() => {
     if (activeTab !== 'scanner') return
 
@@ -124,7 +122,6 @@ export default function AdminDashboard({ onLogout }) {
   }
 
   const fetchAnalytics = async () => {
-    // 1. Hourly Traffic
     const { data: checkIns } = await supabase.from('check_ins').select('checked_in_at')
     const hoursCount = Array(24).fill(0)
     checkIns?.forEach((ci) => {
@@ -136,7 +133,6 @@ export default function AdminDashboard({ onLogout }) {
       visits: count
     })))
 
-    // 2. Revenue Trends
     const { data: payments } = await supabase.from('payments').select('amount, paid_at')
     let sumRev = 0
     const revByMonth = {}
@@ -148,7 +144,6 @@ export default function AdminDashboard({ onLogout }) {
     setTotalRevenue(sumRev)
     setMonthlyRevenue(Object.keys(revByMonth).map(month => ({ month, revenue: revByMonth[month] })))
 
-    // 3. Retention Rate
     const { data: memberList } = await supabase.from('members').select('status, membership_end_date')
     let active = 0, expired = 0
     memberList?.forEach((m) => {
@@ -165,7 +160,6 @@ export default function AdminDashboard({ onLogout }) {
   const processCheckIn = async (token) => {
     setScanResult(null)
     
-    // Check Member Pass first
     let { data: member } = await supabase
       .from('members')
       .select('*')
@@ -195,7 +189,6 @@ export default function AdminDashboard({ onLogout }) {
       return
     }
 
-    // Check Guest Pass second
     let { data: guestPass } = await supabase
       .from('guest_passes')
       .select('*, members(full_name)')
@@ -270,7 +263,6 @@ export default function AdminDashboard({ onLogout }) {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-      {/* HEADER */}
       <header className="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-0 z-40">
         <div className="flex items-center space-x-3">
           <div className="bg-gradient-to-tr from-indigo-600 to-violet-500 p-2.5 rounded-2xl shadow-lg shadow-indigo-600/20">
@@ -278,7 +270,7 @@ export default function AdminDashboard({ onLogout }) {
           </div>
           <div>
             <h1 className="text-xl font-black tracking-tight text-white">IRON GYM</h1>
-            <p className="text-[10px] text-slate-400 font-mono">STAFF ACCESS CONTROL TERMINAL</p>
+            <p className="text-[10px] text-slate-400 font-mono">STAFF ACCESS TERMINAL</p>
           </div>
         </div>
         
@@ -320,11 +312,9 @@ export default function AdminDashboard({ onLogout }) {
         </div>
       </header>
 
-      {/* MAIN CONTAINER */}
       <main className="max-w-7xl mx-auto p-6">
         {activeTab === 'scanner' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* GATE SCANNER */}
             <div className="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl">
               <h2 className="text-lg font-bold mb-4 text-white">Front Desk Access Scanner</h2>
               <div id="reader" className="w-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-900"></div>
@@ -349,7 +339,6 @@ export default function AdminDashboard({ onLogout }) {
               )}
             </div>
 
-            {/* LIVE LOGS */}
             <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl">
               <h2 className="text-lg font-bold mb-4 text-white">Live Gate Access Activity</h2>
               <div className="space-y-3">
@@ -373,7 +362,6 @@ export default function AdminDashboard({ onLogout }) {
 
         {activeTab === 'analytics' && (
           <div className="space-y-6">
-            {/* SUMMARY STATS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center space-x-4">
                 <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
@@ -410,7 +398,6 @@ export default function AdminDashboard({ onLogout }) {
               </div>
             </div>
 
-            {/* CHARTS */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
                 <h3 className="text-sm font-bold text-white mb-4">Revenue Trends ($)</h3>
@@ -567,7 +554,6 @@ export default function AdminDashboard({ onLogout }) {
         )}
       </main>
 
-      {/* ADD MEMBER MODAL */}
       <AddMemberModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

@@ -17,7 +17,6 @@ export default function AdminAnalytics() {
   const fetchAnalytics = async () => {
     setLoading(true)
 
-    // 1. Fetch Check-ins for Traffic Heatmap
     const { data: checkIns } = await supabase.from('check_ins').select('checked_in_at')
     const hoursCount = Array(24).fill(0)
     checkIns?.forEach((ci) => {
@@ -30,7 +29,6 @@ export default function AdminAnalytics() {
       visits: count
     })))
 
-    // 2. Fetch Payments for Revenue Chart
     const { data: payments } = await supabase.from('payments').select('amount, paid_at')
     let sumRev = 0
     const revByMonth = {}
@@ -44,7 +42,6 @@ export default function AdminAnalytics() {
     setTotalRevenue(sumRev)
     setMonthlyRevenue(Object.keys(revByMonth).map(month => ({ month, revenue: revByMonth[month] })))
 
-    // 3. Fetch Retention Ratios
     const { data: members } = await supabase.from('members').select('status, membership_end_date')
     let active = 0, expired = 0
 
@@ -73,7 +70,6 @@ export default function AdminAnalytics() {
 
   return (
     <div className="space-y-6">
-      {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center space-x-4 shadow-xl">
           <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
@@ -106,7 +102,6 @@ export default function AdminAnalytics() {
         </div>
       </div>
 
-      {/* REVENUE AREA CHART & RETENTION PIE */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
           <h3 className="text-sm font-bold text-white mb-4">Revenue Growth ($)</h3>
@@ -155,7 +150,6 @@ export default function AdminAnalytics() {
         </div>
       </div>
 
-      {/* HOURLY TRAFFIC HEATMAP */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
         <h3 className="text-sm font-bold text-white mb-4">Check-In Traffic Heatmap</h3>
         <div className="h-56">
