@@ -3,14 +3,16 @@ import { supabase } from '../lib/supabaseClient'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { 
   CheckCircle, XCircle, QrCode, LogOut, Activity, 
-  DollarSign, TrendingUp, UserPlus, Trash2, CalendarPlus, Search 
+  DollarSign, TrendingUp, UserPlus, Trash2, CalendarPlus, Search, Award, Zap
 } from 'lucide-react'
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts'
 import AddMemberModal from './AddMemberModal'
+import AddTrainerModal from './AddTrainerModal'
 
 export default function AdminDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('scanner')
   const [members, setMembers] = useState([])
+  const [trainers, setTrainers] = useState([])
   const [recentCheckIns, setRecentCheckIns] = useState([])
   const [scanResult, setScanResult] = useState(null)
 
@@ -21,6 +23,7 @@ export default function AdminDashboard({ onLogout }) {
   
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isAddTrainerModalOpen, setIsAddTrainerModalOpen] = useState(false)
   
   const playAccessGrantedSound = () => {
     try {
@@ -61,6 +64,7 @@ export default function AdminDashboard({ onLogout }) {
 
   useEffect(() => {
     fetchMembers()
+    fetchTrainers()
     fetchRecentCheckIns()
     fetchAnalytics()
 
@@ -107,6 +111,14 @@ export default function AdminDashboard({ onLogout }) {
       .select('*')
       .order('created_at', { ascending: false })
     if (data) setMembers(data)
+  }
+
+  const fetchTrainers = async () => {
+    const { data } = await supabase
+      .from('trainers')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (data) setTrainers(data)
   }
 
   const fetchRecentCheckIns = async () => {
@@ -239,6 +251,13 @@ export default function AdminDashboard({ onLogout }) {
     fetchAnalytics()
   }
 
+  const handleDeleteTrainer = async (trainer) => {
+    if (!window.confirm(`Delete Coach ${trainer.full_name}? This will remove their profile.`)) return
+
+    await supabase.from('trainers').delete().eq('id', trainer.id)
+    fetchTrainers()
+  }
+
   const handleExtendMember = async (m) => {
     const currentExpiry = new Date(m.membership_end_date || new Date())
     const baseDate = currentExpiry > new Date() ? currentExpiry : new Date()
@@ -295,7 +314,15 @@ export default function AdminDashboard({ onLogout }) {
                 activeTab === 'members' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Roster
+              Member Roster
+            </button>
+            <button
+              onClick={() => setActiveTab('trainers')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'trainers' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Coaches
             </button>
           </div>
 
@@ -459,6 +486,7 @@ export default function AdminDashboard({ onLogout }) {
           </div>
         )}
 
+        {/* MEMBER ROSTER TAB */}
         {activeTab === 'members' && (
           <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -549,6 +577,62 @@ export default function AdminDashboard({ onLogout }) {
             </div>
           </div>
         )}
+
+        {/* TRAINER ROSTER TAB */}
+        {activeTab === 'trainers' && (
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-white">Coaches & Trainers Directory</h2>
+                <p className="text-xs text-slate-400">{trainers.length} Certified Trainers Registered</p>
+              </div>
+
+              <button
+                onClick={() => setIsAddTrainerModalOpen(true)}
+                className="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition shadow-lg shadow-amber-600/20"
+              >
+                <Award className="h-4 w-4" />
+                <span>Register New Trainer</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {trainers.length === 0 ? (
+                <p className="text-xs text-slate-500 col-span-full py-12 text-center border border-dashed border-slate-800 rounded-2xl font-mono">
+                  No personal trainers registered yet. Click "Register New Trainer" above!
+                </p>
+              ) : (
+                trainers.map((t) => (
+                  <div key={t.id} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between space-y-4 shadow-xl">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <h4 className="text-sm font-black text-white">{t.full_name}</h4>
+                        <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                          ${t.monthly_plan_price || 120}/mo
+                        </span>
+                      </div>
+                      <p className="text-xs font-mono text-slate-400 mt-0.5">{t.email}</p>
+                      <p className="text-xs font-semibold text-indigo-300 mt-2">Specialty: {t.specialty || 'Fitness'}</p>
+                      <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{t.bio || 'Certified personal fitness trainer.'}</p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-800/80">
+                      <span className="text-[10px] font-mono text-slate-500 font-bold">Rate: ${t.hourly_rate || 40}/hr</span>
+                      <button
+                        onClick={() => handleDeleteTrainer(t)}
+                        className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-600 border border-rose-500/20 text-rose-400 hover:text-white text-xs font-semibold rounded-xl transition inline-flex items-center space-x-1"
+                        title="Delete Trainer Profile"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       <AddMemberModal
@@ -557,6 +641,14 @@ export default function AdminDashboard({ onLogout }) {
         onMemberAdded={() => {
           fetchMembers()
           fetchAnalytics()
+        }}
+      />
+
+      <AddTrainerModal
+        isOpen={isAddTrainerModalOpen}
+        onClose={() => setIsAddTrainerModalOpen(false)}
+        onTrainerAdded={() => {
+          fetchTrainers()
         }}
       />
     </div>
