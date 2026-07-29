@@ -1,7 +1,7 @@
 import React from 'react'
 import { 
   Users, QrCode, BarChart3, PlusCircle, LogOut, Shield, 
-  X, User, Wrench, Dumbbell 
+  X, User, Wrench, Dumbbell, Award 
 } from 'lucide-react'
 
 export default function Sidebar({ 
@@ -21,12 +21,20 @@ export default function Sidebar({
     { id: 'trainers', label: 'PT & Coaching', icon: Dumbbell },
   ]
 
-  const memberNavItems = [
-    { id: 'portal', label: 'Digital Pass & Portal', icon: User },
+  const trainerNavItems = [
+    { id: 'trainer_dashboard', label: 'Coach Dashboard', icon: Award },
     { id: 'maintenance', label: 'Report Machine Issue', icon: Wrench },
   ]
 
-  const navItems = role === 'admin' ? adminNavItems : memberNavItems
+  const memberNavItems = [
+    { id: 'portal', label: 'Digital Pass & Portal', icon: User },
+    { id: 'trainers', label: 'Hire a Trainer', icon: Dumbbell },
+    { id: 'maintenance', label: 'Report Machine Issue', icon: Wrench },
+  ]
+
+  let navItems = memberNavItems
+  if (role === 'admin') navItems = adminNavItems
+  if (role === 'trainer') navItems = trainerNavItems
 
   return (
     <>
@@ -52,7 +60,7 @@ export default function Sidebar({
                 <h1 className="text-lg font-black tracking-tight text-white">IRON GYM</h1>
                 <span className="inline-flex items-center space-x-1 text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
                   <Shield className="h-2.5 w-2.5 mr-0.5" />
-                  <span>{role === 'admin' ? 'Staff Terminal' : 'Member Portal'}</span>
+                  <span className="capitalize">{role || 'Member'}</span>
                 </span>
               </div>
             </div>

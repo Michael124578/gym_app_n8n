@@ -5,6 +5,7 @@ import QRScanner from './components/QRScanner'
 import AdminAnalytics from './components/AdminAnalytics'
 import EquipmentMaintenance from './components/EquipmentMaintenance'
 import TrainerManagement from './components/TrainerManagement'
+import TrainerDashboard from './pages/TrainerDashboard' // Corrected path to pages/
 import MemberPortal from './pages/MemberPortal'
 import Login from './pages/Login'
 import Navbar from './components/Navbar'
@@ -13,26 +14,24 @@ import { supabase } from './lib/supabaseClient'
 
 export default function App() {
   const [session, setSession] = useState(null)
-  const [role, setRole] = useState(null) // 'member' or 'admin'
+  const [role, setRole] = useState(null) // 'member', 'admin', or 'trainer'
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [activeAdminTab, setActiveAdminTab] = useState('members')
+  const [activeTab, setActiveTab] = useState('members')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSession(session)
-        const isStaff = session.user?.email === 'admin@irongym.com' || session.user?.email?.includes('admin')
-        setRole(isStaff ? 'admin' : 'member')
+        detectRole(session)
       }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setSession(session)
-        const isStaff = session.user?.email === 'admin@irongym.com' || session.user?.email?.includes('admin')
-        setRole(isStaff ? 'admin' : 'member')
+        detectRole(session)
       } else {
         setSession(null)
         setRole(null)
@@ -42,9 +41,32 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const handleLoginSuccess = (userSession, userRole) => {
-    setSession(userSession)
-    setRole(userRole)
+  const detectRole = async (userSession) => {
+    const email = userSession.user?.email || ''
+    
+    // 1. Admin Email Check
+    if (email === 'admin@irongym.com' || email.includes('admin')) {
+      setRole('admin')
+      setActiveTab('members')
+      return
+    }
+
+    // 2. Trainer Database Check
+    const { data: trainer } = await supabase
+      .from('trainers')
+      .select('id')
+      .or(`auth_id.eq.${userSession.user.id},email.eq.${email}`)
+      .maybeSingle()
+
+    if (trainer) {
+      setRole('trainer')
+      setActiveTab('trainer_dashboard')
+      return
+    }
+
+    // 3. Fallback Member
+    setRole('member')
+    setActiveTab('portal')
   }
 
   const handleLogout = async () => {
@@ -54,21 +76,15 @@ export default function App() {
   }
 
   if (!session && !role) {
-    return <Login onLoginSuccess={handleLoginSuccess} />
+    return <Login onLoginSuccess={(s) => setSession(s)} />
   }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex relative overflow-x-hidden selection:bg-indigo-500 selection:text-white">
-      {/* AMBIENT BACKGROUND GLOW */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[400px] bg-indigo-600/10 rounded-full blur-[140px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[400px] bg-violet-600/10 rounded-full blur-[140px]" />
-      </div>
-
       {/* SIDEBAR NAVIGATION */}
       <Sidebar
-        activeTab={activeAdminTab}
-        setActiveTab={setActiveAdminTab}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
         role={role}
         onRegisterClick={() => setIsModalOpen(true)}
         onLogout={handleLogout}
@@ -80,36 +96,29 @@ export default function App() {
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0 z-10">
         <Navbar
           title="IRON GYM"
-          subtitle={role === 'admin' ? 'SYSTEM TERMINAL' : 'MEMBER ACCESS'}
+          subtitle={role?.toUpperCase() || 'ACCESS'}
           role={role}
           onLogout={handleLogout}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
         <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1">
-          {/* ADMIN & STAFF CONTENT SWITCHER */}
+          {/* TRAINER VIEW */}
+          {role === 'trainer' && (
+            <div className="space-y-6">
+              {activeTab === 'trainer_dashboard' && <TrainerDashboard session={session} />}
+              {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
+            </div>
+          )}
+
+          {/* ADMIN VIEW */}
           {role === 'admin' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              {activeAdminTab === 'members' && (
-                <MemberList refreshTrigger={refreshTrigger} />
-              )}
-
-              {activeAdminTab === 'scanner' && (
-                <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />
-              )}
-
-              {activeAdminTab === 'analytics' && (
-                <AdminAnalytics />
-              )}
-
-              {/* NEW FEATURES INTEGRATED HERE */}
-              {activeAdminTab === 'maintenance' && (
-                <EquipmentMaintenance userRole={role} />
-              )}
-
-              {activeAdminTab === 'trainers' && (
-                <TrainerManagement />
-              )}
+            <div className="space-y-6">
+              {activeTab === 'members' && <MemberList refreshTrigger={refreshTrigger} />}
+              {activeTab === 'scanner' && <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />}
+              {activeTab === 'analytics' && <AdminAnalytics />}
+              {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
+              {activeTab === 'trainers' && <TrainerManagement session={session} />}
 
               <AddMemberModal
                 isOpen={isModalOpen}
@@ -121,12 +130,10 @@ export default function App() {
 
           {/* MEMBER PORTAL VIEW */}
           {role === 'member' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              {activeAdminTab === 'maintenance' ? (
-                <EquipmentMaintenance userRole={role} />
-              ) : (
-                <MemberPortal session={session} onLogout={handleLogout} />
-              )}
+            <div className="space-y-6">
+              {activeTab === 'portal' && <MemberPortal session={session} onLogout={handleLogout} />}
+              {activeTab === 'trainers' && <TrainerManagement session={session} />}
+              {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
             </div>
           )}
         </main>
