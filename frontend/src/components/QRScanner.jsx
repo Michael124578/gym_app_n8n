@@ -9,7 +9,13 @@ export default function QRScanner({ onScanComplete }) {
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [flashEffect, setFlashEffect] = useState(null) // 'success' | 'error' | null
   const scannerRef = useRef(null)
+
+  const triggerTerminalFlash = (type) => {
+    setFlashEffect(type)
+    setTimeout(() => setFlashEffect(null), 1200)
+  }
 
   const playAudioFeedback = (isSuccess) => {
     try {
@@ -38,10 +44,9 @@ export default function QRScanner({ onScanComplete }) {
 
   const processCheckIn = async (scannedValue, isManual = false) => {
     setLoading(true)
-
     let memberQueryId = scannedValue
 
-    // Parse dynamic TOTP pass format: PASS-{idPrefix}-{timeStep}-{tokenPart}
+    // TOTP dynamic pass check
     if (scannedValue.startsWith('PASS-')) {
       const parts = scannedValue.split('-')
       if (parts.length >= 4) {
@@ -49,10 +54,10 @@ export default function QRScanner({ onScanComplete }) {
         const currentEpoch = Math.floor(Date.now() / 1000)
         const currentTimeStep = Math.floor(currentEpoch / 30)
 
-        // Enforce 30s timestamp validity with 1-step grace window
         if (Math.abs(currentTimeStep - scannedTimeStep) > 1) {
           playAudioFeedback(false)
-          setScanResult({ success: false, message: 'Expired dynamic pass QR code. Please scan active screen.' })
+          triggerTerminalFlash('error')
+          setScanResult({ success: false, message: 'Expired dynamic QR pass code. Please scan active screen.' })
           setLoading(false)
           return
         }
@@ -60,7 +65,7 @@ export default function QRScanner({ onScanComplete }) {
       }
     }
 
-    // 1. Guest Pass Verification
+    // 1. Guest Pass
     const { data: guestPass } = await supabase
       .from('guest_passes')
       .select('*, members(full_name)')
@@ -79,12 +84,14 @@ export default function QRScanner({ onScanComplete }) {
         }])
 
         playAudioFeedback(true)
+        triggerTerminalFlash('success')
         setScanResult({
           success: true,
           message: `Guest Access Granted! Welcome ${guestPass.guest_name} (Host: ${guestPass.members?.full_name || 'Member'})`
         })
       } else {
         playAudioFeedback(false)
+        triggerTerminalFlash('error')
         setScanResult({
           success: false,
           message: 'Guest Pass Expired or Already Used.'
@@ -95,24 +102,21 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
-    // 2. Member Pass Verification
+    // 2. Member Pass
     let { data: member } = await supabase
       .from('members')
       .select('*')
       .or(`id.eq.${scannedValue},qr_code_token.eq.${scannedValue}`)
       .maybeSingle()
 
-    // Fallback search for ID prefix from TOTP token
     if (!member && scannedValue.startsWith('PASS-')) {
-      const { data: prefixMatches } = await supabase
-        .from('members')
-        .select('*')
-      
+      const { data: prefixMatches } = await supabase.from('members').select('*')
       member = prefixMatches?.find(m => m.id.startsWith(memberQueryId)) || null
     }
 
     if (!member) {
       playAudioFeedback(false)
+      triggerTerminalFlash('error')
       setScanResult({ success: false, message: 'Invalid Pass: Member record not found.' })
       setLoading(false)
       return
@@ -123,6 +127,7 @@ export default function QRScanner({ onScanComplete }) {
 
     if (isInactive && !isManual) {
       playAudioFeedback(false)
+      triggerTerminalFlash('error')
       setScanResult({
         success: false,
         member,
@@ -142,6 +147,7 @@ export default function QRScanner({ onScanComplete }) {
     }])
 
     playAudioFeedback(true)
+    triggerTerminalFlash('success')
     setScanResult({
       success: true,
       member,
@@ -208,8 +214,19 @@ export default function QRScanner({ onScanComplete }) {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="max-w-xl mx-auto space-y-6">
-      <div className="glass-panel rounded-3xl p-6 shadow-2xl text-center">
+    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="max-w-xl mx-auto space-y-6 relative">
+      
+      {/* FULL-SCREEN TERMINAL FLASH EFFECT */}
+      {flashEffect === 'success' && (
+        <div className="fixed inset-0 z-50 pointer-events-none bg-emerald-500/30 border-[16px] border-emerald-500 animate-pulse transition duration-300" />
+      )}
+      {flashEffect === 'error' && (
+        <div className="fixed inset-0 z-50 pointer-events-none bg-rose-500/30 border-[16px] border-rose-500 animate-pulse transition duration-300" />
+      )}
+
+      <div className={`glass-panel rounded-3xl p-6 shadow-2xl text-center transition-all duration-300 ${
+        flashEffect === 'success' ? 'ring-4 ring-emerald-500' : flashEffect === 'error' ? 'ring-4 ring-rose-500' : ''
+      }`}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
             <QrCode className="h-6 w-6 text-indigo-400" />
@@ -217,7 +234,7 @@ export default function QRScanner({ onScanComplete }) {
           </div>
           <span className="flex items-center space-x-1 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
             <Zap className="h-3 w-3" />
-            <span>RELAY ONLINE</span>
+            <span>GATE ONLINE</span>
           </span>
         </div>
 
@@ -234,8 +251,8 @@ export default function QRScanner({ onScanComplete }) {
         {scanResult && (
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className={`mt-6 p-6 rounded-2xl border text-left flex items-start space-x-4 ${
             scanResult.success 
-              ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200' 
-              : 'bg-rose-950/40 border-rose-500/50 text-rose-200'
+              ? 'bg-emerald-950/60 border-emerald-500 text-emerald-200 shadow-2xl shadow-emerald-500/20' 
+              : 'bg-rose-950/60 border-rose-500 text-rose-200 shadow-2xl shadow-rose-500/20'
           }`}>
             {scanResult.success ? (
               <CheckCircle className="h-8 w-8 text-emerald-400 flex-shrink-0 mt-1" />
@@ -265,6 +282,7 @@ export default function QRScanner({ onScanComplete }) {
         )}
       </div>
 
+      {/* MANUAL OVERRIDE */}
       <div className="glass-panel rounded-3xl p-6 shadow-2xl">
         <div className="flex items-center space-x-2 mb-4">
           <KeyRound className="h-5 w-5 text-indigo-400" />
