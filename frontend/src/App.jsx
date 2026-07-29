@@ -48,7 +48,7 @@ export default function App() {
     // 1. Admin Check
     if (email === 'admin@irongym.com' || email.includes('admin')) {
       setRole('admin')
-      setActiveTab('scanner') // Default Admin view is Gate Scanner
+      setActiveTab('scanner') // Default Admin view
       return
     }
 
@@ -67,7 +67,7 @@ export default function App() {
 
     // 3. Fallback Member
     setRole('member')
-    setActiveTab('portal') // Default Member view is Member Pass Portal
+    setActiveTab('portal')
   }
 
   const handleLogout = async () => {
@@ -87,8 +87,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex relative overflow-x-hidden pb-16 lg:pb-0 selection:bg-indigo-500 selection:text-white">
-      {/* SIDEBAR NAVIGATION (DESKTOP & DRAWER) */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex relative overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+      
+      {/* SIDEBAR - STRICTLY FIXED TO LEFT */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -99,8 +100,8 @@ export default function App() {
         setIsOpen={setIsSidebarOpen}
       />
 
-      {/* MAIN VIEW AREA */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-w-0 z-10">
+      {/* MAIN CONTENT AREA - SHIFTED RIGHT BY lg:pl-64 */}
+      <div className="flex-1 lg:pl-64 flex flex-col min-w-0 w-full relative z-10">
         <Navbar
           title="IRON GYM"
           subtitle={role?.toUpperCase() || 'ACCESS'}
@@ -110,7 +111,7 @@ export default function App() {
         />
 
         <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1 flex flex-col">
-          {/* ================= MEMBER ROLE VIEWS ================= */}
+          {/* MEMBER ROLE VIEWS */}
           {role === 'member' && (
             <div className="w-full flex-1">
               {activeTab === 'portal' && <MemberPortal session={session} onLogout={handleLogout} />}
@@ -119,7 +120,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ================= ADMIN / STAFF ROLE VIEWS ================= */}
+          {/* ADMIN ROLE VIEWS */}
           {role === 'admin' && (
             <div className="w-full flex-1">
               {activeTab === 'scanner' && (
@@ -146,7 +147,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ================= TRAINER ROLE VIEWS ================= */}
+          {/* TRAINER ROLE VIEWS */}
           {role === 'trainer' && (
             <div className="w-full flex-1">
               {activeTab === 'trainer_dashboard' && <TrainerDashboard session={session} />}
@@ -156,7 +157,7 @@ export default function App() {
         </main>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR (PWA STYLE) */}
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/90 backdrop-blur-xl border-t border-slate-800 flex justify-around items-center py-2 px-1 shadow-2xl">
         {role === 'member' && (
           <>

@@ -1,371 +1,134 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react'
-import { Html5QrcodeScanner } from 'html5-qrcode'
-import { supabase } from '../lib/supabaseClient'
-import { motion } from 'framer-motion'
-import { CheckCircle, XCircle, QrCode, Search, KeyRound, Zap, LogOut as ExitIcon, LogIn as EntryIcon } from 'lucide-react'
+import React from 'react'
+import { 
+  Users, QrCode, BarChart3, PlusCircle, LogOut, Shield, 
+  X, User, Wrench, Dumbbell, Award 
+} from 'lucide-react'
 
-export default function QRScanner({ onScanComplete }) {
-  const [scanResult, setScanResult] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState([])
-  const [flashEffect, setFlashEffect] = useState(null) // 'success' | 'error' | null
-  const [gateMode, setGateMode] = useState('entry') // 'entry' | 'exit'
-  const scannerRef = useRef(null)
+export default function Sidebar({ 
+  activeTab, 
+  setActiveTab, 
+  role, 
+  onRegisterClick, 
+  onLogout,
+  isOpen,
+  setIsOpen 
+}) {
+  const adminNavItems = [
+    { id: 'scanner', label: 'QR Gate Scanner', icon: QrCode },
+    { id: 'members', label: 'Member Roster', icon: Users },
+    { id: 'analytics', label: 'Analytics & Revenue', icon: BarChart3 },
+    { id: 'maintenance', label: 'Equipment & Repairs', icon: Wrench },
+    { id: 'trainers', label: 'PT & Coaching', icon: Dumbbell },
+  ]
 
-  const triggerTerminalFlash = (type) => {
-    setFlashEffect(type)
-    setTimeout(() => setFlashEffect(null), 1200)
-  }
+  const trainerNavItems = [
+    { id: 'trainer_dashboard', label: 'Coach Dashboard', icon: Award },
+    { id: 'maintenance', label: 'Report Machine Issue', icon: Wrench },
+  ]
 
-  const playAudioFeedback = (isSuccess) => {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      if (!AudioCtx) return
-      const ctx = new AudioCtx()
-      if (ctx.state === 'suspended') ctx.resume()
+  const memberNavItems = [
+    { id: 'portal', label: 'Digital Pass & Portal', icon: User },
+    { id: 'trainers', label: 'Hire a Trainer', icon: Dumbbell },
+    { id: 'maintenance', label: 'Report Machine Issue', icon: Wrench },
+  ]
 
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-
-      osc.type = isSuccess ? 'sine' : 'sawtooth'
-      osc.frequency.setValueAtTime(isSuccess ? 880 : 220, ctx.currentTime)
-      
-      gain.gain.setValueAtTime(0.2, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
-
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start()
-      osc.stop(ctx.currentTime + 0.3)
-    } catch (e) {
-      console.warn('Audio feedback blocked')
-    }
-  }
-
-  const processCheckIn = async (scannedValue, isManual = false) => {
-    setLoading(true)
-    let memberQueryId = scannedValue
-
-    // Parse dynamic TOTP pass format: PASS-{idPrefix}-{timeStep}-{tokenPart}
-    if (scannedValue.startsWith('PASS-')) {
-      const parts = scannedValue.split('-')
-      if (parts.length >= 4) {
-        const scannedTimeStep = parseInt(parts[2], 10)
-        const currentEpoch = Math.floor(Date.now() / 1000)
-        const currentTimeStep = Math.floor(currentEpoch / 30)
-
-        if (Math.abs(currentTimeStep - scannedTimeStep) > 1) {
-          playAudioFeedback(false)
-          triggerTerminalFlash('error')
-          setScanResult({ success: false, message: 'Expired dynamic QR pass code. Please scan active screen.' })
-          setLoading(false)
-          return
-        }
-        memberQueryId = parts[1]
-      }
-    }
-
-    // 1. Check Guest Pass
-    const { data: guestPass } = await supabase
-      .from('guest_passes')
-      .select('*, members(full_name)')
-      .eq('pass_token', scannedValue)
-      .maybeSingle()
-
-    if (guestPass) {
-      const isValid = !guestPass.is_used && new Date() < new Date(guestPass.valid_until)
-
-      if (isValid) {
-        await supabase.from('guest_passes').update({ is_used: true }).eq('id', guestPass.id)
-        await supabase.from('check_ins').insert([{
-          member_id: guestPass.host_member_id,
-          access_granted: true,
-          notes: `Guest Pass Used: ${guestPass.guest_name}`
-        }])
-
-        playAudioFeedback(true)
-        triggerTerminalFlash('success')
-        setScanResult({
-          success: true,
-          message: `Guest Access Granted! Welcome ${guestPass.guest_name} (Host: ${guestPass.members?.full_name || 'Member'})`
-        })
-      } else {
-        playAudioFeedback(false)
-        triggerTerminalFlash('error')
-        setScanResult({
-          success: false,
-          message: 'Guest Pass Expired or Already Used.'
-        })
-      }
-      setLoading(false)
-      if (onScanComplete) onScanComplete()
-      return
-    }
-
-    // 2. Member Pass Resolution
-    let { data: member } = await supabase
-      .from('members')
-      .select('*')
-      .or(`id.eq.${scannedValue},qr_code_token.eq.${scannedValue}`)
-      .maybeSingle()
-
-    if (!member && scannedValue.startsWith('PASS-')) {
-      const { data: prefixMatches } = await supabase.from('members').select('*')
-      member = prefixMatches?.find(m => m.id.startsWith(memberQueryId)) || null
-    }
-
-    if (!member) {
-      playAudioFeedback(false)
-      triggerTerminalFlash('error')
-      setScanResult({ success: false, message: 'Invalid Pass: Member record not found.' })
-      setLoading(false)
-      return
-    }
-
-    // Unconditional Status & Expiration Check (Fixes Issue #2)
-    const isExpired = member.membership_end_date && new Date() > new Date(member.membership_end_date)
-    const isInactive = member.status !== 'active' || isExpired
-
-    if (isInactive && !isManual) {
-      playAudioFeedback(false)
-      triggerTerminalFlash('error')
-      setScanResult({
-        success: false,
-        member,
-        message: isExpired ? `Membership Expired on ${new Date(member.membership_end_date).toLocaleDateString()}` : `Status: ${member.status}`
-      })
-      setLoading(false)
-      return
-    }
-
-    // Handle Exit Check-out vs Entry Check-in Mode (Fixes Issue #5)
-    if (gateMode === 'exit') {
-      const { data: lastVisit } = await supabase
-        .from('check_ins')
-        .select('id')
-        .eq('member_id', member.id)
-        .is('checked_out_at', null)
-        .order('checked_in_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (lastVisit) {
-        await supabase
-          .from('check_ins')
-          .update({ checked_out_at: new Date().toISOString() })
-          .eq('id', lastVisit.id)
-      }
-
-      playAudioFeedback(true)
-      triggerTerminalFlash('success')
-      setScanResult({
-        success: true,
-        member,
-        message: `Goodbye, ${member.full_name}! Checked out successfully.`
-      })
-    } else {
-      await supabase.from('check_ins').insert([{ 
-        member_id: member.id, 
-        status: 'success',
-        access_granted: true,
-        notes: isManual ? 'Manual Staff Override' : 'Dynamic QR Scan Granted',
-        is_manual_override: isManual,
-        authorized_by: isManual ? 'Staff Operator' : 'QR Terminal'
-      }])
-
-      playAudioFeedback(true)
-      triggerTerminalFlash('success')
-      setScanResult({
-        success: true,
-        member,
-        message: isManual ? `Manual Override Granted for ${member.full_name}` : `Access Granted! Welcome, ${member.full_name}.`
-      })
-    }
-
-    if (onScanComplete) onScanComplete()
-    setLoading(false)
-  }
-
-  const startScanner = useCallback(() => {
-    if (scannerRef.current) return
-
-    const scanner = new Html5QrcodeScanner('reader', {
-      qrbox: { width: 250, height: 250 },
-      fps: 10,
-    })
-
-    scannerRef.current = scanner
-
-    scanner.render(
-      async (scannedValue) => {
-        if (scannerRef.current) {
-          scannerRef.current.clear().catch(() => {})
-          scannerRef.current = null
-        }
-        await processCheckIn(scannedValue)
-      },
-      () => {}
-    )
-  }, [gateMode])
-
-  useEffect(() => {
-    startScanner()
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(() => {})
-        scannerRef.current = null
-      }
-    }
-  }, [startScanner])
-
-  const handleManualSearch = async (query) => {
-    setSearchQuery(query)
-    if (!query.trim()) {
-      setSearchResults([])
-      return
-    }
-
-    const { data } = await supabase
-      .from('members')
-      .select('*')
-      .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
-      .limit(5)
-
-    if (data) setSearchResults(data)
-  }
-
-  const handleScanNext = () => {
-    setScanResult(null)
-    setSearchQuery('')
-    setSearchResults([])
-    startScanner()
-  }
+  let navItems = memberNavItems
+  if (role === 'admin') navItems = adminNavItems
+  if (role === 'trainer') navItems = trainerNavItems
 
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="max-w-xl mx-auto space-y-6 relative">
-      
-      {/* FULL-SCREEN TERMINAL FLASH EFFECT */}
-      {flashEffect === 'success' && (
-        <div className="fixed inset-0 z-50 pointer-events-none bg-emerald-500/30 border-[16px] border-emerald-500 animate-pulse transition duration-300" />
+    <>
+      {/* MOBILE OVERLAY */}
+      {isOpen && (
+        <div 
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden"
+        />
       )}
-      {flashEffect === 'error' && (
-        <div className="fixed inset-0 z-50 pointer-events-none bg-rose-500/30 border-[16px] border-rose-500 animate-pulse transition duration-300" />
-      )}
 
-      <div className={`glass-panel rounded-3xl p-6 shadow-2xl text-center transition-all duration-300 ${
-        flashEffect === 'success' ? 'ring-4 ring-emerald-500' : flashEffect === 'error' ? 'ring-4 ring-rose-500' : ''
-      }`}>
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
-            <QrCode className="h-6 w-6 text-indigo-400" />
-            <h2 className="text-xl font-black text-white uppercase tracking-tight">Front Desk Gate Scanner</h2>
-          </div>
-
-          {/* GATE MODE TOGGLE (ENTRY / EXIT) */}
-          <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800">
-            <button
-              onClick={() => setGateMode('entry')}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${
-                gateMode === 'entry' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <EntryIcon className="h-3.5 w-3.5" />
-              <span>Entry</span>
-            </button>
-            <button
-              onClick={() => setGateMode('exit')}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${
-                gateMode === 'exit' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <ExitIcon className="h-3.5 w-3.5" />
-              <span>Exit</span>
-            </button>
-          </div>
-        </div>
-
-        {!scanResult && (
-          <div id="reader" className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950"></div>
-        )}
-
-        {loading && (
-          <p className="text-indigo-400 font-semibold text-xs mt-4 animate-pulse font-mono">
-            VERIFYING PASS CREDENTIALS...
-          </p>
-        )}
-
-        {scanResult && (
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className={`mt-6 p-6 rounded-2xl border text-left flex items-start space-x-4 ${
-            scanResult.success 
-              ? 'bg-emerald-950/60 border-emerald-500 text-emerald-200 shadow-2xl shadow-emerald-500/20' 
-              : 'bg-rose-950/60 border-rose-500 text-rose-200 shadow-2xl shadow-rose-500/20'
-          }`}>
-            {scanResult.success ? (
-              <CheckCircle className="h-8 w-8 text-emerald-400 flex-shrink-0 mt-1" />
-            ) : (
-              <XCircle className="h-8 w-8 text-rose-400 flex-shrink-0 mt-1" />
-            )}
-
-            <div className="flex-1">
-              <h3 className="font-black text-lg uppercase">{scanResult.success ? (gateMode === 'exit' ? 'CHECK-OUT CONFIRMED' : 'ACCESS GRANTED') : 'ACCESS DENIED'}</h3>
-              <p className="text-xs mt-1 opacity-90">{scanResult.message}</p>
-
-              {scanResult.member && (
-                <div className="mt-3 pt-3 border-t border-slate-800/80 text-xs space-y-1 font-mono">
-                  <p><strong>MEMBER:</strong> {scanResult.member.full_name}</p>
-                  <p><strong>EMAIL:</strong> {scanResult.member.email}</p>
-                </div>
-              )}
-
-              <button
-                onClick={handleScanNext}
-                className="mt-4 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-600/30 uppercase"
-              >
-                Scan Next Member
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </div>
-
-      {/* MANUAL OVERRIDE */}
-      <div className="glass-panel rounded-3xl p-6 shadow-2xl">
-        <div className="flex items-center space-x-2 mb-4">
-          <KeyRound className="h-5 w-5 text-indigo-400" />
-          <h3 className="text-sm font-black text-white uppercase">Manual Staff Override</h3>
-        </div>
-
-        <div className="relative mb-4">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search member by name or email..."
-            value={searchQuery}
-            onChange={(e) => handleManualSearch(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-          />
-        </div>
-
-        {searchResults.length > 0 && (
-          <div className="space-y-2 border-t border-slate-800 pt-3">
-            {searchResults.map((m) => (
-              <div key={m.id} className="p-3 bg-slate-900 rounded-xl flex items-center justify-between border border-slate-800">
-                <div>
-                  <p className="text-xs font-bold text-slate-200">{m.full_name}</p>
-                  <p className="text-[10px] font-mono text-slate-500">{m.email}</p>
-                </div>
-                <button
-                  onClick={() => processCheckIn(m.id, true)}
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold uppercase rounded-lg transition"
-                >
-                  Admit Manually
-                </button>
+      {/* PINNED SIDEBAR */}
+      <aside className={`
+        fixed top-0 bottom-0 left-0 z-50 w-64 bg-slate-950 border-r border-slate-800/80 
+        flex flex-col justify-between p-4 transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div>
+          <div className="flex items-center justify-between px-2 py-3 mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-tr from-indigo-600 to-violet-500 p-2.5 rounded-2xl shadow-lg shadow-indigo-600/25">
+                <QrCode className="h-6 w-6 text-white" />
               </div>
-            ))}
+              <div>
+                <h1 className="text-lg font-black tracking-tight text-white">IRON GYM</h1>
+                <span className="inline-flex items-center space-x-1 text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                  <Shield className="h-2.5 w-2.5 mr-0.5" />
+                  <span className="capitalize">{role || 'Member'}</span>
+                </span>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="lg:hidden text-slate-400 hover:text-white p-1"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-        )}
-      </div>
-    </motion.div>
+
+          {role === 'admin' && onRegisterClick && (
+            <button
+              onClick={() => {
+                onRegisterClick()
+                setIsOpen(false)
+              }}
+              className="w-full mb-6 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold py-3 px-4 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center space-x-2"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>Register Member</span>
+            </button>
+          )}
+
+          <nav className="space-y-1.5">
+            <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+              Navigation
+            </p>
+            {navItems.map((item) => {
+              const Icon = item.icon
+              const isActive = activeTab === item.id
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id)
+                    setIsOpen(false)
+                  }}
+                  className={`w-full flex items-center space-x-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all duration-200 ${
+                    isActive
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span>{item.label}</span>
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+
+        <div className="pt-4 border-t border-slate-800/80">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-2xl transition-all border border-transparent hover:border-rose-500/20"
+          >
+            <div className="flex items-center space-x-2">
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </div>
+            <span className="text-[10px] font-mono opacity-60">v2.4</span>
+          </button>
+        </div>
+      </aside>
+    </>
   )
 }
