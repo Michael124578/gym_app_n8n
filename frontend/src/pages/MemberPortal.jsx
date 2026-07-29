@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   CheckCircle, LogOut, ShieldCheck, UserPlus, Send, 
   X, Settings, Save, KeyRound, AlertCircle, Clock,
-  Flame, Download, CalendarCheck, Users, Dumbbell, Plus, Trash2, Zap, Sparkles
+  Flame, Download, CalendarCheck, Users, Dumbbell, Plus, Trash2, Zap, Sparkles, FileText
 } from 'lucide-react'
 import { toPng } from 'html-to-image'
 
@@ -13,6 +13,7 @@ export default function MemberPortal({ session, onLogout }) {
   const [member, setMember] = useState(null)
   const [checkIns, setCheckIns] = useState([])
   const [workouts, setWorkouts] = useState([])
+  const [assignedRoutines, setAssignedRoutines] = useState([])
   const [guestName, setGuestName] = useState('')
   const [generatedGuestPass, setGeneratedGuestPass] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -84,17 +85,17 @@ export default function MemberPortal({ session, onLogout }) {
       })
       .subscribe()
 
-    const checkInChannel = supabase
-      .channel('realtime-occupancy-member')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'check_ins' }, () => {
-        fetchOccupancy()
+    const planChannel = supabase
+      .channel(`realtime-assigned-plans-${member.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trainer_workout_plans', filter: `member_id=eq.${member.id}` }, () => {
+        fetchAssignedRoutines(member.id)
       })
       .subscribe()
 
     return () => {
       supabase.removeChannel(profileChannel)
       supabase.removeChannel(workoutChannel)
-      supabase.removeChannel(checkInChannel)
+      supabase.removeChannel(planChannel)
     }
   }, [member?.id])
 
@@ -118,18 +119,17 @@ export default function MemberPortal({ session, onLogout }) {
 
       if (checkInData) setCheckIns(checkInData)
       fetchWorkouts(memberData.id)
+      fetchAssignedRoutines(memberData.id)
     }
     setLoading(false)
   }
 
   const fetchOccupancy = async () => {
-    const ninetyMinsAgo = new Date(Date.now() - 90 * 60 * 1000).toISOString()
     const { data } = await supabase
       .from('check_ins')
       .select('id')
       .eq('access_granted', true)
       .is('checked_out_at', null)
-      .gte('checked_in_at', ninetyMinsAgo)
 
     if (data) setActiveOccupancy(data.length)
   }
@@ -142,6 +142,16 @@ export default function MemberPortal({ session, onLogout }) {
       .order('logged_at', { ascending: false })
 
     if (data) setWorkouts(data)
+  }
+
+  const fetchAssignedRoutines = async (memberId) => {
+    const { data } = await supabase
+      .from('trainer_workout_plans')
+      .select('*, trainers(full_name, specialty)')
+      .eq('member_id', memberId)
+      .order('created_at', { ascending: false })
+
+    if (data) setAssignedRoutines(data)
   }
 
   const handleLogWorkout = async (e) => {
@@ -345,7 +355,7 @@ export default function MemberPortal({ session, onLogout }) {
               }`}
             />
           </div>
-          <p className="text-[10px] text-slate-500 font-mono mt-2">Real-time gate check-ins & 90-minute auto decay</p>
+          <p className="text-[10px] text-slate-500 font-mono mt-2">Real-time gate entry and exit synchronization</p>
         </div>
 
         <div className="glass-panel p-5 rounded-3xl flex items-center justify-between">
@@ -441,6 +451,36 @@ export default function MemberPortal({ session, onLogout }) {
           )}
         </div>
       </div>
+
+      {/* ASSIGNED COACH WORKOUT ROUTINES */}
+      {assignedRoutines.length > 0 && (
+        <div className="glass-panel p-6 rounded-3xl space-y-4">
+          <div className="flex items-center space-x-2">
+            <FileText className="h-5 w-5 text-indigo-400" />
+            <h3 className="text-base font-black text-white uppercase">Assigned Programs by Personal Trainer</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {assignedRoutines.map((routine) => (
+              <div key={routine.id} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col justify-between space-y-2">
+                <div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-white">{routine.title}</span>
+                    <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                      {routine.split_day}
+                    </span>
+                  </div>
+                  <p className="text-xs text-indigo-300 font-bold mt-1">
+                    {routine.exercise_name} — {routine.target_sets} sets × {routine.target_reps} reps @ RPE {routine.target_rpe}
+                  </p>
+                  {routine.notes && <p className="text-[11px] text-slate-400 mt-1">Cue: {routine.notes}</p>}
+                </div>
+                <p className="text-[10px] font-mono text-slate-500">Coach: {routine.trainers?.full_name || 'Personal Trainer'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* WORKOUT SPLIT & PR TRACKER */}
       <div className="glass-panel p-6 rounded-3xl space-y-6">

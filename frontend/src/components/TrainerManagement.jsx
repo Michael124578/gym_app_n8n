@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Award, Zap, CheckCircle2, UserCheck, Calendar, PlusCircle, Trash2, UserPlus, Sparkles } from 'lucide-react'
+import { Award, Zap, CheckCircle2, UserCheck, Calendar, PlusCircle, Trash2, UserPlus, Sparkles, Users } from 'lucide-react'
 import AddTrainerModal from './AddTrainerModal'
 
 export default function TrainerManagement({ session, userRole }) {
@@ -8,6 +8,7 @@ export default function TrainerManagement({ session, userRole }) {
   const [members, setMembers] = useState([])
   const [sessions, setSessions] = useState([])
   const [subscriptions, setSubscriptions] = useState([])
+  const [allSubscriptionsList, setAllSubscriptionsList] = useState([])
   const [currentMember, setCurrentMember] = useState(null)
 
   const [selectedTrainer, setSelectedTrainer] = useState('')
@@ -34,48 +35,59 @@ export default function TrainerManagement({ session, userRole }) {
       osc.start()
       osc.stop(ctx.currentTime + 0.3)
     } catch (e) {
-      console.log('Audio playback prevented')
+      console.log('Audio blocked')
     }
   }
 
   const fetchData = useCallback(async () => {
-    // 1. Fetch Trainers
     const { data: t } = await supabase.from('trainers').select('*').order('created_at', { ascending: false })
     if (t) setTrainers(t)
 
-    // 2. Fetch Members
     const { data: m } = await supabase.from('members').select('id, full_name, email, auth_id')
     if (m) setMembers(m)
 
-    // 3. Match current logged-in user member profile
-    if (session?.user) {
+    // Robust null-safe current member lookup (Fixes Issue #1)
+    if (session?.user && userRole === 'member') {
       const match = m?.find(mem => mem.auth_id === session.user.id || mem.email === session.user.email)
       if (match) {
         setCurrentMember(match)
-        // Fetch current member subscriptions
-        const { data: subs } = await supabase
+        const { data: memberSubs } = await supabase
           .from('trainer_subscriptions')
           .select('trainer_id')
           .eq('member_id', match.id)
           .eq('status', 'active')
 
-        if (subs) setSubscriptions(subs.map(s => s.trainer_id))
+        if (memberSubs) setSubscriptions(memberSubs.map(s => s.trainer_id))
       }
     }
 
-    // 4. Fetch Scheduled PT Sessions
+    if (userRole === 'admin' || userRole === 'trainer') {
+      const { data: allSubs } = await supabase
+        .from('trainer_subscriptions')
+        .select('*, trainers(full_name, specialty), members(full_name, email)')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+
+      if (allSubs) setAllSubscriptionsList(allSubs)
+    }
+
     const { data: s } = await supabase
       .from('pt_sessions')
       .select('*, trainers(full_name, specialty), members(full_name)')
       .order('scheduled_at', { ascending: true })
     if (s) setSessions(s)
-  }, [session])
+  }, [session, userRole])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
   const handleSubscribeToTrainer = async (trainer) => {
+    if (userRole === 'admin' || userRole === 'trainer') {
+      alert("Staff and Coaches cannot subscribe to personal trainers.")
+      return
+    }
+
     if (!currentMember) {
       alert("Please ensure your member profile is fully registered before subscribing to a coach.")
       return
@@ -110,6 +122,12 @@ export default function TrainerManagement({ session, userRole }) {
 
     const targetMember = selectedMember || currentMember?.id
 
+    if (!targetMember) {
+      alert('Please select a valid member for this session.')
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase.from('pt_sessions').insert([
       {
         trainer_id: selectedTrainer,
@@ -137,6 +155,12 @@ export default function TrainerManagement({ session, userRole }) {
     fetchData()
   }
 
+  const markSessionComplete = async (sessionId) => {
+    await supabase.from('pt_sessions').update({ status: 'completed' }).eq('id', sessionId)
+    playSuccessSound()
+    fetchData()
+  }
+
   return (
     <div className="space-y-6">
       {msg && (
@@ -146,7 +170,7 @@ export default function TrainerManagement({ session, userRole }) {
         </div>
       )}
 
-      {/* COACHING MARKETPLACE */}
+      {/* COACHING MARKETPLACE & ROSTER */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center space-x-3">
@@ -158,12 +182,11 @@ export default function TrainerManagement({ session, userRole }) {
                 {userRole === 'admin' ? 'Coaches & Trainers Directory' : 'Choose Your Personal Coach'}
               </h3>
               <p className="text-xs text-slate-400">
-                {userRole === 'admin' ? 'Manage gym personal trainers' : 'Subscribe to a trainer to receive personalized programs & 1-on-1 coaching'}
+                {userRole === 'admin' ? 'Manage gym personal trainers & view active subscriptions' : 'Subscribe to a trainer to receive personalized programs & 1-on-1 coaching'}
               </p>
             </div>
           </div>
 
-          {/* ADMIN ONLY: REGISTER NEW TRAINER BUTTON */}
           {userRole === 'admin' && (
             <button
               onClick={() => setIsAddTrainerModalOpen(true)}
@@ -198,8 +221,7 @@ export default function TrainerManagement({ session, userRole }) {
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    {/* MEMBER SUBSCRIPTION BUTTON */}
-                    {userRole !== 'admin' && (
+                    {userRole === 'member' && (
                       <button
                         onClick={() => handleSubscribeToTrainer(t)}
                         disabled={subscribingId === t.id || isSubscribed}
@@ -214,7 +236,6 @@ export default function TrainerManagement({ session, userRole }) {
                       </button>
                     )}
 
-                    {/* ADMIN REMOVE BUTTON */}
                     {userRole === 'admin' && (
                       <button
                         onClick={() => handleDeleteTrainer(t)}
@@ -232,6 +253,51 @@ export default function TrainerManagement({ session, userRole }) {
         </div>
       </div>
 
+      {/* ADMIN ONLY: ALL COACH SUBSCRIPTIONS AUDIT PANEL */}
+      {userRole === 'admin' && (
+        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center space-x-2">
+              <Users className="h-5 w-5 text-indigo-400" />
+              <span>Active Coach Subscriptions Roster</span>
+            </h3>
+            <span className="text-xs font-mono text-slate-400">Total Active Subscriptions: {allSubscriptionsList.length}</span>
+          </div>
+
+          <div className="space-y-3">
+            {allSubscriptionsList.length === 0 ? (
+              <p className="text-xs text-slate-500 py-8 text-center border border-dashed border-slate-800 rounded-2xl font-mono">
+                No active member-to-coach subscriptions found in system.
+              </p>
+            ) : (
+              allSubscriptionsList.map((sub) => (
+                <div key={sub.id} className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-bold text-white">Member: {sub.members?.full_name}</span>
+                      <span className="text-[10px] text-slate-400">assigned to</span>
+                      <span className="text-xs font-bold text-indigo-400">Coach: {sub.trainers?.full_name}</span>
+                    </div>
+                    <p className="text-[10px] font-mono text-slate-500 mt-1">
+                      Email: {sub.members?.email} | Plan: {sub.plan_type}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                      ${sub.price || 120}/mo
+                    </span>
+                    <p className="text-[10px] text-slate-500 font-mono mt-1">
+                      Renews: {new Date(sub.end_date).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       {/* BOOK PT SESSION APPOINTMENT */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl">
         <div className="flex items-center space-x-3 mb-6">
@@ -240,7 +306,7 @@ export default function TrainerManagement({ session, userRole }) {
           </div>
           <div>
             <h3 className="text-base font-black text-white uppercase tracking-tight">Schedule 1-on-1 PT Session</h3>
-            <p className="text-xs text-slate-400">Book personal training slots with your subscribed coach</p>
+            <p className="text-xs text-slate-400">Book personal training slots</p>
           </div>
         </div>
 
@@ -316,7 +382,53 @@ export default function TrainerManagement({ session, userRole }) {
         </form>
       </div>
 
-      {/* ADMIN REGISTRATION MODAL */}
+      {/* SCHEDULED SESSIONS HISTORY */}
+      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl">
+        <h3 className="text-sm font-black text-white uppercase tracking-tight mb-4 flex items-center space-x-2">
+          <Calendar className="h-4 w-4 text-indigo-400" />
+          <span>Scheduled PT Sessions History</span>
+        </h3>
+
+        <div className="space-y-3">
+          {sessions.length === 0 ? (
+            <p className="text-xs text-slate-500 text-center py-8 border border-dashed border-slate-800 rounded-2xl">
+              No personal training sessions scheduled.
+            </p>
+          ) : (
+            sessions.map((s) => (
+              <div key={s.id} className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold text-white">{s.members?.full_name}</span>
+                    <span className="text-[10px] text-slate-400">with Coach</span>
+                    <span className="text-xs font-bold text-indigo-400">{s.trainers?.full_name}</span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">{s.notes || 'General Fitness Workout'}</p>
+                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">
+                    📅 {new Date(s.scheduled_at).toLocaleString()} ({s.duration_minutes || 60} mins)
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  {s.status === 'scheduled' ? (
+                    <button
+                      onClick={() => markSessionComplete(s.id)}
+                      className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold rounded-xl transition"
+                    >
+                      Complete Session
+                    </button>
+                  ) : (
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                      Completed
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
       <AddTrainerModal
         isOpen={isAddTrainerModalOpen}
         onClose={() => setIsAddTrainerModalOpen(false)}

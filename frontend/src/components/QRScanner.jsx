@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { supabase } from '../lib/supabaseClient'
 import { motion } from 'framer-motion'
-import { CheckCircle, XCircle, QrCode, Search, KeyRound, Zap } from 'lucide-react'
+import { CheckCircle, XCircle, QrCode, Search, KeyRound, Zap, LogOut as ExitIcon, LogIn as EntryIcon } from 'lucide-react'
 
 export default function QRScanner({ onScanComplete }) {
   const [scanResult, setScanResult] = useState(null)
@@ -10,6 +10,7 @@ export default function QRScanner({ onScanComplete }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [flashEffect, setFlashEffect] = useState(null) // 'success' | 'error' | null
+  const [gateMode, setGateMode] = useState('entry') // 'entry' | 'exit'
   const scannerRef = useRef(null)
 
   const triggerTerminalFlash = (type) => {
@@ -46,7 +47,7 @@ export default function QRScanner({ onScanComplete }) {
     setLoading(true)
     let memberQueryId = scannedValue
 
-    // TOTP dynamic pass check
+    // Parse dynamic TOTP pass format: PASS-{idPrefix}-{timeStep}-{tokenPart}
     if (scannedValue.startsWith('PASS-')) {
       const parts = scannedValue.split('-')
       if (parts.length >= 4) {
@@ -65,7 +66,7 @@ export default function QRScanner({ onScanComplete }) {
       }
     }
 
-    // 1. Guest Pass
+    // 1. Check Guest Pass
     const { data: guestPass } = await supabase
       .from('guest_passes')
       .select('*, members(full_name)')
@@ -102,7 +103,7 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
-    // 2. Member Pass
+    // 2. Member Pass Resolution
     let { data: member } = await supabase
       .from('members')
       .select('*')
@@ -122,6 +123,7 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
+    // Unconditional Status & Expiration Check (Fixes Issue #2)
     const isExpired = member.membership_end_date && new Date() > new Date(member.membership_end_date)
     const isInactive = member.status !== 'active' || isExpired
 
@@ -137,22 +139,49 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
-    await supabase.from('check_ins').insert([{ 
-      member_id: member.id, 
-      status: 'success',
-      access_granted: true,
-      notes: isManual ? 'Manual Staff Override' : 'Dynamic QR Scan Granted',
-      is_manual_override: isManual,
-      authorized_by: isManual ? 'Staff Operator' : 'QR Terminal'
-    }])
+    // Handle Exit Check-out vs Entry Check-in Mode (Fixes Issue #5)
+    if (gateMode === 'exit') {
+      const { data: lastVisit } = await supabase
+        .from('check_ins')
+        .select('id')
+        .eq('member_id', member.id)
+        .is('checked_out_at', null)
+        .order('checked_in_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-    playAudioFeedback(true)
-    triggerTerminalFlash('success')
-    setScanResult({
-      success: true,
-      member,
-      message: isManual ? `Manual Override Granted for ${member.full_name}` : `Access Granted! Welcome, ${member.full_name}.`
-    })
+      if (lastVisit) {
+        await supabase
+          .from('check_ins')
+          .update({ checked_out_at: new Date().toISOString() })
+          .eq('id', lastVisit.id)
+      }
+
+      playAudioFeedback(true)
+      triggerTerminalFlash('success')
+      setScanResult({
+        success: true,
+        member,
+        message: `Goodbye, ${member.full_name}! Checked out successfully.`
+      })
+    } else {
+      await supabase.from('check_ins').insert([{ 
+        member_id: member.id, 
+        status: 'success',
+        access_granted: true,
+        notes: isManual ? 'Manual Staff Override' : 'Dynamic QR Scan Granted',
+        is_manual_override: isManual,
+        authorized_by: isManual ? 'Staff Operator' : 'QR Terminal'
+      }])
+
+      playAudioFeedback(true)
+      triggerTerminalFlash('success')
+      setScanResult({
+        success: true,
+        member,
+        message: isManual ? `Manual Override Granted for ${member.full_name}` : `Access Granted! Welcome, ${member.full_name}.`
+      })
+    }
 
     if (onScanComplete) onScanComplete()
     setLoading(false)
@@ -178,7 +207,7 @@ export default function QRScanner({ onScanComplete }) {
       },
       () => {}
     )
-  }, [])
+  }, [gateMode])
 
   useEffect(() => {
     startScanner()
@@ -230,12 +259,30 @@ export default function QRScanner({ onScanComplete }) {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
             <QrCode className="h-6 w-6 text-indigo-400" />
-            <h2 className="text-xl font-black text-white uppercase tracking-tight">Front Desk QR Scanner</h2>
+            <h2 className="text-xl font-black text-white uppercase tracking-tight">Front Desk Gate Scanner</h2>
           </div>
-          <span className="flex items-center space-x-1 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-            <Zap className="h-3 w-3" />
-            <span>GATE ONLINE</span>
-          </span>
+
+          {/* GATE MODE TOGGLE (ENTRY / EXIT) */}
+          <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800">
+            <button
+              onClick={() => setGateMode('entry')}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${
+                gateMode === 'entry' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <EntryIcon className="h-3.5 w-3.5" />
+              <span>Entry</span>
+            </button>
+            <button
+              onClick={() => setGateMode('exit')}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${
+                gateMode === 'exit' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ExitIcon className="h-3.5 w-3.5" />
+              <span>Exit</span>
+            </button>
+          </div>
         </div>
 
         {!scanResult && (
@@ -261,7 +308,7 @@ export default function QRScanner({ onScanComplete }) {
             )}
 
             <div className="flex-1">
-              <h3 className="font-black text-lg uppercase">{scanResult.success ? 'ACCESS GRANTED' : 'ACCESS DENIED'}</h3>
+              <h3 className="font-black text-lg uppercase">{scanResult.success ? (gateMode === 'exit' ? 'CHECK-OUT CONFIRMED' : 'ACCESS GRANTED') : 'ACCESS DENIED'}</h3>
               <p className="text-xs mt-1 opacity-90">{scanResult.message}</p>
 
               {scanResult.member && (

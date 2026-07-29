@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { 
   Users, Calendar, DollarSign, Clock, Dumbbell, PlusCircle, 
-  CheckCircle2, Sparkles, TrendingUp, ChevronRight, Activity, Zap, FileText
+  CheckCircle2, Sparkles, Activity, Zap, FileText
 } from 'lucide-react'
 
 export default function TrainerDashboard({ session }) {
@@ -13,7 +13,6 @@ export default function TrainerDashboard({ session }) {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('clients')
 
-  // Program Builder State
   const [selectedClient, setSelectedClient] = useState('')
   const [programTitle, setProgramTitle] = useState('')
   const [splitDay, setSplitDay] = useState('Push Day')
@@ -23,8 +22,6 @@ export default function TrainerDashboard({ session }) {
   const [targetRpe, setTargetRpe] = useState('8.0')
   const [planNotes, setPlanNotes] = useState('')
   const [savingPlan, setSavingPlan] = useState(false)
-
-  // Feedback Toast
   const [msg, setMsg] = useState('')
 
   const playSuccessSound = () => {
@@ -52,7 +49,7 @@ export default function TrainerDashboard({ session }) {
     const userEmail = session?.user?.email || ''
     const userId = session?.user?.id || ''
 
-    // 1. Fetch current logged-in trainer profile
+    // Direct lookup in 'trainers' table (Fixes Issue #1)
     const { data: trainer } = await supabase
       .from('trainers')
       .select('*')
@@ -62,7 +59,6 @@ export default function TrainerDashboard({ session }) {
     if (trainer) {
       setTrainerProfile(trainer)
 
-      // 2. Fetch active subscribed athletes
       const { data: subs } = await supabase
         .from('trainer_subscriptions')
         .select('*, members(id, full_name, email, status, membership_end_date)')
@@ -71,7 +67,6 @@ export default function TrainerDashboard({ session }) {
 
       if (subs) setSubscribers(subs)
 
-      // 3. Fetch trainer PT sessions
       const { data: sessions } = await supabase
         .from('pt_sessions')
         .select('*, members(full_name, email)')
@@ -80,7 +75,6 @@ export default function TrainerDashboard({ session }) {
 
       if (sessions) setUpcomingSessions(sessions)
 
-      // 4. Fetch assigned workout plans
       const { data: plans } = await supabase
         .from('trainer_workout_plans')
         .select('*, members(full_name)')
@@ -161,8 +155,6 @@ export default function TrainerDashboard({ session }) {
 
   return (
     <div className="space-y-6">
-      
-      {/* TOAST NOTIFICATION */}
       {msg && (
         <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl flex items-center space-x-3 text-xs font-bold animate-bounce shadow-xl">
           <Sparkles className="h-5 w-5 text-emerald-400 flex-shrink-0" />
@@ -181,7 +173,6 @@ export default function TrainerDashboard({ session }) {
           <p className="text-xs text-slate-400 mt-1">Specialization: <strong className="text-indigo-300">{trainerProfile?.specialty || 'Strength & Conditioning'}</strong></p>
         </div>
 
-        {/* METRICS BADGES */}
         <div className="flex items-center space-x-4 relative z-10 w-full md:w-auto">
           <div className="flex-1 md:flex-none bg-slate-950/80 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3">
             <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl">
