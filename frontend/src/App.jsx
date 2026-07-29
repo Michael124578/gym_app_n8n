@@ -11,14 +11,14 @@ import Login from './pages/Login'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import { supabase } from './lib/supabaseClient'
-import { QrCode, Dumbbell, Wrench, Users, Award, Shield } from 'lucide-react'
+import { QrCode, Dumbbell, Wrench, Users, Award } from 'lucide-react'
 
 export default function App() {
   const [session, setSession] = useState(null)
-  const [role, setRole] = useState(null) // 'member', 'admin', or 'trainer'
+  const [role, setRole] = useState(null) // 'member' | 'admin' | 'trainer'
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [activeTab, setActiveTab] = useState('members')
+  const [activeTab, setActiveTab] = useState('portal')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
@@ -45,12 +45,14 @@ export default function App() {
   const detectRole = async (userSession) => {
     const email = userSession.user?.email || ''
     
+    // 1. Admin Email Check
     if (email === 'admin@irongym.com' || email.includes('admin')) {
       setRole('admin')
-      setActiveTab('members')
+      setActiveTab('scanner') // Default Admin view is Front Desk Scanner
       return
     }
 
+    // 2. Trainer Database Check
     const { data: trainer } = await supabase
       .from('trainers')
       .select('id')
@@ -63,8 +65,9 @@ export default function App() {
       return
     }
 
+    // 3. Fallback Member
     setRole('member')
-    setActiveTab('portal')
+    setActiveTab('portal') // Default Member view is Digital Pass Portal
   }
 
   const handleLogout = async () => {
@@ -74,12 +77,18 @@ export default function App() {
   }
 
   if (!session && !role) {
-    return <Login onLoginSuccess={(s) => setSession(s)} />
+    return <Login onLoginSuccess={(s, detectedRole) => {
+      setSession(s)
+      setRole(detectedRole)
+      if (detectedRole === 'admin') setActiveTab('scanner')
+      else if (detectedRole === 'trainer') setActiveTab('trainer_dashboard')
+      else setActiveTab('portal')
+    }} />
   }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex relative overflow-x-hidden pb-16 lg:pb-0 selection:bg-indigo-500 selection:text-white">
-      {/* SIDEBAR NAVIGATION (DESKTOP / DRAWER) */}
+      {/* SIDEBAR NAVIGATION (DESKTOP & DRAWER) */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -101,22 +110,33 @@ export default function App() {
         />
 
         <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1">
-          {/* TRAINER VIEW */}
-          {role === 'trainer' && (
-            <div className="space-y-6">
-              {activeTab === 'trainer_dashboard' && <TrainerDashboard session={session} />}
+          {/* ================= MEMBER ROLE VIEWS ================= */}
+          {role === 'member' && (
+            <div className="w-full animate-in fade-in duration-300">
+              {activeTab === 'portal' && <MemberPortal session={session} onLogout={handleLogout} />}
+              {activeTab === 'trainers' && <TrainerManagement session={session} userRole={role} />}
               {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
             </div>
           )}
 
-          {/* ADMIN VIEW */}
+          {/* ================= ADMIN / STAFF ROLE VIEWS ================= */}
           {role === 'admin' && (
-            <div className="space-y-6">
-              {activeTab === 'members' && <MemberList refreshTrigger={refreshTrigger} />}
-              {activeTab === 'scanner' && <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />}
-              {activeTab === 'analytics' && <AdminAnalytics />}
-              {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
-              {activeTab === 'trainers' && <TrainerManagement session={session} />}
+            <div className="w-full animate-in fade-in duration-300">
+              {activeTab === 'scanner' && (
+                <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />
+              )}
+              {activeTab === 'members' && (
+                <MemberList refreshTrigger={refreshTrigger} />
+              )}
+              {activeTab === 'analytics' && (
+                <AdminAnalytics />
+              )}
+              {activeTab === 'maintenance' && (
+                <EquipmentMaintenance userRole={role} />
+              )}
+              {activeTab === 'trainers' && (
+                <TrainerManagement session={session} userRole={role} />
+              )}
 
               <AddMemberModal
                 isOpen={isModalOpen}
@@ -126,11 +146,10 @@ export default function App() {
             </div>
           )}
 
-          {/* MEMBER PORTAL VIEW */}
-          {role === 'member' && (
-            <div className="space-y-6">
-              {activeTab === 'portal' && <MemberPortal session={session} onLogout={handleLogout} />}
-              {activeTab === 'trainers' && <TrainerManagement session={session} />}
+          {/* ================= TRAINER ROLE VIEWS ================= */}
+          {role === 'trainer' && (
+            <div className="w-full animate-in fade-in duration-300">
+              {activeTab === 'trainer_dashboard' && <TrainerDashboard session={session} />}
               {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
             </div>
           )}
@@ -203,30 +222,6 @@ export default function App() {
             >
               <Award className="h-5 w-5 mb-0.5" />
               <span className="text-[10px] uppercase font-mono">Coaches</span>
-            </button>
-          </>
-        )}
-
-        {role === 'trainer' && (
-          <>
-            <button
-              onClick={() => setActiveTab('trainer_dashboard')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'trainer_dashboard' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Award className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] uppercase font-mono">Coach</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('maintenance')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'maintenance' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Wrench className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] uppercase font-mono">Repairs</span>
             </button>
           </>
         )}
