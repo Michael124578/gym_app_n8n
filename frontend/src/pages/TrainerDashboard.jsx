@@ -2,12 +2,13 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { 
   Users, Calendar, DollarSign, Clock, Dumbbell, PlusCircle, 
-  CheckCircle2, Sparkles, Activity, Zap, FileText
+  CheckCircle2, Sparkles, Activity, Zap, FileText, XCircle
 } from 'lucide-react'
 
 export default function TrainerDashboard({ session }) {
   const [trainerProfile, setTrainerProfile] = useState(null)
   const [subscribers, setSubscribers] = useState([])
+  const [pendingRequests, setPendingRequests] = useState([])
   const [upcomingSessions, setUpcomingSessions] = useState([])
   const [assignedPlans, setAssignedPlans] = useState([])
   const [loading, setLoading] = useState(true)
@@ -49,7 +50,6 @@ export default function TrainerDashboard({ session }) {
     const userEmail = session?.user?.email || ''
     const userId = session?.user?.id || ''
 
-    // Direct lookup in 'trainers' table (Fixes Issue #1)
     const { data: trainer } = await supabase
       .from('trainers')
       .select('*')
@@ -59,6 +59,7 @@ export default function TrainerDashboard({ session }) {
     if (trainer) {
       setTrainerProfile(trainer)
 
+      // Active Subscribed Clients
       const { data: subs } = await supabase
         .from('trainer_subscriptions')
         .select('*, members(id, full_name, email, status, membership_end_date)')
@@ -66,6 +67,15 @@ export default function TrainerDashboard({ session }) {
         .eq('status', 'active')
 
       if (subs) setSubscribers(subs)
+
+      // Pending Member Hiring Requests
+      const { data: pending } = await supabase
+        .from('trainer_subscriptions')
+        .select('*, members(id, full_name, email)')
+        .eq('trainer_id', trainer.id)
+        .eq('status', 'pending')
+
+      if (pending) setPendingRequests(pending)
 
       const { data: sessions } = await supabase
         .from('pt_sessions')
@@ -101,6 +111,35 @@ export default function TrainerDashboard({ session }) {
       sessionChannel.unsubscribe()
     }
   }, [fetchTrainerData])
+
+  // Accept pending member request
+  const handleAcceptRequest = async (subscriptionId) => {
+    const { error } = await supabase
+      .from('trainer_subscriptions')
+      .update({ status: 'active' })
+      .eq('id', subscriptionId)
+
+    if (!error) {
+      playSuccessSound()
+      setMsg('Client hiring request accepted!')
+      fetchTrainerData()
+      setTimeout(() => setMsg(''), 3500)
+    }
+  }
+
+  // Reject pending member request
+  const handleRejectRequest = async (subscriptionId) => {
+    const { error } = await supabase
+      .from('trainer_subscriptions')
+      .update({ status: 'rejected' })
+      .eq('id', subscriptionId)
+
+    if (!error) {
+      setMsg('Client hiring request rejected.')
+      fetchTrainerData()
+      setTimeout(() => setMsg(''), 3000)
+    }
+  }
 
   const handleAssignWorkoutPlan = async (e) => {
     e.preventDefault()
@@ -205,7 +244,7 @@ export default function TrainerDashboard({ session }) {
           }`}
         >
           <Users className="h-4 w-4" />
-          <span>Clients Roster ({subscribers.length})</span>
+          <span>Clients ({subscribers.length})</span>
         </button>
 
         <button
@@ -229,41 +268,82 @@ export default function TrainerDashboard({ session }) {
         </button>
       </div>
 
-      {/* TAB 1: SUBSCRIBED CLIENTS ROSTER */}
+      {/* TAB 1: SUBSCRIBED CLIENTS & PENDING REQUESTS QUEUE */}
       {activeTab === 'clients' && (
-        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center space-x-2">
-              <Users className="h-5 w-5 text-indigo-400" />
-              <span>Subscribed Athlete Roster</span>
-            </h3>
-            <span className="text-xs font-mono text-slate-400">Total Subscriptions: {subscribers.length}</span>
-          </div>
+        <div className="space-y-6">
+          {/* PENDING REQUESTS QUEUE */}
+          {pendingRequests.length > 0 && (
+            <div className="bg-amber-950/40 border border-amber-500/30 p-6 rounded-3xl shadow-2xl space-y-4">
+              <h3 className="text-sm font-black text-amber-300 uppercase tracking-tight flex items-center space-x-2">
+                <Clock className="h-4 w-4 text-amber-400 animate-spin" />
+                <span>Pending Client Hiring Requests ({pendingRequests.length})</span>
+              </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {subscribers.length === 0 ? (
-              <p className="text-xs text-slate-500 col-span-full py-8 text-center border border-dashed border-slate-800 rounded-2xl">
-                No members currently subscribed to your coaching package.
-              </p>
-            ) : (
-              subscribers.map((sub) => (
-                <div key={sub.id} className="p-5 bg-slate-900 border border-slate-800 hover:border-indigo-500/40 rounded-2xl flex justify-between items-center transition">
-                  <div>
-                    <h4 className="text-sm font-black text-white">{sub.members?.full_name}</h4>
-                    <p className="text-xs font-mono text-slate-400 mt-0.5">{sub.members?.email}</p>
-                    <p className="text-[10px] text-indigo-300 font-mono mt-2">Plan: {sub.plan_type}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pendingRequests.map((req) => (
+                  <div key={req.id} className="p-4 bg-slate-900 border border-amber-500/30 rounded-2xl flex justify-between items-center">
+                    <div>
+                      <h4 className="text-xs font-black text-white">{req.members?.full_name}</h4>
+                      <p className="text-[10px] font-mono text-slate-400">{req.members?.email}</p>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleAcceptRequest(req.id)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-xl transition flex items-center space-x-1"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Accept</span>
+                      </button>
+                      <button
+                        onClick={() => handleRejectRequest(req.id)}
+                        className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-[10px] font-bold rounded-xl transition flex items-center space-x-1"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                        <span>Reject</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                      Active
-                    </span>
-                    <p className="text-[10px] text-slate-500 font-mono mt-2">
-                      Renews: {new Date(sub.end_date).toLocaleDateString()}
-                    </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ACTIVE SUBSCRIBED CLIENTS */}
+          <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center space-x-2">
+                <Users className="h-5 w-5 text-indigo-400" />
+                <span>Active Subscribed Athletes</span>
+              </h3>
+              <span className="text-xs font-mono text-slate-400">Total Active: {subscribers.length}</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {subscribers.length === 0 ? (
+                <p className="text-xs text-slate-500 col-span-full py-8 text-center border border-dashed border-slate-800 rounded-2xl font-mono">
+                  No active members currently subscribed to your coaching package.
+                </p>
+              ) : (
+                subscribers.map((sub) => (
+                  <div key={sub.id} className="p-5 bg-slate-900 border border-slate-800 hover:border-indigo-500/40 rounded-2xl flex justify-between items-center transition">
+                    <div>
+                      <h4 className="text-sm font-black text-white">{sub.members?.full_name}</h4>
+                      <p className="text-xs font-mono text-slate-400 mt-0.5">{sub.members?.email}</p>
+                      <p className="text-[10px] text-indigo-300 font-mono mt-2">Plan: {sub.plan_type}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                        Active
+                      </span>
+                      <p className="text-[10px] text-slate-500 font-mono mt-2">
+                        Renews: {new Date(sub.end_date).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -405,7 +485,7 @@ export default function TrainerDashboard({ session }) {
 
             <div className="space-y-3">
               {assignedPlans.length === 0 ? (
-                <p className="text-xs text-slate-500 py-8 text-center border border-dashed border-slate-800 rounded-2xl">
+                <p className="text-xs text-slate-500 py-8 text-center border border-dashed border-slate-800 rounded-2xl font-mono">
                   No routines assigned yet. Build a workout on the left panel!
                 </p>
               ) : (
@@ -447,7 +527,7 @@ export default function TrainerDashboard({ session }) {
 
           <div className="space-y-3">
             {upcomingSessions.length === 0 ? (
-              <p className="text-xs text-slate-500 py-8 text-center border border-dashed border-slate-800 rounded-2xl">
+              <p className="text-xs text-slate-500 py-8 text-center border border-dashed border-slate-800 rounded-2xl font-mono">
                 No personal training sessions scheduled.
               </p>
             ) : (

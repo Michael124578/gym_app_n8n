@@ -18,7 +18,7 @@ export default function App() {
   const [role, setRole] = useState(null) // 'member' | 'admin' | 'trainer'
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [activeTab, setActiveTab] = useState('portal')
+  const [activeTab, setActiveTab] = useState('members')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
@@ -45,10 +45,10 @@ export default function App() {
   const detectRole = async (userSession) => {
     const email = userSession.user?.email || ''
     
-    // 1. Admin Check
+    // 1. Admin Check: Member Roster is Default Tab
     if (email === 'admin@irongym.com' || email.includes('admin')) {
       setRole('admin')
-      setActiveTab('scanner') // Default Admin view
+      setActiveTab('members') // Member Roster is 1st & default
       return
     }
 
@@ -80,7 +80,7 @@ export default function App() {
     return <Login onLoginSuccess={(s, detectedRole) => {
       setSession(s)
       setRole(detectedRole)
-      if (detectedRole === 'admin') setActiveTab('scanner')
+      if (detectedRole === 'admin') setActiveTab('members')
       else if (detectedRole === 'trainer') setActiveTab('trainer_dashboard')
       else setActiveTab('portal')
     }} />
@@ -89,7 +89,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex relative overflow-x-hidden selection:bg-indigo-500 selection:text-white">
       
-      {/* SIDEBAR - STRICTLY FIXED TO LEFT */}
+      {/* SIDEBAR NAVIGATION */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -100,7 +100,7 @@ export default function App() {
         setIsOpen={setIsSidebarOpen}
       />
 
-      {/* MAIN CONTENT AREA - SHIFTED RIGHT BY lg:pl-64 */}
+      {/* MAIN CONTENT AREA */}
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0 w-full relative z-10">
         <Navbar
           title="IRON GYM"
@@ -123,11 +123,11 @@ export default function App() {
           {/* ADMIN ROLE VIEWS */}
           {role === 'admin' && (
             <div className="w-full flex-1">
-              {activeTab === 'scanner' && (
-                <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />
-              )}
               {activeTab === 'members' && (
                 <MemberList refreshTrigger={refreshTrigger} />
+              )}
+              {activeTab === 'scanner' && (
+                <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />
               )}
               {activeTab === 'analytics' && (
                 <AdminAnalytics />
@@ -196,16 +196,6 @@ export default function App() {
         {role === 'admin' && (
           <>
             <button
-              onClick={() => setActiveTab('scanner')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'scanner' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <QrCode className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] uppercase font-mono">Gate</span>
-            </button>
-
-            <button
               onClick={() => setActiveTab('members')}
               className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
                 activeTab === 'members' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
@@ -213,6 +203,16 @@ export default function App() {
             >
               <Users className="h-5 w-5 mb-0.5" />
               <span className="text-[10px] uppercase font-mono">Roster</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('scanner')}
+              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
+                activeTab === 'scanner' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              }`}
+            >
+              <QrCode className="h-5 w-5 mb-0.5" />
+              <span className="text-[10px] uppercase font-mono">Gate</span>
             </button>
 
             <button

@@ -13,9 +13,10 @@ export default function Sidebar({
   isOpen,
   setIsOpen 
 }) {
+  // Member Roster is 1st item for Admin
   const adminNavItems = [
-    { id: 'scanner', label: 'QR Gate Scanner', icon: QrCode },
     { id: 'members', label: 'Member Roster', icon: Users },
+    { id: 'scanner', label: 'QR Gate Scanner', icon: QrCode },
     { id: 'analytics', label: 'Analytics & Revenue', icon: BarChart3 },
     { id: 'maintenance', label: 'Equipment & Repairs', icon: Wrench },
     { id: 'trainers', label: 'PT & Coaching', icon: Dumbbell },
@@ -38,7 +39,6 @@ export default function Sidebar({
 
   return (
     <>
-      {/* MOBILE OVERLAY */}
       {isOpen && (
         <div 
           onClick={() => setIsOpen(false)}
@@ -46,7 +46,6 @@ export default function Sidebar({
         />
       )}
 
-      {/* PINNED SIDEBAR */}
       <aside className={`
         fixed top-0 bottom-0 left-0 z-50 w-64 bg-slate-950 border-r border-slate-800/80 
         flex flex-col justify-between p-4 transition-transform duration-300 ease-in-out
