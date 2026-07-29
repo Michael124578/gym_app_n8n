@@ -45,14 +45,14 @@ export default function App() {
   const detectRole = async (userSession) => {
     const email = userSession.user?.email || ''
     
-    // 1. Admin Email Check
+    // 1. Admin Check
     if (email === 'admin@irongym.com' || email.includes('admin')) {
       setRole('admin')
-      setActiveTab('scanner') // Default Admin view is Front Desk Scanner
+      setActiveTab('scanner') // Default Admin view is Gate Scanner
       return
     }
 
-    // 2. Trainer Database Check
+    // 2. Trainer Check
     const { data: trainer } = await supabase
       .from('trainers')
       .select('id')
@@ -67,7 +67,7 @@ export default function App() {
 
     // 3. Fallback Member
     setRole('member')
-    setActiveTab('portal') // Default Member view is Digital Pass Portal
+    setActiveTab('portal') // Default Member view is Member Pass Portal
   }
 
   const handleLogout = async () => {
