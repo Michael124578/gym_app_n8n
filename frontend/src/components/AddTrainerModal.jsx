@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Award, Lock, Mail, DollarSign, User, AlertCircle, Sparkles } from 'lucide-react'
+import { Award, AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [specialty, setSpecialty] = useState('Strength & Conditioning')
   const [hourlyRate, setHourlyRate] = useState('40')
   const [monthlyPrice, setMonthlyPrice] = useState('120')
@@ -13,6 +14,23 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
+  // AUTO-RESET FORM STATE ON MODAL CLOSE
+  useEffect(() => {
+    if (!isOpen) {
+      setFullName('')
+      setEmail('')
+      setPassword('')
+      setShowPassword(false)
+      setSpecialty('Strength & Conditioning')
+      setHourlyRate('40')
+      setMonthlyPrice('120')
+      setBio('')
+      setErrorMsg('')
+      setLoading(false)
+    }
+  }, [isOpen])
+
+  // ESC Listener to close Modal
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' || e.key === 'Esc') onClose()
@@ -55,10 +73,6 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
 
       if (trainerError) throw new Error(`Trainer Record Insertion: ${trainerError.message}`)
 
-      setFullName('')
-      setEmail('')
-      setPassword('')
-      setBio('')
       if (onTrainerAdded) onTrainerAdded(trainer)
       onClose()
     } catch (err) {
@@ -124,15 +138,24 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1">Password</label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                placeholder="Min 6 chars"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  placeholder="Min 6 chars"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3 pr-8 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-3 text-slate-500 hover:text-slate-300 transition"
+                >
+                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
             </div>
           </div>
 

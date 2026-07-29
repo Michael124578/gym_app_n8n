@@ -1,20 +1,15 @@
 import React, { useRef } from 'react'
 import { Flame, Download, CalendarCheck } from 'lucide-react'
 import { toPng } from 'html-to-image'
+import { formatLocalDate } from '../utils/dateUtils'
 
 export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
-  const cardRef = useRef(null)
-
-  const formatLocalDate = (dateObj) => {
-    const year = dateObj.getFullYear()
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0')
-    const day = String(dateObj.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
+  // DIRECT IMAGE DATA CAPTURE TARGET REF
+  const passCardRef = useRef(null)
 
   const calculateStreak = () => {
     if (!checkIns.length) return 0
-    const setOfDates = new Set(checkIns.map(c => formatLocalDate(new Date(c.checked_in_at))))
+    const setOfDates = new Set(checkIns.map(c => formatLocalDate(c.checked_in_at)))
     
     let streak = 0
     let curr = new Date()
@@ -25,7 +20,6 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
         streak++
         curr.setDate(curr.getDate() - 1)
       } else if (streak === 0) {
-        // Check if yesterday had a checkin to allow streak continuity prior to today's visit
         curr.setDate(curr.getDate() - 1)
         if (setOfDates.has(formatLocalDate(curr))) {
           streak++
@@ -40,10 +34,11 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
     return streak
   }
 
+  // Direct Image Data Capture Target
   const handleDownloadPass = async () => {
-    if (!cardRef.current) return
+    if (!passCardRef.current) return
     try {
-      const dataUrl = await toPng(cardRef.current, { cacheBust: true })
+      const dataUrl = await toPng(passCardRef.current, { cacheBust: true })
       const link = document.createElement('a')
       link.download = `${(member?.full_name || 'Member').replace(/\s+/g, '_')}_IronGym_Pass.png`
       link.href = dataUrl
@@ -56,7 +51,7 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
   const render30DayHeatmap = () => {
     const days = []
     const checkInDates = new Set(
-      checkIns.map(c => formatLocalDate(new Date(c.checked_in_at)))
+      checkIns.map(c => formatLocalDate(c.checked_in_at))
     )
 
     for (let i = 29; i >= 0; i--) {
@@ -85,7 +80,7 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
   const streak = calculateStreak()
 
   return (
-    <div className="space-y-6" ref={cardRef}>
+    <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-xl">
           <div className="flex items-center space-x-3">
@@ -102,7 +97,11 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
           </span>
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-xl">
+        {/* TARGET ELEMENT FOR DIRECT IMAGE DATA CAPTURE */}
+        <div 
+          ref={passCardRef} 
+          className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-xl"
+        >
           <div>
             <h4 className="text-sm font-bold text-white">Offline Pass Card</h4>
             <p className="text-xs text-slate-400">Save pass image to device gallery</p>
