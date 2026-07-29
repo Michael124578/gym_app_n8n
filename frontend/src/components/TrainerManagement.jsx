@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { UserCheck, Calendar, Award, PlusCircle, CheckCircle2, Zap, Sparkles } from 'lucide-react'
+import { UserCheck, Calendar, Award, PlusCircle, CheckCircle2, Zap, Sparkles, Trash2, UserPlus } from 'lucide-react'
+import AddTrainerModal from './AddTrainerModal'
 
 export default function TrainerManagement({ session }) {
   const [trainers, setTrainers] = useState([])
@@ -14,6 +15,7 @@ export default function TrainerManagement({ session }) {
   const [sessionNotes, setSessionNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [subscribingId, setSubscribingId] = useState(null)
+  const [isAddTrainerModalOpen, setIsAddTrainerModalOpen] = useState(false)
   const [msg, setMsg] = useState('')
 
   const playSuccessSound = () => {
@@ -37,7 +39,7 @@ export default function TrainerManagement({ session }) {
 
   const fetchData = useCallback(async () => {
     // 1. Fetch Trainers
-    const { data: t } = await supabase.from('trainers').select('*')
+    const { data: t } = await supabase.from('trainers').select('*').order('created_at', { ascending: false })
     if (t) setTrainers(t)
 
     // 2. Fetch Members
@@ -61,6 +63,15 @@ export default function TrainerManagement({ session }) {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  const handleDeleteTrainer = async (trainer) => {
+    if (!window.confirm(`Delete Coach ${trainer.full_name}?`)) return
+
+    await supabase.from('trainers').delete().eq('id', trainer.id)
+    setMsg(`Trainer ${trainer.full_name} removed.`)
+    fetchData()
+    setTimeout(() => setMsg(''), 3000)
+  }
 
   const handleSubscribeToTrainer = async (trainer) => {
     if (!currentMember) {
@@ -133,26 +144,36 @@ export default function TrainerManagement({ session }) {
         </div>
       )}
 
-      {/* COACHING MARKETPLACE TILES */}
+      {/* COACHING MARKETPLACE & ADMIN REGISTRATION TILES */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="p-2.5 bg-violet-600/20 border border-violet-500/30 text-violet-400 rounded-2xl">
-            <Award className="h-6 w-6" />
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-violet-600/20 border border-violet-500/30 text-violet-400 rounded-2xl">
+              <Award className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-white uppercase tracking-tight">Personal Trainers Roster</h3>
+              <p className="text-xs text-slate-400">Hire a coach or register new trainers</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-black text-white uppercase tracking-tight">Hire a Personal Trainer</h3>
-            <p className="text-xs text-slate-400">Subscribe to personal coaching & receive custom workout programs</p>
-          </div>
+
+          <button
+            onClick={() => setIsAddTrainerModalOpen(true)}
+            className="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5 shadow-lg shadow-amber-600/20"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Add New Trainer</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {trainers.length === 0 ? (
             <p className="text-xs text-slate-500 col-span-full py-8 text-center border border-dashed border-slate-800 rounded-2xl">
-              No personal trainers currently listed.
+              No personal trainers currently listed. Click "Add New Trainer" to register one!
             </p>
           ) : (
             trainers.map((t) => (
-              <div key={t.id} className="bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-5 rounded-2xl flex flex-col justify-between space-y-4 transition shadow-lg">
+              <div key={t.id} className="bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-5 rounded-2xl flex flex-col justify-between space-y-4 transition shadow-lg relative group">
                 <div>
                   <div className="flex justify-between items-start">
                     <h4 className="text-sm font-black text-white">{t.full_name}</h4>
@@ -164,14 +185,24 @@ export default function TrainerManagement({ session }) {
                   <p className="text-[11px] text-slate-400 mt-2 line-clamp-2">{t.bio || 'Dedicated elite fitness trainer specialized in strength and transformation.'}</p>
                 </div>
 
-                <button
-                  onClick={() => handleSubscribeToTrainer(t)}
-                  disabled={subscribingId === t.id}
-                  className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-1"
-                >
-                  <Zap className="h-3.5 w-3.5 mr-1 text-amber-300" />
-                  <span>{subscribingId === t.id ? 'Subscribing...' : 'Hire & Subscribe'}</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleSubscribeToTrainer(t)}
+                    disabled={subscribingId === t.id}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-1"
+                  >
+                    <Zap className="h-3.5 w-3.5 mr-1 text-amber-300" />
+                    <span>{subscribingId === t.id ? 'Subscribing...' : 'Hire & Subscribe'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteTrainer(t)}
+                    className="p-2.5 bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 rounded-xl transition"
+                    title="Remove Trainer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -262,52 +293,16 @@ export default function TrainerManagement({ session }) {
         </form>
       </div>
 
-      {/* SCHEDULED SESSIONS HISTORY */}
-      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl">
-        <h3 className="text-sm font-black text-white uppercase tracking-tight mb-4 flex items-center space-x-2">
-          <Calendar className="h-4 w-4 text-indigo-400" />
-          <span>Scheduled PT Sessions History</span>
-        </h3>
-
-        <div className="space-y-3">
-          {sessions.length === 0 ? (
-            <p className="text-xs text-slate-500 text-center py-8 border border-dashed border-slate-800 rounded-2xl">
-              No personal training sessions scheduled.
-            </p>
-          ) : (
-            sessions.map((s) => (
-              <div key={s.id} className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-bold text-white">{s.members?.full_name}</span>
-                    <span className="text-[10px] text-slate-400">with Coach</span>
-                    <span className="text-xs font-bold text-indigo-400">{s.trainers?.full_name}</span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">{s.notes || 'General Fitness Workout'}</p>
-                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                    📅 {new Date(s.scheduled_at).toLocaleString()} ({s.duration_minutes || 60} mins)
-                  </p>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  {s.status === 'scheduled' ? (
-                    <button
-                      onClick={() => markSessionComplete(s.id)}
-                      className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold rounded-xl transition"
-                    >
-                      Complete Session
-                    </button>
-                  ) : (
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                      Completed
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+      {/* MODAL FOR REGISTERING TRAINER */}
+      <AddTrainerModal
+        isOpen={isAddTrainerModalOpen}
+        onClose={() => setIsAddTrainerModalOpen(false)}
+        onTrainerAdded={() => {
+          setMsg('New trainer account created!')
+          fetchData()
+          setTimeout(() => setMsg(''), 3000)
+        }}
+      />
     </div>
   )
 }
