@@ -29,7 +29,7 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
     const cleanEmail = email.trim().toLowerCase()
 
     try {
-      // 1. Create Auth user via admin function or direct signup
+      // 1. Create Auth user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: password,
@@ -38,7 +38,7 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
 
       if (authError) throw new Error(`Trainer Auth Error: ${authError.message}`)
 
-      // 2. Insert into 'trainers' table
+      // 2. Insert record into 'trainers' table
       const { data: trainer, error: trainerError } = await supabase
         .from('trainers')
         .insert([{

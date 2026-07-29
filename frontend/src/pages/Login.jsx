@@ -4,7 +4,7 @@ import {
   QrCode, ShieldCheck, ArrowRight, Lock, Mail, 
   Dumbbell, ChevronRight, Flame, Zap, 
   CheckCircle2, Trophy, KeyRound, Activity, 
-  Eye, EyeOff, Radio, Award
+  Eye, EyeOff, Radio, Award, Sparkles
 } from 'lucide-react'
 
 export default function Login({ onLoginSuccess }) {
@@ -14,18 +14,18 @@ export default function Login({ onLoginSuccess }) {
 
   // Auth Modal State
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const [authRole, setAuthRole] = useState('member') // 'member' | 'admin' | 'trainer'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [showDemoLogins, setShowDemoLogins] = useState(false)
 
-  // Physical Keyboard ESC Listener
+  // ESC Listener to close Modal
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' || e.key === 'Esc') {
-        setIsAuthModalOpen(false)
+        closeAuthModal()
       }
     }
 
@@ -38,7 +38,7 @@ export default function Login({ onLoginSuccess }) {
     }
   }, [isAuthModalOpen])
 
-  // Preloader Progress Simulation
+  // Preloader Progress
   useEffect(() => {
     const interval = setInterval(() => {
       setLoadingProgress((prev) => {
@@ -54,25 +54,30 @@ export default function Login({ onLoginSuccess }) {
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-fill Handlers
-  const handleAutoFillAdmin = () => {
-    setAuthRole('admin')
-    setEmail('admin@irongym.com')
-    setPassword('123456789')
-  }
-
-  const handleAutoFillTrainer = () => {
-    setAuthRole('trainer')
-    setEmail('coach@irongym.com')
-    setPassword('123456789')
-  }
-
-  const handleOpenAuth = (role = 'member') => {
-    setAuthRole(role)
+  // Clean URL Hash (#plans, #facilities, etc.) when opening Auth
+  const handleOpenAuth = () => {
     setErrorMsg('')
     setIsAuthModalOpen(true)
+    // Remove anchor hashes from URL bar
+    if (window.location.hash) {
+      window.history.pushState('', document.title, window.location.pathname + window.location.search)
+    }
   }
 
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false)
+    setEmail('')
+    setPassword('')
+    setErrorMsg('')
+  }
+
+  // Quick Demo Account Fillers
+  const fillDemoAccount = (demoEmail, demoPassword) => {
+    setEmail(demoEmail)
+    setPassword(demoPassword)
+  }
+
+  // Unified Login Process with Automatic Role Detection
   const handleLogin = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -91,11 +96,11 @@ export default function Login({ onLoginSuccess }) {
       const user = data.user
       let detectedRole = 'member'
 
-      // 1. Check if Admin
+      // 1. Admin Email Check
       if (user.email === 'admin@irongym.com' || user.email.includes('admin')) {
         detectedRole = 'admin'
       } else {
-        // 2. Check if Trainer in database
+        // 2. Trainer Table Lookup
         const { data: trainer } = await supabase
           .from('trainers')
           .select('id')
@@ -105,21 +110,19 @@ export default function Login({ onLoginSuccess }) {
         if (trainer) detectedRole = 'trainer'
       }
 
+      closeAuthModal()
       onLoginSuccess(data.session, detectedRole)
     } catch (err) {
-      setErrorMsg(err.message || 'Authentication failed. Please verify credentials.')
+      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  // CINEMATIC PRELOADER
   if (isLoading) {
     return (
       <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 select-none overflow-hidden">
         <div className="absolute w-[600px] h-[600px] bg-indigo-600/15 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute w-[400px] h-[400px] bg-violet-600/10 rounded-full blur-2xl animate-ping opacity-20" />
-
         <div className="relative z-10 flex flex-col items-center max-w-sm w-full text-center">
           <div className="relative mb-8">
             <div className="absolute -inset-2 bg-gradient-to-r from-indigo-500 to-violet-600 rounded-2xl blur opacity-75 animate-pulse" />
@@ -184,26 +187,10 @@ export default function Login({ onLoginSuccess }) {
 
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => handleOpenAuth('trainer')}
-              className="hidden sm:flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
-            >
-              <Award className="h-4 w-4 text-amber-400" />
-              <span>Coach Portal</span>
-            </button>
-
-            <button
-              onClick={() => handleOpenAuth('admin')}
-              className="hidden sm:flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
-            >
-              <ShieldCheck className="h-4 w-4 text-indigo-400" />
-              <span>Staff Login</span>
-            </button>
-
-            <button
-              onClick={() => handleOpenAuth('member')}
+              onClick={handleOpenAuth}
               className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center space-x-2"
             >
-              <span>Member Sign In</span>
+              <span>Sign In to Terminal</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -233,27 +220,11 @@ export default function Login({ onLoginSuccess }) {
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-10">
               <button
-                onClick={() => handleOpenAuth('member')}
+                onClick={handleOpenAuth}
                 className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider px-8 py-4 rounded-2xl shadow-xl shadow-indigo-600/30 transition flex items-center justify-center space-x-2 group"
               >
-                <span>Member Portal</span>
+                <span>Access Terminal Portal</span>
                 <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
-              </button>
-
-              <button
-                onClick={() => handleOpenAuth('trainer')}
-                className="bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 font-bold text-xs uppercase tracking-wider px-7 py-4 rounded-2xl transition flex items-center justify-center space-x-2"
-              >
-                <Award className="h-4 w-4 text-amber-400" />
-                <span>Coach Terminal</span>
-              </button>
-
-              <button
-                onClick={() => handleOpenAuth('admin')}
-                className="bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 font-bold text-xs uppercase tracking-wider px-7 py-4 rounded-2xl transition flex items-center justify-center space-x-2"
-              >
-                <ShieldCheck className="h-4 w-4 text-indigo-400" />
-                <span>Staff Terminal</span>
               </button>
             </div>
 
@@ -409,7 +380,7 @@ export default function Login({ onLoginSuccess }) {
                 </div>
 
                 <button
-                  onClick={() => handleOpenAuth('member')}
+                  onClick={handleOpenAuth}
                   className={`w-full font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition ${
                     plan.featured
                       ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-600/30'
@@ -429,110 +400,40 @@ export default function Login({ onLoginSuccess }) {
         © {new Date().getFullYear()} IRON GYM. Automated Gate Engine & Portal Systems.
       </footer>
 
-      {/* AUTH MODAL OVERLAY */}
+      {/* UNIFIED AUTH MODAL OVERLAY */}
       {isAuthModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-slate-100 relative">
             
             {/* ESC Key Badge & Close Button */}
             <button
-              onClick={() => setIsAuthModalOpen(false)}
+              onClick={closeAuthModal}
               className="absolute top-5 right-5 text-slate-400 hover:text-white transition text-[11px] font-mono bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 flex items-center space-x-1"
             >
               <span>ESC</span>
             </button>
 
-            {/* Role Switcher Tabs */}
-            <div className="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 mb-6">
-              <button
-                type="button"
-                onClick={() => setAuthRole('member')}
-                className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
-                  authRole === 'member'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Member
-              </button>
-              <button
-                type="button"
-                onClick={() => setAuthRole('trainer')}
-                className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
-                  authRole === 'trainer'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Coach
-              </button>
-              <button
-                type="button"
-                onClick={() => setAuthRole('admin')}
-                className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
-                  authRole === 'admin'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Staff
-              </button>
-            </div>
-
             {/* Modal Header */}
-            <div className="text-center mb-5">
-              <div className="inline-flex bg-gradient-to-tr from-indigo-600 to-violet-500 p-3 rounded-2xl shadow-lg shadow-indigo-600/30 mb-2">
-                {authRole === 'admin' ? (
-                  <ShieldCheck className="h-6 w-6 text-white" />
-                ) : authRole === 'trainer' ? (
-                  <Award className="h-6 w-6 text-white" />
-                ) : (
-                  <QrCode className="h-6 w-6 text-white" />
-                )}
+            <div className="text-center mb-6">
+              <div className="inline-flex bg-gradient-to-tr from-indigo-600 to-violet-500 p-3 rounded-2xl shadow-lg shadow-indigo-600/30 mb-3">
+                <QrCode className="h-7 w-7 text-white" />
               </div>
               <h2 className="text-xl font-black uppercase text-white tracking-tight">
-                {authRole === 'admin' ? 'Staff Terminal Access' : authRole === 'trainer' ? 'Coach Terminal Access' : 'Member Portal Access'}
+                Terminal Access Sign In
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {authRole === 'admin' 
-                  ? 'Authorized gym staff & system admin login' 
-                  : authRole === 'trainer'
-                  ? 'Personal trainers & coaching portal login'
-                  : 'Log in to view your active dynamic pass & subscriptions'}
+              <p className="text-xs text-slate-400 mt-1">
+                Enter your credentials. The engine automatically routes Members, Coaches, and Staff to their dashboards.
               </p>
             </div>
 
-            {/* Quick Auto-Fill Demo Accounts */}
-            {authRole === 'admin' && (
-              <button
-                type="button"
-                onClick={handleAutoFillAdmin}
-                className="w-full mb-4 py-2 px-3 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/50 rounded-xl text-[11px] font-semibold text-indigo-300 flex items-center justify-center space-x-2 transition"
-              >
-                <KeyRound className="h-3.5 w-3.5 text-indigo-400" />
-                <span>Auto-Fill Test Admin Credentials</span>
-              </button>
-            )}
-
-            {authRole === 'trainer' && (
-              <button
-                type="button"
-                onClick={handleAutoFillTrainer}
-                className="w-full mb-4 py-2 px-3 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-amber-500/50 rounded-xl text-[11px] font-semibold text-amber-300 flex items-center justify-center space-x-2 transition"
-              >
-                <KeyRound className="h-3.5 w-3.5 text-amber-400" />
-                <span>Auto-Fill Test Coach Credentials</span>
-              </button>
-            )}
-
-            {/* Error Message Alert */}
+            {/* Error Alert */}
             {errorMsg && (
               <div className="mb-4 p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl text-center">
                 {errorMsg}
               </div>
             )}
 
-            {/* Form */}
+            {/* Unified Form */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1">Email Address</label>
@@ -576,10 +477,43 @@ export default function Login({ onLoginSuccess }) {
                 disabled={isSubmitting}
                 className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition shadow-lg shadow-indigo-600/25 disabled:opacity-50 flex items-center justify-center space-x-2"
               >
-                <span>{isSubmitting ? 'Authenticating...' : 'Enter Portal'}</span>
+                <span>{isSubmitting ? 'Authenticating...' : 'Sign In to Portal'}</span>
                 <ChevronRight className="h-4 w-4" />
               </button>
             </form>
+
+            {/* Collapsible Demo Fill Bar for Testing */}
+            <div className="mt-6 pt-4 border-t border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => setShowDemoLogins(!showDemoLogins)}
+                className="w-full text-center text-[10px] font-mono text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider flex items-center justify-center space-x-1"
+              >
+                <KeyRound className="h-3 w-3" />
+                <span>{showDemoLogins ? 'Hide Demo Logins' : 'Show Demo Testing Credentials'}</span>
+              </button>
+
+              {showDemoLogins && (
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => fillDemoAccount('admin@irongym.com', '123456789')}
+                    className="p-2 bg-slate-950 border border-slate-800 hover:border-indigo-500/50 rounded-lg text-slate-300 text-center font-mono"
+                  >
+                    Staff Admin
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => fillDemoAccount('coach@irongym.com', '123456789')}
+                    className="p-2 bg-slate-950 border border-slate-800 hover:border-amber-500/50 rounded-lg text-slate-300 text-center font-mono"
+                  >
+                    Coach Account
+                  </button>
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       )}

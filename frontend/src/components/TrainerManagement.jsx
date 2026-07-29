@@ -38,21 +38,17 @@ export default function TrainerManagement({ session }) {
   }
 
   const fetchData = useCallback(async () => {
-    // 1. Fetch Trainers
     const { data: t } = await supabase.from('trainers').select('*').order('created_at', { ascending: false })
     if (t) setTrainers(t)
 
-    // 2. Fetch Members
     const { data: m } = await supabase.from('members').select('id, full_name, email, auth_id')
     if (m) setMembers(m)
 
-    // 3. Match current logged-in user member profile
     if (session?.user) {
       const match = m?.find(mem => mem.auth_id === session.user.id || mem.email === session.user.email)
       if (match) setCurrentMember(match)
     }
 
-    // 4. Fetch Scheduled PT Sessions
     const { data: s } = await supabase
       .from('pt_sessions')
       .select('*, trainers(full_name, specialty), members(full_name)')
@@ -293,7 +289,6 @@ export default function TrainerManagement({ session }) {
         </form>
       </div>
 
-      {/* MODAL FOR REGISTERING TRAINER */}
       <AddTrainerModal
         isOpen={isAddTrainerModalOpen}
         onClose={() => setIsAddTrainerModalOpen(false)}
