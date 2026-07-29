@@ -505,7 +505,7 @@ export default function Login({ onLoginSuccess }) {
 
                   <button
                     type="button"
-                    onClick={() => fillDemoAccount('coach@irongym.com', '123456789')}
+                    onClick={() => fillDemoAccount('coach1@irongym.com', '123456789')}
                     className="p-2 bg-slate-950 border border-slate-800 hover:border-amber-500/50 rounded-lg text-slate-300 text-center font-mono"
                   >
                     Coach Account

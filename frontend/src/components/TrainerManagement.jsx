@@ -102,28 +102,42 @@ export default function TrainerManagement({ session }) {
     e.preventDefault()
     setLoading(true)
 
-    const targetMember = selectedMember || currentMember?.id
+    const selectedTime = new Date(sessionDate)
+    const startTimeWindow = new Date(selectedTime.getTime() - 45 * 60 * 1000).toISOString()
+    const endTimeWindow = new Date(selectedTime.getTime() + 45 * 60 * 1000).toISOString()
 
+    // Check for existing active bookings within 45 minutes
+    const { data: conflict } = await supabase
+        .from('pt_sessions')
+        .select('id')
+        .eq('trainer_id', selectedTrainer)
+        .neq('status', 'canceled')
+        .gte('scheduled_at', startTimeWindow)
+        .lte('scheduled_at', endTimeWindow)
+        .maybeSingle()
+
+    if (conflict) {
+        alert('Booking Conflict: This trainer already has an active session within this time window.')
+        setLoading(false)
+        return
+    }
+
+    // Proceed with session insertion...
     const { error } = await supabase.from('pt_sessions').insert([
-      {
+        {
         trainer_id: selectedTrainer,
-        member_id: targetMember,
-        scheduled_at: new Date(sessionDate).toISOString(),
+        member_id: selectedMember || currentMember?.id,
+        scheduled_at: selectedTime.toISOString(),
         notes: sessionNotes
-      }
+        }
     ])
 
     if (!error) {
-      playSuccessSound()
-      setMsg('PT Appointment scheduled successfully!')
-      setSessionNotes('')
-      fetchData()
-      setTimeout(() => setMsg(''), 3500)
-    } else {
-      alert(`Booking Error: ${error.message}`)
+        setMsg('PT Appointment scheduled successfully!')
+        fetchData()
     }
     setLoading(false)
-  }
+    }
 
   const markSessionComplete = async (sessionId) => {
     await supabase.from('pt_sessions').update({ status: 'completed' }).eq('id', sessionId)
