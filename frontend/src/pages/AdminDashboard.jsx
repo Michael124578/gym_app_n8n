@@ -13,18 +13,15 @@ export default function AdminDashboard({ onLogout }) {
   const [members, setMembers] = useState([])
   const [recentCheckIns, setRecentCheckIns] = useState([])
   const [scanResult, setScanResult] = useState(null)
-  
-  // Analytics State
+
   const [hourlyTraffic, setHourlyTraffic] = useState([])
   const [monthlyRevenue, setMonthlyRevenue] = useState([])
   const [retentionStats, setRetentionStats] = useState([])
   const [totalRevenue, setTotalRevenue] = useState(0)
-
-  // Directory Search & Filter
+  
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-
-  // Web Audio Sound FX Generators
+  
   const playAccessGrantedSound = () => {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)()

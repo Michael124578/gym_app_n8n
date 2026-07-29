@@ -4,7 +4,7 @@ import {
   QrCode, ShieldCheck, ArrowRight, Lock, Mail, 
   Dumbbell, ChevronRight, Flame, Zap, 
   CheckCircle2, Trophy, KeyRound, Activity, 
-  Eye, EyeOff, Radio
+  Eye, EyeOff, Radio, Award
 } from 'lucide-react'
 
 export default function Login({ onLoginSuccess }) {
@@ -14,7 +14,7 @@ export default function Login({ onLoginSuccess }) {
 
   // Auth Modal State
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const [authRole, setAuthRole] = useState('member') // 'member' | 'admin'
+  const [authRole, setAuthRole] = useState('member') // 'member' | 'admin' | 'trainer'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -38,7 +38,7 @@ export default function Login({ onLoginSuccess }) {
     }
   }, [isAuthModalOpen])
 
-  // Preloader Progress
+  // Preloader Progress Simulation
   useEffect(() => {
     const interval = setInterval(() => {
       setLoadingProgress((prev) => {
@@ -54,10 +54,16 @@ export default function Login({ onLoginSuccess }) {
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-fill Handlers with updated admin credentials
+  // Auto-fill Handlers
   const handleAutoFillAdmin = () => {
     setAuthRole('admin')
     setEmail('admin@irongym.com')
+    setPassword('123456789')
+  }
+
+  const handleAutoFillTrainer = () => {
+    setAuthRole('trainer')
+    setEmail('coach@irongym.com')
     setPassword('123456789')
   }
 
@@ -84,12 +90,19 @@ export default function Login({ onLoginSuccess }) {
 
       const user = data.user
       let detectedRole = 'member'
-      if (
-        user.email === 'admin@irongym.com' || 
-        user.email === 'michael.nagui.kiriakos@gmail.com' || 
-        user.email.includes('admin')
-      ) {
+
+      // 1. Check if Admin
+      if (user.email === 'admin@irongym.com' || user.email.includes('admin')) {
         detectedRole = 'admin'
+      } else {
+        // 2. Check if Trainer in database
+        const { data: trainer } = await supabase
+          .from('trainers')
+          .select('id')
+          .or(`auth_id.eq.${user.id},email.eq.${cleanEmail}`)
+          .maybeSingle()
+
+        if (trainer) detectedRole = 'trainer'
       }
 
       onLoginSuccess(data.session, detectedRole)
@@ -148,7 +161,7 @@ export default function Login({ onLoginSuccess }) {
         <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:32px_32px] opacity-25" />
       </div>
 
-      {/* FIXED / FROZEN TOP NAVIGATION BAR */}
+      {/* FIXED TOP NAVIGATION BAR */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-slate-950/90 backdrop-blur-2xl border-b border-slate-800/80 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -170,6 +183,14 @@ export default function Login({ onLoginSuccess }) {
           </nav>
 
           <div className="flex items-center space-x-3">
+            <button
+              onClick={() => handleOpenAuth('trainer')}
+              className="hidden sm:flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
+            >
+              <Award className="h-4 w-4 text-amber-400" />
+              <span>Coach Portal</span>
+            </button>
+
             <button
               onClick={() => handleOpenAuth('admin')}
               className="hidden sm:flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition"
@@ -207,7 +228,7 @@ export default function Login({ onLoginSuccess }) {
             </h1>
 
             <p className="text-slate-400 text-sm sm:text-base max-w-xl font-normal leading-relaxed mb-8">
-              Instant QR turnstile authorization, real-time activity tracking, automated membership passes, and elite conditioning programs.
+              Instant turnstile authorization via anti-screenshot dynamic QR passes, equipment maintenance dispatch queues, and dedicated 1-on-1 personal trainer coaching terminals.
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-10">
@@ -220,11 +241,19 @@ export default function Login({ onLoginSuccess }) {
               </button>
 
               <button
+                onClick={() => handleOpenAuth('trainer')}
+                className="bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 font-bold text-xs uppercase tracking-wider px-7 py-4 rounded-2xl transition flex items-center justify-center space-x-2"
+              >
+                <Award className="h-4 w-4 text-amber-400" />
+                <span>Coach Terminal</span>
+              </button>
+
+              <button
                 onClick={() => handleOpenAuth('admin')}
                 className="bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 font-bold text-xs uppercase tracking-wider px-7 py-4 rounded-2xl transition flex items-center justify-center space-x-2"
               >
                 <ShieldCheck className="h-4 w-4 text-indigo-400" />
-                <span>Admin Terminal</span>
+                <span>Staff Terminal</span>
               </button>
             </div>
 
@@ -424,7 +453,18 @@ export default function Login({ onLoginSuccess }) {
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Member Portal
+                Member
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthRole('trainer')}
+                className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
+                  authRole === 'trainer'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Coach
               </button>
               <button
                 type="button"
@@ -435,7 +475,7 @@ export default function Login({ onLoginSuccess }) {
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Staff / Admin
+                Staff
               </button>
             </div>
 
@@ -444,21 +484,25 @@ export default function Login({ onLoginSuccess }) {
               <div className="inline-flex bg-gradient-to-tr from-indigo-600 to-violet-500 p-3 rounded-2xl shadow-lg shadow-indigo-600/30 mb-2">
                 {authRole === 'admin' ? (
                   <ShieldCheck className="h-6 w-6 text-white" />
+                ) : authRole === 'trainer' ? (
+                  <Award className="h-6 w-6 text-white" />
                 ) : (
                   <QrCode className="h-6 w-6 text-white" />
                 )}
               </div>
               <h2 className="text-xl font-black uppercase text-white tracking-tight">
-                {authRole === 'admin' ? 'Staff Terminal Access' : 'Member Portal Access'}
+                {authRole === 'admin' ? 'Staff Terminal Access' : authRole === 'trainer' ? 'Coach Terminal Access' : 'Member Portal Access'}
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 {authRole === 'admin' 
                   ? 'Authorized gym staff & system admin login' 
-                  : 'Log in to view your active QR pass & billing'}
+                  : authRole === 'trainer'
+                  ? 'Personal trainers & coaching portal login'
+                  : 'Log in to view your active dynamic pass & subscriptions'}
               </p>
             </div>
 
-            {/* Quick Auto-Fill Admin Test Account Button */}
+            {/* Quick Auto-Fill Demo Accounts */}
             {authRole === 'admin' && (
               <button
                 type="button"
@@ -467,6 +511,17 @@ export default function Login({ onLoginSuccess }) {
               >
                 <KeyRound className="h-3.5 w-3.5 text-indigo-400" />
                 <span>Auto-Fill Test Admin Credentials</span>
+              </button>
+            )}
+
+            {authRole === 'trainer' && (
+              <button
+                type="button"
+                onClick={handleAutoFillTrainer}
+                className="w-full mb-4 py-2 px-3 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-amber-500/50 rounded-xl text-[11px] font-semibold text-amber-300 flex items-center justify-center space-x-2 transition"
+              >
+                <KeyRound className="h-3.5 w-3.5 text-amber-400" />
+                <span>Auto-Fill Test Coach Credentials</span>
               </button>
             )}
 

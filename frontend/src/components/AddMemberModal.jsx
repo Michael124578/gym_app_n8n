@@ -42,12 +42,11 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     const cleanEmail = email.trim().toLowerCase()
 
     try {
-      // 1. Create Auth user via admin endpoint / function to protect active admin session
+      // 1. Create Auth user via admin function to protect active session
       const { data: authData, error: authError } = await supabase.functions.invoke('create-member-user', {
         body: { email: cleanEmail, password, fullName: fullName.trim() }
       })
 
-      // Fallback to direct sign-up if edge function is unconfigured
       let userId = authData?.user?.id
       if (authError || !userId) {
         const { data: fallbackAuth, error: fallbackError } = await supabase.auth.signUp({
