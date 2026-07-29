@@ -279,7 +279,7 @@ export default function MemberPortal({ session, onLogout }) {
 
   if (loading && !member) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center text-slate-400 text-sm font-mono animate-pulse">
+      <div className="min-h-[50vh] flex items-center justify-center text-slate-400 text-sm font-mono animate-pulse w-full">
         Initializing Member Terminal...
       </div>
     )
@@ -291,7 +291,7 @@ export default function MemberPortal({ session, onLogout }) {
   const occupancyPercent = Math.min(100, Math.round((activeOccupancy / maxCapacity) * 100))
 
   return (
-    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="max-w-5xl mx-auto space-y-6">
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto space-y-6">
       
       {/* TOAST ALERTS */}
       <AnimatePresence>
@@ -304,7 +304,7 @@ export default function MemberPortal({ session, onLogout }) {
       </AnimatePresence>
 
       {/* MEMBER HEADER */}
-      <div className="glass-panel p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="glass-panel p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
         <div>
           <div className="flex items-center space-x-3">
             <h2 className="text-3xl font-black text-white uppercase tracking-tight">{member.full_name}</h2>
@@ -335,7 +335,7 @@ export default function MemberPortal({ session, onLogout }) {
       </div>
 
       {/* METRICS & LIVE CAPACITY */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
         <div className="md:col-span-2 glass-panel p-5 rounded-3xl flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
@@ -372,8 +372,8 @@ export default function MemberPortal({ session, onLogout }) {
       </div>
 
       {/* HOLOGRAPHIC DIGITAL PASS & GUEST GENERATOR */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div ref={cardRef} className="holo-card p-6 rounded-3xl flex flex-col justify-between shadow-2xl relative overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        <div ref={cardRef} className="holo-card p-6 rounded-3xl flex flex-col justify-between shadow-2xl relative overflow-hidden w-full">
           <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
             <div className="flex items-center space-x-2">
               <ShieldCheck className="h-5 w-5 text-indigo-400" />
@@ -410,7 +410,7 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
 
         {/* GUEST PASS GENERATOR */}
-        <div className="glass-panel p-6 rounded-3xl flex flex-col justify-between">
+        <div className="glass-panel p-6 rounded-3xl flex flex-col justify-between w-full">
           <div>
             <div className="flex items-center space-x-2 mb-2">
               <UserPlus className="h-5 w-5 text-indigo-400" />
@@ -454,7 +454,7 @@ export default function MemberPortal({ session, onLogout }) {
 
       {/* ASSIGNED COACH WORKOUT ROUTINES */}
       {assignedRoutines.length > 0 && (
-        <div className="glass-panel p-6 rounded-3xl space-y-4">
+        <div className="glass-panel p-6 rounded-3xl space-y-4 w-full">
           <div className="flex items-center space-x-2">
             <FileText className="h-5 w-5 text-indigo-400" />
             <h3 className="text-base font-black text-white uppercase">Assigned Programs by Personal Trainer</h3>
@@ -483,7 +483,7 @@ export default function MemberPortal({ session, onLogout }) {
       )}
 
       {/* WORKOUT SPLIT & PR TRACKER */}
-      <div className="glass-panel p-6 rounded-3xl space-y-6">
+      <div className="glass-panel p-6 rounded-3xl space-y-6 w-full">
         <div className="flex items-center space-x-2">
           <Dumbbell className="h-5 w-5 text-indigo-400" />
           <h3 className="text-base font-black text-white uppercase">Personal Record (PR) Tracker</h3>
@@ -573,7 +573,7 @@ export default function MemberPortal({ session, onLogout }) {
       </div>
 
       {/* 30-DAY ATTENDANCE GRID */}
-      <div className="glass-panel p-6 rounded-3xl">
+      <div className="glass-panel p-6 rounded-3xl w-full">
         <div className="flex items-center space-x-2 mb-4">
           <CalendarCheck className="h-5 w-5 text-emerald-400" />
           <h3 className="text-sm font-bold text-white uppercase">30-Day Check-In Heatmap</h3>

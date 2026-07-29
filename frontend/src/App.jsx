@@ -109,10 +109,10 @@ export default function App() {
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
-        <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1">
+        <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1 flex flex-col">
           {/* ================= MEMBER ROLE VIEWS ================= */}
           {role === 'member' && (
-            <div className="w-full animate-in fade-in duration-300">
+            <div className="w-full flex-1">
               {activeTab === 'portal' && <MemberPortal session={session} onLogout={handleLogout} />}
               {activeTab === 'trainers' && <TrainerManagement session={session} userRole={role} />}
               {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
@@ -121,7 +121,7 @@ export default function App() {
 
           {/* ================= ADMIN / STAFF ROLE VIEWS ================= */}
           {role === 'admin' && (
-            <div className="w-full animate-in fade-in duration-300">
+            <div className="w-full flex-1">
               {activeTab === 'scanner' && (
                 <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />
               )}
@@ -148,7 +148,7 @@ export default function App() {
 
           {/* ================= TRAINER ROLE VIEWS ================= */}
           {role === 'trainer' && (
-            <div className="w-full animate-in fade-in duration-300">
+            <div className="w-full flex-1">
               {activeTab === 'trainer_dashboard' && <TrainerDashboard session={session} />}
               {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
             </div>

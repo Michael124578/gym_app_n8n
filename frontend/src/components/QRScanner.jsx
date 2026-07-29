@@ -9,8 +9,8 @@ export default function QRScanner({ onScanComplete }) {
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
-  const [flashEffect, setFlashEffect] = useState(null) // 'success' | 'error' | null
-  const [gateMode, setGateMode] = useState('entry') // 'entry' | 'exit'
+  const [flashEffect, setFlashEffect] = useState(null)
+  const [gateMode, setGateMode] = useState('entry')
   const scannerRef = useRef(null)
 
   const triggerTerminalFlash = (type) => {
@@ -47,7 +47,6 @@ export default function QRScanner({ onScanComplete }) {
     setLoading(true)
     let memberQueryId = scannedValue
 
-    // Parse dynamic TOTP pass format: PASS-{idPrefix}-{timeStep}-{tokenPart}
     if (scannedValue.startsWith('PASS-')) {
       const parts = scannedValue.split('-')
       if (parts.length >= 4) {
@@ -66,7 +65,6 @@ export default function QRScanner({ onScanComplete }) {
       }
     }
 
-    // 1. Check Guest Pass
     const { data: guestPass } = await supabase
       .from('guest_passes')
       .select('*, members(full_name)')
@@ -103,7 +101,6 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
-    // 2. Member Pass Resolution
     let { data: member } = await supabase
       .from('members')
       .select('*')
@@ -123,7 +120,6 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
-    // Unconditional Status & Expiration Check (Fixes Issue #2)
     const isExpired = member.membership_end_date && new Date() > new Date(member.membership_end_date)
     const isInactive = member.status !== 'active' || isExpired
 
@@ -139,7 +135,6 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
-    // Handle Exit Check-out vs Entry Check-in Mode (Fixes Issue #5)
     if (gateMode === 'exit') {
       const { data: lastVisit } = await supabase
         .from('check_ins')
@@ -243,9 +238,8 @@ export default function QRScanner({ onScanComplete }) {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="max-w-xl mx-auto space-y-6 relative">
+    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-2xl mx-auto space-y-6 relative">
       
-      {/* FULL-SCREEN TERMINAL FLASH EFFECT */}
       {flashEffect === 'success' && (
         <div className="fixed inset-0 z-50 pointer-events-none bg-emerald-500/30 border-[16px] border-emerald-500 animate-pulse transition duration-300" />
       )}
@@ -262,7 +256,6 @@ export default function QRScanner({ onScanComplete }) {
             <h2 className="text-xl font-black text-white uppercase tracking-tight">Front Desk Gate Scanner</h2>
           </div>
 
-          {/* GATE MODE TOGGLE (ENTRY / EXIT) */}
           <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800">
             <button
               onClick={() => setGateMode('entry')}
@@ -329,7 +322,6 @@ export default function QRScanner({ onScanComplete }) {
         )}
       </div>
 
-      {/* MANUAL OVERRIDE */}
       <div className="glass-panel rounded-3xl p-6 shadow-2xl">
         <div className="flex items-center space-x-2 mb-4">
           <KeyRound className="h-5 w-5 text-indigo-400" />

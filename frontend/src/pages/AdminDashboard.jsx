@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { 
   CheckCircle, XCircle, QrCode, LogOut, Activity, 
-  DollarSign, TrendingUp, UserPlus, Trash2, CalendarPlus, Search, Award, Zap
+  DollarSign, TrendingUp, UserPlus, Trash2, CalendarPlus, Search, Award 
 } from 'lucide-react'
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts'
 import AddMemberModal from './AddMemberModal'
@@ -278,7 +278,7 @@ export default function AdminDashboard({ onLogout }) {
   )
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans w-full">
       <header className="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-0 z-40">
         <div className="flex items-center space-x-3">
           <div className="bg-gradient-to-tr from-indigo-600 to-violet-500 p-2.5 rounded-2xl shadow-lg shadow-indigo-600/20">
@@ -336,9 +336,9 @@ export default function AdminDashboard({ onLogout }) {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-6">
+      <main className="max-w-7xl mx-auto p-6 w-full">
         {activeTab === 'scanner' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
             <div className="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl">
               <h2 className="text-lg font-bold mb-4 text-white">Front Desk Access Scanner</h2>
               <div id="reader" className="w-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-900"></div>
@@ -385,7 +385,7 @@ export default function AdminDashboard({ onLogout }) {
         )}
 
         {activeTab === 'analytics' && (
-          <div className="space-y-6">
+          <div className="space-y-6 w-full">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center space-x-4">
                 <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
@@ -488,7 +488,7 @@ export default function AdminDashboard({ onLogout }) {
 
         {/* MEMBER ROSTER TAB */}
         {activeTab === 'members' && (
-          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 w-full">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h2 className="text-lg font-bold text-white">Member Directory</h2>
@@ -580,7 +580,7 @@ export default function AdminDashboard({ onLogout }) {
 
         {/* TRAINER ROSTER TAB */}
         {activeTab === 'trainers' && (
-          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 w-full">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h2 className="text-lg font-bold text-white">Coaches & Trainers Directory</h2>
