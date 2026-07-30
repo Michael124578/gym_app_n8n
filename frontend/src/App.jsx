@@ -18,56 +18,57 @@ export default function App() {
   const [role, setRole] = useState(null) // 'member' | 'admin' | 'trainer'
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [activeTab, setActiveTab] = useState('members')
+  const [activeTab, setActiveTab] = useState(null) // Start null so initial role load sets default tab
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
-    // Single auth state listener to avoid duplicate role detection calls
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (currentSession) {
         setSession(currentSession)
-        detectRole(currentSession)
+        detectRole(currentSession, event)
       } else {
         setSession(null)
         setRole(null)
+        setActiveTab(null)
       }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  const detectRole = async (userSession) => {
+  const detectRole = async (userSession, authEvent) => {
     const email = userSession.user?.email || ''
-    
-    // 1. Admin Check: Default tab is Member Roster
+    let detectedRole = 'member'
+
+    // 1. Admin Check
     if (email === 'admin@irongym.com' || email.includes('admin')) {
-      setRole('admin')
-      setActiveTab('members')
-      return
+      detectedRole = 'admin'
+    } else {
+      // 2. Trainer Check
+      const { data: trainer } = await supabase
+        .from('trainers')
+        .select('id')
+        .or(`auth_id.eq.${userSession.user.id},email.eq.${email}`)
+        .maybeSingle()
+
+      if (trainer) detectedRole = 'trainer'
     }
 
-    // 2. Trainer Check
-    const { data: trainer } = await supabase
-      .from('trainers')
-      .select('id')
-      .or(`auth_id.eq.${userSession.user.id},email.eq.${email}`)
-      .maybeSingle()
+    setRole(detectedRole)
 
-    if (trainer) {
-      setRole('trainer')
-      setActiveTab('trainer_dashboard')
-      return
+    // ONLY set default tab on initial sign-in (INITIAL_SESSION or SIGNED_IN), NOT on TOKEN_REFRESHED / window focus
+    if (!activeTab || authEvent === 'SIGNED_IN') {
+      if (detectedRole === 'admin') setActiveTab('members')
+      else if (detectedRole === 'trainer') setActiveTab('trainer_dashboard')
+      else setActiveTab('portal')
     }
-
-    // 3. Fallback Member View
-    setRole('member')
-    setActiveTab('portal')
   }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setSession(null)
     setRole(null)
+    setActiveTab(null)
   }
 
   if (!session && !role) {
@@ -85,7 +86,7 @@ export default function App() {
       
       {/* SIDEBAR NAVIGATION */}
       <Sidebar
-        activeTab={activeTab}
+        activeTab={activeTab || 'portal'}
         setActiveTab={setActiveTab}
         role={role}
         onRegisterClick={() => setIsModalOpen(true)}
@@ -108,7 +109,7 @@ export default function App() {
           {/* MEMBER ROLE VIEWS */}
           {role === 'member' && (
             <div className="w-full flex-1">
-              {activeTab === 'portal' && <MemberPortal session={session} onLogout={handleLogout} />}
+              {(activeTab === 'portal' || !activeTab) && <MemberPortal session={session} onLogout={handleLogout} />}
               {activeTab === 'trainers' && <TrainerManagement session={session} userRole={role} />}
               {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
             </div>
@@ -117,7 +118,7 @@ export default function App() {
           {/* ADMIN ROLE VIEWS */}
           {role === 'admin' && (
             <div className="w-full flex-1">
-              {activeTab === 'members' && (
+              {(activeTab === 'members' || !activeTab) && (
                 <MemberList refreshTrigger={refreshTrigger} />
               )}
               {activeTab === 'scanner' && (
@@ -144,7 +145,7 @@ export default function App() {
           {/* TRAINER ROLE VIEWS */}
           {role === 'trainer' && (
             <div className="w-full flex-1">
-              {activeTab === 'trainer_dashboard' && <TrainerDashboard session={session} />}
+              {(activeTab === 'trainer_dashboard' || !activeTab) && <TrainerDashboard session={session} />}
               {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
             </div>
           )}

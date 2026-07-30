@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Award, Zap, CheckCircle2, UserCheck, Calendar, PlusCircle, Trash2, UserPlus, Sparkles, Users, Clock, XCircle } from 'lucide-react'
+import { Award, CheckCircle2, UserCheck, Calendar, PlusCircle, Trash2, UserPlus, Sparkles, Users, Clock } from 'lucide-react'
 import AddTrainerModal from './AddTrainerModal'
 
 export default function TrainerManagement({ session, userRole }) {
@@ -48,16 +48,16 @@ export default function TrainerManagement({ session, userRole }) {
     const { data: m } = await supabase.from('members').select('id, full_name, email, auth_id')
     if (m) setMembers(m)
 
-    // 3. Match Current Logged-in Member Profile
+    // 3. Match Logged-in Member Profile & Active Coach Subscriptions
     if (session?.user && userRole === 'member') {
       const match = m?.find(mem => mem.auth_id === session.user.id || mem.email === session.user.email)
       if (match) {
         setCurrentMember(match)
+        setSelectedMember(match.id) // Automatically lock member selection to self
         
-        // Fetch all active/pending requests for this member
         const { data: memberSubs } = await supabase
           .from('trainer_subscriptions')
-          .select('*')
+          .select('*, trainers(*)')
           .eq('member_id', match.id)
           .in('status', ['pending', 'active'])
 
@@ -65,7 +65,7 @@ export default function TrainerManagement({ session, userRole }) {
       }
     }
 
-    // 4. Fetch All Subscriptions for Admin Audit
+    // 4. Admin Audit List
     if (userRole === 'admin') {
       const { data: allSubs } = await supabase
         .from('trainer_subscriptions')
@@ -75,7 +75,7 @@ export default function TrainerManagement({ session, userRole }) {
       if (allSubs) setAllSubscriptionsList(allSubs)
     }
 
-    // 5. Fetch PT Sessions (Members only)
+    // 5. PT Sessions
     if (userRole === 'member') {
       const { data: s } = await supabase
         .from('pt_sessions')
@@ -89,7 +89,6 @@ export default function TrainerManagement({ session, userRole }) {
     fetchData()
   }, [fetchData])
 
-  // Member sends a hiring request (status = 'pending')
   const handleSubscribeToTrainer = async (trainer) => {
     if (userRole === 'admin' || userRole === 'trainer') {
       alert("Staff and Coaches cannot request personal trainers.")
@@ -109,7 +108,7 @@ export default function TrainerManagement({ session, userRole }) {
         member_id: currentMember.id,
         plan_type: 'Personal Coaching Monthly',
         price: trainer.monthly_plan_price || 120.00,
-        status: 'pending' // Creates a pending request
+        status: 'pending'
       }
     ])
 
@@ -125,7 +124,6 @@ export default function TrainerManagement({ session, userRole }) {
     setSubscribingId(null)
   }
 
-  // Member withdraws hiring request before acceptance
   const handleWithdrawRequest = async (subscriptionId) => {
     const { error } = await supabase
       .from('trainer_subscriptions')
@@ -145,10 +143,10 @@ export default function TrainerManagement({ session, userRole }) {
     e.preventDefault()
     setLoading(true)
 
-    const targetMember = selectedMember || currentMember?.id
+    const targetMember = currentMember?.id || selectedMember
 
-    if (!targetMember) {
-      alert('Please select a valid member for this session.')
+    if (!selectedTrainer) {
+      alert('Please select a valid active coach.')
       setLoading(false)
       return
     }
@@ -166,6 +164,7 @@ export default function TrainerManagement({ session, userRole }) {
       playSuccessSound()
       setMsg('PT Appointment scheduled successfully!')
       setSessionNotes('')
+      setSessionDate('')
       fetchData()
       setTimeout(() => setMsg(''), 3500)
     } else {
@@ -186,6 +185,11 @@ export default function TrainerManagement({ session, userRole }) {
     fetchData()
   }
 
+  // Filter coaches available for 1-on-1 booking (ONLY ACTIVE HIRED COACHES for Members)
+  const activeHiredCoaches = trainers.filter(t => 
+    memberSubscriptions.some(sub => sub.trainer_id === t.id && sub.status === 'active')
+  )
+
   return (
     <div className="space-y-6">
       {msg && (
@@ -195,7 +199,7 @@ export default function TrainerManagement({ session, userRole }) {
         </div>
       )}
 
-      {/* COACHING MARKETPLACE & ROSTER */}
+      {/* COACHING MARKETPLACE */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center space-x-3">
@@ -244,11 +248,10 @@ export default function TrainerManagement({ session, userRole }) {
                       </span>
                     </div>
                     <p className="text-xs font-semibold text-indigo-300 mt-0.5">{t.specialty || 'Pro Coach'}</p>
-                    <p className="text-[11px] text-slate-400 mt-2 line-clamp-2">{t.bio || 'Dedicated certified fitness coach specialized in athletic strength and transformation.'}</p>
+                    <p className="text-[11px] text-slate-400 mt-2 line-clamp-2">{t.bio || 'Dedicated certified fitness coach.'}</p>
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    {/* MEMBER REQUEST & WITHDRAW OPTIONS */}
                     {userRole === 'member' && (
                       <div className="w-full flex flex-col space-y-2">
                         {isPending ? (
@@ -267,7 +270,7 @@ export default function TrainerManagement({ session, userRole }) {
                         ) : isActive ? (
                           <div className="py-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold rounded-xl text-center flex items-center justify-center space-x-1">
                             <CheckCircle2 className="h-4 w-4" />
-                            <span>Active Coach</span>
+                            <span>Active Hired Coach</span>
                           </div>
                         ) : (
                           <button
@@ -275,14 +278,12 @@ export default function TrainerManagement({ session, userRole }) {
                             disabled={subscribingId === t.id}
                             className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-xl transition shadow-lg flex items-center justify-center space-x-1 shadow-indigo-600/20"
                           >
-                            <Zap className="h-3.5 w-3.5 mr-1 text-amber-300" />
                             <span>{subscribingId === t.id ? 'Sending...' : 'Send Hire Request'}</span>
                           </button>
                         )}
                       </div>
                     )}
 
-                    {/* ADMIN REMOVE BUTTON */}
                     {userRole === 'admin' && (
                       <button
                         onClick={() => handleDeleteTrainer(t)}
@@ -300,56 +301,7 @@ export default function TrainerManagement({ session, userRole }) {
         </div>
       </div>
 
-      {/* ADMIN ONLY: ALL COACH SUBSCRIPTIONS AUDIT PANEL */}
-      {userRole === 'admin' && (
-        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center space-x-2">
-              <Users className="h-5 w-5 text-indigo-400" />
-              <span>Active Coach Subscriptions Roster</span>
-            </h3>
-            <span className="text-xs font-mono text-slate-400">Total Requests & Subscriptions: {allSubscriptionsList.length}</span>
-          </div>
-
-          <div className="space-y-3">
-            {allSubscriptionsList.length === 0 ? (
-              <p className="text-xs text-slate-500 py-8 text-center border border-dashed border-slate-800 rounded-2xl font-mono">
-                No active member-to-coach subscriptions found in system.
-              </p>
-            ) : (
-              allSubscriptionsList.map((sub) => (
-                <div key={sub.id} className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs font-bold text-white">Member: {sub.members?.full_name}</span>
-                      <span className="text-[10px] text-slate-400">requested</span>
-                      <span className="text-xs font-bold text-indigo-400">Coach: {sub.trainers?.full_name}</span>
-                    </div>
-                    <p className="text-[10px] font-mono text-slate-500 mt-1">
-                      Email: {sub.members?.email} | Plan: {sub.plan_type}
-                    </p>
-                  </div>
-
-                  <div className="text-right flex items-center space-x-3">
-                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase ${
-                      sub.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                      sub.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                      'bg-slate-800 text-slate-400 border-slate-700'
-                    }`}>
-                      {sub.status}
-                    </span>
-                    <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                      ${sub.price || 120}/mo
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* MEMBER ONLY: SCHEDULE 1-ON-1 PT SESSION */}
+      {/* MEMBER ONLY: SCHEDULE 1-ON-1 PT SESSION WITH ACTIVE HIRED COACH */}
       {userRole === 'member' && (
         <>
           <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl">
@@ -359,80 +311,79 @@ export default function TrainerManagement({ session, userRole }) {
               </div>
               <div>
                 <h3 className="text-base font-black text-white uppercase tracking-tight">Schedule 1-on-1 PT Session</h3>
-                <p className="text-xs text-slate-400">Book personal training slots with your coach</p>
+                <p className="text-xs text-slate-400">Book appointment slots with your active hired coach</p>
               </div>
             </div>
 
-            <form onSubmit={handleBookSession} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Select Coach</label>
-                  <select
-                    required
-                    value={selectedTrainer}
-                    onChange={(e) => setSelectedTrainer(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">-- Choose Coach --</option>
-                    {trainers.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.full_name} ({t.specialty})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Select Member</label>
-                  <select
-                    required={!currentMember}
-                    value={selectedMember || currentMember?.id || ''}
-                    onChange={(e) => setSelectedMember(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">-- Choose Member --</option>
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.full_name} ({m.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            {activeHiredCoaches.length === 0 ? (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium rounded-2xl">
+                ⚠️ You must have an accepted, active coach subscription to schedule a 1-on-1 personal training session. Please hire a coach from the roster above first!
               </div>
+            ) : (
+              <form onSubmit={handleBookSession} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Active Coach</label>
+                    <select
+                      required
+                      value={selectedTrainer}
+                      onChange={(e) => setSelectedTrainer(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">-- Select Active Coach --</option>
+                      {activeHiredCoaches.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.full_name} ({t.specialty})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Session Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={sessionDate}
-                    onChange={(e) => setSessionDate(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                  />
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Member (You)</label>
+                    <input
+                      type="text"
+                      disabled
+                      value={`${currentMember?.full_name || 'Member'} (${currentMember?.email || ''})`}
+                      className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-400 cursor-not-allowed"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Session Focus / Notes</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Squat Form Analysis & Heavy Triples"
-                    value={sessionNotes}
-                    onChange={(e) => setSessionNotes(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Session Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={sessionDate}
+                      onChange={(e) => setSessionDate(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-1"
-              >
-                <PlusCircle className="h-4 w-4 mr-1" />
-                <span>{loading ? 'Booking Session...' : 'Confirm Appointment'}</span>
-              </button>
-            </form>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Session Focus / Notes</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Squat Form Analysis & Heavy Triples"
+                      value={sessionNotes}
+                      onChange={(e) => setSessionNotes(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-1"
+                >
+                  <PlusCircle className="h-4 w-4 mr-1" />
+                  <span>{loading ? 'Booking Session...' : 'Confirm Appointment'}</span>
+                </button>
+              </form>
+            )}
           </div>
 
           {/* SCHEDULED SESSIONS HISTORY */}

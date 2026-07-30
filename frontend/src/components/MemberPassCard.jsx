@@ -7,7 +7,6 @@ export default function MemberPassCard({ member, cardRef, onDownload, onZoom }) 
   const [totpToken, setTotpToken] = useState('')
   const [timeLeft, setTimeLeft] = useState(30)
 
-  // Dynamic ROTATING TOTP PASS TOKEN GENERATION
   useEffect(() => {
     if (!member?.id) return
 
@@ -79,14 +78,16 @@ export default function MemberPassCard({ member, cardRef, onDownload, onZoom }) 
           </button>
         </div>
 
-        <motion.div 
+        {/* CLICKABLE QR CONTAINER WITH EXPLICIT EVENT BINDING */}
+        <motion.button 
+          type="button"
           whileHover={{ scale: 1.08 }} 
           onClick={onZoom}
-          className="bg-white p-3 rounded-2xl shadow-2xl cursor-pointer"
+          className="bg-white p-3 rounded-2xl shadow-2xl cursor-pointer pointer-events-auto focus:outline-none"
         >
           <QRCodeSVG value={totpToken || member.qr_code_token || member.id} size={100} bgColor="#ffffff" fgColor="#0f172a" level="H" />
           <span className="block text-[8px] font-bold text-slate-500 mt-1 uppercase text-center">Tap to Zoom</span>
-        </motion.div>
+        </motion.button>
       </div>
     </div>
   )

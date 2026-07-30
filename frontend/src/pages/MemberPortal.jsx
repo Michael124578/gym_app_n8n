@@ -235,7 +235,7 @@ export default function MemberPortal({ session, onLogout }) {
         )}
       </AnimatePresence>
 
-      {/* MEMBER HEADER */}
+      {/* MEMBER HEADER (TOKEN ID REMOVED) */}
       <div className="glass-panel p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
         <div>
           <div className="flex items-center space-x-3">
@@ -244,7 +244,7 @@ export default function MemberPortal({ session, onLogout }) {
               {member.plan_name || 'Member Pass'}
             </span>
           </div>
-          <p className="text-xs text-slate-400 font-mono mt-1">TOKEN ID: {member.id}</p>
+          <p className="text-xs text-slate-400 font-mono mt-1">{member.email}</p>
         </div>
 
         <div className="flex items-center space-x-3 w-full sm:w-auto">
