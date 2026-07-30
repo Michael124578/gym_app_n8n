@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { supabaseAdminAuth } from '../utils/supabaseAdmin'
-import { UserPlus, CreditCard, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { UserPlus, CreditCard, AlertCircle, Eye, EyeOff, Phone } from 'lucide-react'
 
 export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [planName, setPlanName] = useState('Monthly Pass')
@@ -19,6 +20,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     if (!isOpen) {
       setFullName('')
       setEmail('')
+      setPhone('')
       setPassword('')
       setShowPassword(false)
       setPlanName('Monthly Pass')
@@ -58,11 +60,12 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     setErrorMsg('')
 
     const cleanEmail = email.trim().toLowerCase()
+    const cleanPhone = phone.trim()
 
     try {
       // 1. Create Auth user via Edge Function first
       const { data: authData, error: authError } = await supabase.functions.invoke('create-member-user', {
-        body: { email: cleanEmail, password, fullName: fullName.trim() }
+        body: { email: cleanEmail, password, fullName: fullName.trim(), phone: cleanPhone }
       })
 
       let userId = authData?.user?.id
@@ -72,7 +75,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
         const { data: fallbackAuth, error: fallbackError } = await supabaseAdminAuth.auth.signUp({
           email: cleanEmail,
           password: password,
-          options: { data: { full_name: fullName.trim() } }
+          options: { data: { full_name: fullName.trim(), phone: cleanPhone } }
         })
         if (fallbackError) throw new Error(`Auth Creation: ${fallbackError.message}`)
         userId = fallbackAuth.user?.id
@@ -83,12 +86,14 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
       const expiryDate = new Date()
       expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays, 10))
 
+      // 3. Insert into public.members
       const { data: member, error: memberError } = await supabase
         .from('members')
         .insert([{
           auth_id: userId,
           full_name: fullName.trim(),
           email: cleanEmail,
+          phone: cleanPhone,
           status: 'active',
           plan_name: planName,
           last_payment_amount: parseFloat(amount),
@@ -99,13 +104,14 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
 
       if (memberError) throw new Error(`Profile Insertion: ${memberError.message}`)
 
+      // 4. Record Payment
       await supabase.from('payments').insert([{
         member_id: member.id,
         amount: parseFloat(amount),
         plan_name: planName
       }])
 
-      // Safe Non-blocking Welcome Email API Dispatch
+      // 5. Safe Non-blocking Welcome Email API Dispatch
       try {
         await fetch('/api/send-welcome', {
           method: 'POST',
@@ -114,6 +120,29 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
         })
       } catch (err) {
         console.warn('Welcome email dispatch warning:', err)
+      }
+
+      // 6. Safe Non-blocking Automated WhatsApp Direct Message Dispatch (Via Localtunnel)
+      try {
+        const botUrl = import.meta.env.VITE_WHATSAPP_BOT_URL || 'http://localhost:3001'
+        const botSecret = import.meta.env.VITE_WHATSAPP_BOT_SECRET || 'my_super_secret_gym_key_12345'
+
+        await fetch(`${botUrl}/send-pass`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${botSecret}`,
+            'Bypass-Tunnel-Reminder': 'true'
+          },
+          body: JSON.stringify({
+            phone: cleanPhone,
+            fullName: fullName.trim(),
+            planName: planName,
+            qrToken: member.qr_code_token
+          })
+        })
+      } catch (err) {
+        console.warn('WhatsApp dispatch warning:', err)
       }
 
       if (onMemberAdded) onMemberAdded(member)
@@ -177,6 +206,21 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Phone Number (WhatsApp)</label>
+            <div className="relative">
+              <input
+                type="tel"
+                required
+                placeholder="e.g. +201234567890"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+              />
+              <Phone className="absolute right-3.5 top-3 h-4 w-4 text-slate-500" />
+            </div>
           </div>
 
           <div>

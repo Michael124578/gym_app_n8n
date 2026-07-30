@@ -15,14 +15,29 @@ import { QrCode, Dumbbell, Wrench, Users, Award } from 'lucide-react'
 
 export default function App() {
   const [session, setSession] = useState(null)
-  const [role, setRole] = useState(null) // 'member' | 'admin' | 'trainer'
+  const [role, setRole] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [activeTab, setActiveTab] = useState(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
+    // 1. Initial Session Check (Runs ONCE on app load)
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      if (currentSession) {
+        setSession(currentSession)
+        detectRole(currentSession, 'INITIAL_LOAD')
+      }
+    })
+
+    // 2. Auth Event Listener (Handles explicit login/logout while ignoring tab-switch token refreshes)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      // IGNORE background focus / token refresh events to prevent tab resets
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        if (currentSession) setSession(currentSession)
+        return
+      }
+
       if (currentSession) {
         setSession(currentSession)
         detectRole(currentSession, event)
@@ -40,11 +55,9 @@ export default function App() {
     const email = userSession.user?.email || ''
     let detectedRole = 'member'
 
-    // 1. Admin Check
     if (email === 'admin@irongym.com' || email.includes('admin')) {
       detectedRole = 'admin'
     } else {
-      // 2. Trainer Check
       const { data: trainer } = await supabase
         .from('trainers')
         .select('id')
@@ -56,12 +69,14 @@ export default function App() {
 
     setRole(detectedRole)
 
-    // ONLY set default tab on initial sign-in, NOT on window focus / token refresh
-    if (!activeTab || authEvent === 'SIGNED_IN') {
-      if (detectedRole === 'admin') setActiveTab('members')
-      else if (detectedRole === 'trainer') setActiveTab('trainer_dashboard')
-      else setActiveTab('portal')
-    }
+    // ONLY set the default tab on initial load or explicit SIGNED_IN event.
+    // Never reset activeTab if the user is already on a tab.
+    setActiveTab((prevTab) => {
+      if (prevTab && authEvent !== 'SIGNED_IN') return prevTab
+      if (detectedRole === 'admin') return 'members'
+      if (detectedRole === 'trainer') return 'trainer_dashboard'
+      return 'portal'
+    })
   }
 
   const handleLogout = async () => {
