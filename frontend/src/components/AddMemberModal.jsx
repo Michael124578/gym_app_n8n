@@ -63,30 +63,22 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     const cleanPhone = phone.trim()
 
     try {
-      // 1. Create Auth user via Edge Function first
-      const { data: authData, error: authError } = await supabase.functions.invoke('create-member-user', {
-        body: { email: cleanEmail, password, fullName: fullName.trim(), phone: cleanPhone }
+      // 1. Create Auth User directly via non-persisted Admin Auth client
+      const { data: authData, error: authError } = await supabaseAdminAuth.auth.signUp({
+        email: cleanEmail,
+        password: password,
+        options: { data: { full_name: fullName.trim(), phone: cleanPhone } }
       })
 
-      let userId = authData?.user?.id
+      if (authError) throw new Error(`Auth Creation: ${authError.message}`)
 
-      // 2. Safe Fallback: Use isolated non-persisted client so Admin session is protected
-      if (authError || !userId) {
-        const { data: fallbackAuth, error: fallbackError } = await supabaseAdminAuth.auth.signUp({
-          email: cleanEmail,
-          password: password,
-          options: { data: { full_name: fullName.trim(), phone: cleanPhone } }
-        })
-        if (fallbackError) throw new Error(`Auth Creation: ${fallbackError.message}`)
-        userId = fallbackAuth.user?.id
-      }
-
+      const userId = authData.user?.id
       if (!userId) throw new Error('Failed to resolve valid Auth User ID.')
 
       const expiryDate = new Date()
       expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays, 10))
 
-      // 3. Insert into public.members
+      // 2. Insert into public.members
       const { data: member, error: memberError } = await supabase
         .from('members')
         .insert([{
@@ -104,14 +96,14 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
 
       if (memberError) throw new Error(`Profile Insertion: ${memberError.message}`)
 
-      // 4. Record Payment
+      // 3. Record Payment
       await supabase.from('payments').insert([{
         member_id: member.id,
         amount: parseFloat(amount),
         plan_name: planName
       }])
 
-      // 5. Safe Non-blocking Welcome Email API Dispatch
+      // 4. Safe Non-blocking Welcome Email API Dispatch
       try {
         await fetch('/api/send-welcome', {
           method: 'POST',
@@ -122,9 +114,10 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
         console.warn('Welcome email dispatch warning:', err)
       }
 
-      // 6. Safe Non-blocking Automated WhatsApp Direct Message Dispatch (Via Localtunnel)
+      // 5. Safe Non-blocking Automated WhatsApp Direct Message Dispatch
       try {
-        const botUrl = import.meta.env.VITE_WHATSAPP_BOT_URL || 'http://localhost:3001'
+        const rawUrl = import.meta.env.VITE_WHATSAPP_BOT_URL || 'http://localhost:3001'
+        const botUrl = rawUrl.replace(/\/+$/, '') // Prevents double slashes like //send-pass
         const botSecret = import.meta.env.VITE_WHATSAPP_BOT_SECRET || 'my_super_secret_gym_key_12345'
 
         await fetch(`${botUrl}/send-pass`, {

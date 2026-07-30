@@ -1,15 +1,25 @@
-import { Resend } from 'resend'
+import nodemailer from 'nodemailer'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
 
-export async function POST(req) {
   try {
-    const { email, full_name, plan_name } = await req.json()
+    const { email, full_name, plan_name } = req.body
     const appUrl = process.env.PUBLIC_APP_URL || 'https://your-gym-app.vercel.app'
 
-    const data = await resend.emails.send({
-      from: 'IRON GYM Operations <onboarding@yourdomain.com>',
-      to: [email],
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASS
+      }
+    })
+
+    await transporter.sendMail({
+      from: `"IRON GYM Operations" <${process.env.GMAIL_USER}>`,
+      to: email,
       subject: 'Official Welcome & Account Confirmation — IRON GYM',
       html: `
         <!DOCTYPE html>
@@ -48,8 +58,9 @@ export async function POST(req) {
       `
     })
 
-    return Response.json({ success: true, data })
+    return res.status(200).json({ success: true })
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 })
+    console.error('Welcome Email Error:', error)
+    return res.status(500).json({ error: error.message })
   }
 }
