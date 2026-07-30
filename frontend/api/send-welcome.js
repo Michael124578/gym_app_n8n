@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
   try {
     const { email, full_name, plan_name } = req.body
-    const appUrl = process.env.PUBLIC_APP_URL || 'https://your-gym-app.vercel.app'
+    const appUrl = process.env.PUBLIC_APP_URL || 'https://gym-app-n8n.vercel.app/'
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
