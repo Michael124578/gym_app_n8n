@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { 
-  QrCode, ShieldCheck, ArrowRight, Lock, Mail, 
+  QrCode, ArrowRight, Lock, Mail, 
   Dumbbell, ChevronRight, Flame, Zap, 
   CheckCircle2, Trophy, KeyRound, Activity, 
-  Eye, EyeOff, Radio, Award, Sparkles
+  Eye, EyeOff, Radio
 } from 'lucide-react'
 
 export default function Login({ onLoginSuccess }) {
@@ -54,11 +54,9 @@ export default function Login({ onLoginSuccess }) {
     return () => clearInterval(interval)
   }, [])
 
-  // Clean URL Hash (#plans, #facilities, etc.) when opening Auth
   const handleOpenAuth = () => {
     setErrorMsg('')
     setIsAuthModalOpen(true)
-    // Remove anchor hashes from URL bar
     if (window.location.hash) {
       window.history.pushState('', document.title, window.location.pathname + window.location.search)
     }
@@ -68,16 +66,16 @@ export default function Login({ onLoginSuccess }) {
     setIsAuthModalOpen(false)
     setEmail('')
     setPassword('')
+    setShowPassword(false)
     setErrorMsg('')
   }
 
-  // Quick Demo Account Fillers
   const fillDemoAccount = (demoEmail, demoPassword) => {
     setEmail(demoEmail)
     setPassword(demoPassword)
   }
 
-  // Unified Login Process with Automatic Role Detection
+  // Unified Login Process with Multi-tier Role Detection
   const handleLogin = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -96,18 +94,21 @@ export default function Login({ onLoginSuccess }) {
       const user = data.user
       let detectedRole = 'member'
 
-      // 1. Admin Email Check
-      if (user.email === 'admin@irongym.com' || user.email.includes('admin')) {
+      const userRoleMeta = user?.user_metadata?.user_role
+
+      // Role Priority Check
+      if (userRoleMeta === 'admin' || cleanEmail === 'admin@irongym.com' || cleanEmail.includes('admin')) {
         detectedRole = 'admin'
       } else {
-        // 2. Trainer Table Lookup
         const { data: trainer } = await supabase
           .from('trainers')
           .select('id')
           .or(`auth_id.eq.${user.id},email.eq.${cleanEmail}`)
           .maybeSingle()
 
-        if (trainer) detectedRole = 'trainer'
+        if (trainer || userRoleMeta === 'trainer') {
+          detectedRole = 'trainer'
+        }
       }
 
       closeAuthModal()

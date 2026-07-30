@@ -2,16 +2,19 @@ import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { supabase } from '../lib/supabaseClient'
 import { motion } from 'framer-motion'
-import { CheckCircle, XCircle, QrCode, Search, KeyRound, Zap, LogOut as ExitIcon, LogIn as EntryIcon } from 'lucide-react'
+import { CheckCircle, XCircle, QrCode, Search, KeyRound, LogOut as ExitIcon, LogIn as EntryIcon } from 'lucide-react'
 
 export default function QRScanner({ onScanComplete }) {
   const [scanResult, setScanResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
-  const [flashEffect, setFlashEffect] = useState(null) // 'success' | 'error' | null
-  const [gateMode, setGateMode] = useState('entry') // 'entry' | 'exit'
+  const [flashEffect, setFlashEffect] = useState(null)
+  const [gateMode, setGateMode] = useState('entry')
   const scannerRef = useRef(null)
+
+  // Unique element ID per instance to avoid DOM collisions
+  const scannerElementId = useRef(`reader-${Math.random().toString(36).substring(2, 9)}`).current
 
   const triggerTerminalFlash = (type) => {
     setFlashEffect(type)
@@ -55,6 +58,7 @@ export default function QRScanner({ onScanComplete }) {
         const currentEpoch = Math.floor(Date.now() / 1000)
         const currentTimeStep = Math.floor(currentEpoch / 30)
 
+        // Expand tolerance to +/- 1 time step (60s window) to handle client device clock drift
         if (Math.abs(currentTimeStep - scannedTimeStep) > 1) {
           playAudioFeedback(false)
           triggerTerminalFlash('error')
@@ -123,7 +127,6 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
-    // Unconditional Status & Expiration Check
     const isExpired = member.membership_end_date && new Date() > new Date(member.membership_end_date)
     const isInactive = member.status !== 'active' || isExpired
 
@@ -139,7 +142,6 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
-    // Handle Exit Check-out vs Entry Check-in Mode
     if (gateMode === 'exit') {
       const { data: lastVisit } = await supabase
         .from('check_ins')
@@ -190,7 +192,7 @@ export default function QRScanner({ onScanComplete }) {
   const startScanner = useCallback(() => {
     if (scannerRef.current) return
 
-    const scanner = new Html5QrcodeScanner('reader', {
+    const scanner = new Html5QrcodeScanner(scannerElementId, {
       qrbox: { width: 250, height: 250 },
       fps: 10,
     })
@@ -207,7 +209,7 @@ export default function QRScanner({ onScanComplete }) {
       },
       () => {}
     )
-  }, [gateMode])
+  }, [gateMode, scannerElementId])
 
   useEffect(() => {
     startScanner()
@@ -245,7 +247,6 @@ export default function QRScanner({ onScanComplete }) {
   return (
     <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-2xl mx-auto space-y-6 relative">
       
-      {/* FULL-SCREEN TERMINAL FLASH EFFECT */}
       {flashEffect === 'success' && (
         <div className="fixed inset-0 z-50 pointer-events-none bg-emerald-500/30 border-[16px] border-emerald-500 animate-pulse transition duration-300" />
       )}
@@ -262,7 +263,6 @@ export default function QRScanner({ onScanComplete }) {
             <h2 className="text-xl font-black text-white uppercase tracking-tight">Front Desk Gate Scanner</h2>
           </div>
 
-          {/* GATE MODE TOGGLE (ENTRY / EXIT) */}
           <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800">
             <button
               onClick={() => setGateMode('entry')}
@@ -286,7 +286,7 @@ export default function QRScanner({ onScanComplete }) {
         </div>
 
         {!scanResult && (
-          <div id="reader" className="w-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-950"></div>
+          <div id={scannerElementId} className="w-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-950"></div>
         )}
 
         {loading && (
@@ -329,7 +329,6 @@ export default function QRScanner({ onScanComplete }) {
         )}
       </div>
 
-      {/* MANUAL OVERRIDE */}
       <div className="glass-panel rounded-3xl p-6 shadow-2xl w-full">
         <div className="flex items-center space-x-2 mb-4">
           <KeyRound className="h-5 w-5 text-indigo-400" />

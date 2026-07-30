@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { supabaseAdminAuth } from '../utils/supabaseAdmin'
 import { Award, AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
@@ -30,7 +31,7 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
     }
   }, [isOpen])
 
-  // ESC Listener to close Modal
+  // ESC Listener
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' || e.key === 'Esc') onClose()
@@ -47,8 +48,8 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
     const cleanEmail = email.trim().toLowerCase()
 
     try {
-      // 1. Create Auth user account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // 1. Create Auth user using isolated non-persisted client so Admin session is protected
+      const { data: authData, error: authError } = await supabaseAdminAuth.auth.signUp({
         email: cleanEmail,
         password: password,
         options: { data: { full_name: fullName.trim(), user_role: 'trainer' } }

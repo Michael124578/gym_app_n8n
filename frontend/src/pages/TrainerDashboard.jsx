@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { 
-  Users, Calendar, DollarSign, Clock, Dumbbell, PlusCircle, 
-  CheckCircle2, Sparkles, Activity, Zap, FileText, XCircle
-} from 'lucide-react'
+import { Users, Calendar, Dumbbell, Sparkles, Activity, Clock, CheckCircle2, XCircle } from 'lucide-react'
+
+import TrainerStatsBanner from '../components/TrainerStatsBanner'
+import TrainerProgramBuilder from '../components/TrainerProgramBuilder'
 
 export default function TrainerDashboard({ session }) {
   const [trainerProfile, setTrainerProfile] = useState(null)
@@ -46,7 +46,6 @@ export default function TrainerDashboard({ session }) {
 
   const fetchTrainerData = useCallback(async () => {
     setLoading(true)
-
     const userEmail = session?.user?.email || ''
     const userId = session?.user?.id || ''
 
@@ -59,7 +58,6 @@ export default function TrainerDashboard({ session }) {
     if (trainer) {
       setTrainerProfile(trainer)
 
-      // Active Subscribed Clients
       const { data: subs } = await supabase
         .from('trainer_subscriptions')
         .select('*, members(id, full_name, email, status, membership_end_date)')
@@ -68,7 +66,6 @@ export default function TrainerDashboard({ session }) {
 
       if (subs) setSubscribers(subs)
 
-      // Pending Member Hiring Requests
       const { data: pending } = await supabase
         .from('trainer_subscriptions')
         .select('*, members(id, full_name, email)')
@@ -100,19 +97,17 @@ export default function TrainerDashboard({ session }) {
   useEffect(() => {
     fetchTrainerData()
 
-    const sessionChannel = supabase
-      .channel('realtime-pt-sessions')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pt_sessions' }, () => {
-        fetchTrainerData()
-      })
+    const channel = supabase
+      .channel('realtime-trainer-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pt_sessions' }, fetchTrainerData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trainer_subscriptions' }, fetchTrainerData)
       .subscribe()
 
     return () => {
-      sessionChannel.unsubscribe()
+      supabase.removeChannel(channel)
     }
   }, [fetchTrainerData])
 
-  // Accept pending member request
   const handleAcceptRequest = async (subscriptionId) => {
     const { error } = await supabase
       .from('trainer_subscriptions')
@@ -127,7 +122,6 @@ export default function TrainerDashboard({ session }) {
     }
   }
 
-  // Reject pending member request
   const handleRejectRequest = async (subscriptionId) => {
     const { error } = await supabase
       .from('trainer_subscriptions')
@@ -190,8 +184,6 @@ export default function TrainerDashboard({ session }) {
     )
   }
 
-  const totalMonthlyEarnings = subscribers.length * (trainerProfile?.monthly_plan_price || 120)
-
   return (
     <div className="space-y-6">
       {msg && (
@@ -201,39 +193,8 @@ export default function TrainerDashboard({ session }) {
         </div>
       )}
 
-      {/* TRAINER HEADER BANNER */}
-      <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-violet-950 border border-indigo-500/30 p-6 rounded-3xl shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
-        <div className="relative z-10">
-          <span className="inline-flex items-center space-x-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-300 bg-indigo-500/20 px-3.5 py-1 rounded-full border border-indigo-500/30 mb-3">
-            <Zap className="h-3 w-3 text-amber-300" />
-            <span>Master Coach Command</span>
-          </span>
-          <h2 className="text-3xl font-black text-white tracking-tight">Coach {trainerProfile?.full_name || 'Trainer'}</h2>
-          <p className="text-xs text-slate-400 mt-1">Specialization: <strong className="text-indigo-300">{trainerProfile?.specialty || 'Strength & Conditioning'}</strong></p>
-        </div>
-
-        <div className="flex items-center space-x-4 relative z-10 w-full md:w-auto">
-          <div className="flex-1 md:flex-none bg-slate-950/80 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3">
-            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl">
-              <DollarSign className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xl font-black text-white">${totalMonthlyEarnings.toLocaleString()}</p>
-              <p className="text-[10px] font-mono text-slate-400 uppercase">Monthly MRR</p>
-            </div>
-          </div>
-
-          <div className="flex-1 md:flex-none bg-slate-950/80 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3">
-            <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl">
-              <Users className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xl font-black text-white">{subscribers.length}</p>
-              <p className="text-[10px] font-mono text-slate-400 uppercase">Active Athletes</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* STATS BANNER */}
+      <TrainerStatsBanner trainerProfile={trainerProfile} subscribers={subscribers} />
 
       {/* DASHBOARD TAB SWITCHER */}
       <div className="flex space-x-2 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 max-w-xl">
@@ -268,10 +229,9 @@ export default function TrainerDashboard({ session }) {
         </button>
       </div>
 
-      {/* TAB 1: SUBSCRIBED CLIENTS & PENDING REQUESTS QUEUE */}
+      {/* TAB 1: CLIENTS & PENDING QUEUE */}
       {activeTab === 'clients' && (
         <div className="space-y-6">
-          {/* PENDING REQUESTS QUEUE */}
           {pendingRequests.length > 0 && (
             <div className="bg-amber-950/40 border border-amber-500/30 p-6 rounded-3xl shadow-2xl space-y-4">
               <h3 className="text-sm font-black text-amber-300 uppercase tracking-tight flex items-center space-x-2">
@@ -309,7 +269,6 @@ export default function TrainerDashboard({ session }) {
             </div>
           )}
 
-          {/* ACTIVE SUBSCRIBED CLIENTS */}
           <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-4">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center space-x-2">
@@ -348,171 +307,33 @@ export default function TrainerDashboard({ session }) {
         </div>
       )}
 
-      {/* TAB 2: WORKOUT PROGRAM BUILDER */}
+      {/* TAB 2: PROGRAM BUILDER MODULAR CALL */}
       {activeTab === 'builder' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-4">
-            <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center space-x-2">
-              <Dumbbell className="h-5 w-5 text-indigo-400" />
-              <span>Assign Custom Routine</span>
-            </h3>
-
-            <form onSubmit={handleAssignWorkoutPlan} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Select Athlete</label>
-                <select
-                  required
-                  value={selectedClient}
-                  onChange={(e) => setSelectedClient(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="">-- Select Client --</option>
-                  {subscribers.map((sub) => (
-                    <option key={sub.members?.id} value={sub.members?.id}>
-                      {sub.members?.full_name} ({sub.members?.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Program Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Hypertrophy Block - Week 1"
-                  value={programTitle}
-                  onChange={(e) => setProgramTitle(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Split Day</label>
-                  <select
-                    value={splitDay}
-                    onChange={(e) => setSplitDay(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="Push Day">Push Day</option>
-                    <option value="Pull Day">Pull Day</option>
-                    <option value="Leg Day">Leg Day</option>
-                    <option value="Upper Body">Upper Body</option>
-                    <option value="Lower Body">Lower Body</option>
-                    <option value="Full Body">Full Body</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Target RPE (1-10)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="1"
-                    max="10"
-                    required
-                    value={targetRpe}
-                    onChange={(e) => setTargetRpe(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Exercise Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Incline Dumbbell Bench Press"
-                  value={exerciseName}
-                  onChange={(e) => setExerciseName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Target Sets</label>
-                  <input
-                    type="number"
-                    required
-                    value={targetSets}
-                    onChange={(e) => setTargetSets(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Target Reps</label>
-                  <input
-                    type="number"
-                    required
-                    value={targetReps}
-                    onChange={(e) => setTargetReps(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Cues / Tempo Notes</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 3-sec eccentric lowering, pause at bottom"
-                  value={planNotes}
-                  onChange={(e) => setPlanNotes(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={savingPlan}
-                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-1"
-              >
-                <PlusCircle className="h-4 w-4 mr-1" />
-                <span>{savingPlan ? 'Dispatching...' : 'Dispatch Routine'}</span>
-              </button>
-            </form>
-          </div>
-
-          <div className="lg:col-span-2 bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-4">
-            <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center space-x-2">
-              <FileText className="h-5 w-5 text-indigo-400" />
-              <span>Assigned Routines History ({assignedPlans.length})</span>
-            </h3>
-
-            <div className="space-y-3">
-              {assignedPlans.length === 0 ? (
-                <p className="text-xs text-slate-500 py-8 text-center border border-dashed border-slate-800 rounded-2xl font-mono">
-                  No routines assigned yet. Build a workout on the left panel!
-                </p>
-              ) : (
-                assignedPlans.map((plan) => (
-                  <div key={plan.id} className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex justify-between items-center">
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs font-black text-white">{plan.title}</span>
-                        <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
-                          {plan.split_day}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-300 mt-1 font-semibold">
-                        {plan.exercise_name} — {plan.target_sets} sets × {plan.target_reps} reps @ RPE {plan.target_rpe}
-                      </p>
-                      {plan.notes && <p className="text-[11px] text-slate-400 mt-0.5">Cue: {plan.notes}</p>}
-                      <p className="text-[10px] font-mono text-slate-500 mt-1">Client: {plan.members?.full_name}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+        <TrainerProgramBuilder
+          subscribers={subscribers}
+          selectedClient={selectedClient}
+          setSelectedClient={setSelectedClient}
+          programTitle={programTitle}
+          setProgramTitle={setProgramTitle}
+          splitDay={splitDay}
+          setSplitDay={setSplitDay}
+          targetRpe={targetRpe}
+          setTargetRpe={setTargetRpe}
+          exerciseName={exerciseName}
+          setExerciseName={setExerciseName}
+          targetSets={targetSets}
+          setTargetSets={setTargetSets}
+          targetReps={targetReps}
+          setTargetReps={setTargetReps}
+          planNotes={planNotes}
+          setPlanNotes={setPlanNotes}
+          onAssignWorkoutPlan={handleAssignWorkoutPlan}
+          savingPlan={savingPlan}
+          assignedPlans={assignedPlans}
+        />
       )}
 
-      {/* TAB 3: SESSIONS MANAGEMENT */}
+      {/* TAB 3: PT SESSIONS */}
       {activeTab === 'sessions' && (
         <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-4">
           <div className="flex justify-between items-center mb-2">

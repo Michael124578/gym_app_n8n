@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  CheckCircle, LogOut, ShieldCheck, UserPlus, Send, 
-  X, Settings, Save, KeyRound, AlertCircle, Clock,
-  Flame, Download, CalendarCheck, Users, Dumbbell, Plus, Trash2, Zap, Sparkles, FileText
-} from 'lucide-react'
+import { Settings, LogOut, Sparkles, Flame, Users, X, KeyRound, Save, FileText } from 'lucide-react'
 import { toPng } from 'html-to-image'
+import { formatLocalDate } from '../utils/dateUtils'
+
+import MemberPassCard from '../components/MemberPassCard'
+import GuestPassGenerator from '../components/GuestPassGenerator'
+import WorkoutPRTracker from '../components/WorkoutPRTracker'
+import MemberAttendanceCalendar from '../components/MemberAttendanceCalendar'
 
 export default function MemberPortal({ session, onLogout }) {
   const [member, setMember] = useState(null)
@@ -19,46 +21,25 @@ export default function MemberPortal({ session, onLogout }) {
   const [loading, setLoading] = useState(false)
   const [isZoomed, setIsZoomed] = useState(false)
 
-  // Live Occupancy
   const [activeOccupancy, setActiveOccupancy] = useState(0)
   const maxCapacity = 100
 
-  // Workout Logger Form State
   const [splitType, setSplitType] = useState('Push')
   const [exerciseName, setExerciseName] = useState('')
   const [weightKg, setWeightKg] = useState('')
-  const [reps, setReps] = useState('')
 
-  // Edit Profile
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editName, setEditName] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   
-  // Toasts
   const [toastMessage, setToastMessage] = useState(null)
-  const [errorMessage, setErrorMessage] = useState(null)
-
   const cardRef = useRef(null)
 
   const showToast = (msg) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3500)
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('IRON GYM', { body: msg })
-    }
   }
-
-  const showError = (msg) => {
-    setErrorMessage(msg)
-    setTimeout(() => setErrorMessage(null), 4000)
-  }
-
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
-  }, [])
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -70,32 +51,22 @@ export default function MemberPortal({ session, onLogout }) {
   useEffect(() => {
     if (!member?.id) return
 
-    const profileChannel = supabase
-      .channel(`realtime-member-${member.id}`)
+    const channel = supabase
+      .channel(`realtime-member-portal-${member.id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'members', filter: `id=eq.${member.id}` }, (payload) => {
         setMember(payload.new)
         showToast('Membership pass updated!')
       })
-      .subscribe()
-
-    const workoutChannel = supabase
-      .channel(`realtime-workouts-${member.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'workouts', filter: `member_id=eq.${member.id}` }, () => {
         fetchWorkouts(member.id)
       })
-      .subscribe()
-
-    const planChannel = supabase
-      .channel(`realtime-assigned-plans-${member.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trainer_workout_plans', filter: `member_id=eq.${member.id}` }, () => {
         fetchAssignedRoutines(member.id)
       })
       .subscribe()
 
     return () => {
-      supabase.removeChannel(profileChannel)
-      supabase.removeChannel(workoutChannel)
-      supabase.removeChannel(planChannel)
+      supabase.removeChannel(channel)
     }
   }, [member?.id])
 
@@ -163,19 +134,15 @@ export default function MemberPortal({ session, onLogout }) {
       split_type: splitType,
       exercise_name: exerciseName.trim(),
       weight_kg: parseFloat(weightKg),
-      reps: parseInt(reps || '1')
+      reps: 1
     }])
 
-    if (error) {
-      showError(`Workout Log Error: ${error.message}`)
-      return
+    if (!error) {
+      setExerciseName('')
+      setWeightKg('')
+      showToast('⚡ Set logged successfully!')
+      fetchWorkouts(member.id)
     }
-
-    setExerciseName('')
-    setWeightKg('')
-    setReps('')
-    showToast('⚡ Set logged successfully!')
-    fetchWorkouts(member.id)
   }
 
   const handleDeleteWorkout = async (id) => {
@@ -185,15 +152,17 @@ export default function MemberPortal({ session, onLogout }) {
 
   const calculateStreak = () => {
     if (!checkIns.length) return 0
-    const dates = [...new Set(checkIns.map(c => new Date(c.checked_in_at).toDateString()))]
+    const dates = [...new Set(checkIns.map(c => formatLocalDate(c.checked_in_at)))]
     let streak = 0
     let today = new Date()
 
     for (let i = 0; i < dates.length; i++) {
-      const checkDate = new Date(dates[i])
-      const diffDays = Math.floor((today - checkDate) / (1000 * 60 * 60 * 24))
-      if (diffDays <= streak + 1) streak++
-      else break
+      if (dates[i] === formatLocalDate(today)) {
+        streak++
+        today.setDate(today.getDate() - 1)
+      } else {
+        break
+      }
     }
     return streak
   }
@@ -207,55 +176,8 @@ export default function MemberPortal({ session, onLogout }) {
       link.href = dataUrl
       link.click()
     } catch (err) {
-      showError('Failed to export pass image.')
+      console.error(err)
     }
-  }
-
-  const render30DayHeatmap = () => {
-    const days = []
-    const checkInDates = new Set(checkIns.map(c => new Date(c.checked_in_at).toISOString().split('T')[0]))
-
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().split('T')[0]
-      const hasCheckedIn = checkInDates.has(dateStr)
-
-      days.push(
-        <motion.div
-          key={dateStr}
-          whileHover={{ scale: 1.2 }}
-          title={`${dateStr}: ${hasCheckedIn ? 'Checked In' : 'No visit'}`}
-          className={`h-8 w-8 rounded-xl flex items-center justify-center text-[10px] font-bold transition ${
-            hasCheckedIn
-              ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/30'
-              : 'bg-slate-900 border border-slate-800/80 text-slate-600'
-          }`}
-        >
-          {d.getDate()}
-        </motion.div>
-      )
-    }
-    return days
-  }
-
-  const handleSaveProfile = async (e) => {
-    e.preventDefault()
-    setIsSaving(true)
-
-    if (editName.trim() && editName.trim() !== member.full_name) {
-      await supabase.from('members').update({ full_name: editName.trim() }).eq('id', member.id)
-      setMember({ ...member, full_name: editName.trim() })
-    }
-
-    if (newPassword) {
-      await supabase.auth.updateUser({ password: newPassword })
-      setNewPassword('')
-    }
-
-    setIsSaving(false)
-    setIsEditModalOpen(false)
-    showToast('Profile updated!')
   }
 
   const handleGenerateGuestPass = async (e) => {
@@ -277,14 +199,26 @@ export default function MemberPortal({ session, onLogout }) {
     setLoading(false)
   }
 
-  if (loading && !member) {
-    return (
-      <div className="min-h-[50vh] flex items-center justify-center text-slate-400 text-sm font-mono animate-pulse w-full">
-        Initializing Member Terminal...
-      </div>
-    )
+  const handleSaveProfile = async (e) => {
+    e.preventDefault()
+    setIsSaving(true)
+
+    if (editName.trim() && editName.trim() !== member.full_name) {
+      await supabase.from('members').update({ full_name: editName.trim() }).eq('id', member.id)
+      setMember({ ...member, full_name: editName.trim() })
+    }
+
+    if (newPassword) {
+      await supabase.auth.updateUser({ password: newPassword })
+      setNewPassword('')
+    }
+
+    setIsSaving(false)
+    setIsEditModalOpen(false)
+    showToast('Profile updated!')
   }
 
+  if (loading && !member) return <div className="p-8 text-center text-slate-500 font-mono">Initializing Terminal...</div>
   if (!member) return null
 
   const streak = calculateStreak()
@@ -292,11 +226,9 @@ export default function MemberPortal({ session, onLogout }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto space-y-6">
-      
-      {/* TOAST ALERTS */}
       <AnimatePresence>
         {toastMessage && (
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-3 rounded-2xl shadow-2xl border border-indigo-400/30 text-xs font-bold flex items-center space-x-2">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center space-x-2">
             <Sparkles className="h-4 w-4 text-emerald-300" />
             <span>{toastMessage}</span>
           </motion.div>
@@ -334,7 +266,7 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       </div>
 
-      {/* METRICS & LIVE CAPACITY */}
+      {/* OCCUPANCY & STREAK METRICS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
         <div className="md:col-span-2 glass-panel p-5 rounded-3xl flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
@@ -355,7 +287,6 @@ export default function MemberPortal({ session, onLogout }) {
               }`}
             />
           </div>
-          <p className="text-[10px] text-slate-500 font-mono mt-2">Real-time gate entry and exit synchronization</p>
         </div>
 
         <div className="glass-panel p-5 rounded-3xl flex items-center justify-between">
@@ -371,88 +302,24 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       </div>
 
-      {/* HOLOGRAPHIC DIGITAL PASS & GUEST GENERATOR */}
+      {/* PASS & GUEST MODULAR CALLS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        <div ref={cardRef} className="holo-card p-6 rounded-3xl flex flex-col justify-between shadow-2xl relative overflow-hidden w-full">
-          <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
-            <div className="flex items-center space-x-2">
-              <ShieldCheck className="h-5 w-5 text-indigo-400" />
-              <span className="text-xs font-black tracking-widest text-indigo-300 uppercase">IRON GYM DIGITAL PASS</span>
-            </div>
-            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              {member.status}
-            </span>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-2xl font-black text-white uppercase tracking-tight">{member.full_name}</p>
-              <p className="text-xs text-indigo-300 font-semibold mt-1">{member.plan_name || 'Monthly Pass'}</p>
-              <p className="text-xs text-slate-400 font-mono mt-0.5">{member.email}</p>
-              <button
-                onClick={handleDownloadPass}
-                className="mt-4 text-[10px] font-bold text-indigo-400 hover:text-white inline-flex items-center space-x-1"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>Save Pass PNG</span>
-              </button>
-            </div>
-
-            <motion.div 
-              whileHover={{ scale: 1.08 }} 
-              onClick={() => setIsZoomed(true)}
-              className="bg-white p-3 rounded-2xl shadow-2xl cursor-pointer"
-            >
-              <QRCodeSVG value={member.qr_code_token || member.id} size={100} bgColor="#ffffff" fgColor="#0f172a" level="H" />
-              <span className="block text-[8px] font-bold text-slate-500 mt-1 uppercase text-center">Tap to Zoom</span>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* GUEST PASS GENERATOR */}
-        <div className="glass-panel p-6 rounded-3xl flex flex-col justify-between w-full">
-          <div>
-            <div className="flex items-center space-x-2 mb-2">
-              <UserPlus className="h-5 w-5 text-indigo-400" />
-              <h3 className="text-sm font-bold text-white uppercase">Issue Guest Access Pass</h3>
-            </div>
-            <p className="text-xs text-slate-400 mb-4">Grant a 24-hour single-use QR pass to a workout partner.</p>
-
-            <form onSubmit={handleGenerateGuestPass} className="space-y-3">
-              <input
-                type="text"
-                required
-                placeholder="Guest Full Name"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold py-3 rounded-xl transition flex items-center justify-center space-x-1 shadow-lg shadow-indigo-600/30"
-              >
-                <Send className="h-3.5 w-3.5 mr-1" />
-                <span>Issue Guest Pass</span>
-              </button>
-            </form>
-          </div>
-
-          {generatedGuestPass && (
-            <div className="mt-4 p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-indigo-200">Guest: {generatedGuestPass.guest_name}</p>
-                <p className="text-[10px] text-slate-400 font-mono">Token: {generatedGuestPass.pass_token.substring(0, 8)}...</p>
-              </div>
-              <div className="bg-white p-1 rounded-lg">
-                <QRCodeSVG value={generatedGuestPass.pass_token} size={48} />
-              </div>
-            </div>
-          )}
-        </div>
+        <MemberPassCard 
+          member={member} 
+          cardRef={cardRef} 
+          onDownload={handleDownloadPass} 
+          onZoom={() => setIsZoomed(true)} 
+        />
+        <GuestPassGenerator 
+          guestName={guestName} 
+          setGuestName={setGuestName} 
+          onGenerate={handleGenerateGuestPass} 
+          generatedGuestPass={generatedGuestPass} 
+          loading={loading} 
+        />
       </div>
 
-      {/* ASSIGNED COACH WORKOUT ROUTINES */}
+      {/* ASSIGNED COACH ROUTINES */}
       {assignedRoutines.length > 0 && (
         <div className="glass-panel p-6 rounded-3xl space-y-4 w-full">
           <div className="flex items-center space-x-2">
@@ -482,108 +349,23 @@ export default function MemberPortal({ session, onLogout }) {
         </div>
       )}
 
-      {/* WORKOUT SPLIT & PR TRACKER */}
-      <div className="glass-panel p-6 rounded-3xl space-y-6 w-full">
-        <div className="flex items-center space-x-2">
-          <Dumbbell className="h-5 w-5 text-indigo-400" />
-          <h3 className="text-base font-black text-white uppercase">Personal Record (PR) Tracker</h3>
-        </div>
+      {/* WORKOUT PR TRACKER */}
+      <WorkoutPRTracker
+        splitType={splitType}
+        setSplitType={setSplitType}
+        exerciseName={exerciseName}
+        setExerciseName={setExerciseName}
+        weightKg={weightKg}
+        setWeightKg={setWeightKg}
+        onLogWorkout={handleLogWorkout}
+        onDeleteWorkout={handleDeleteWorkout}
+        workouts={workouts}
+      />
 
-        <form onSubmit={handleLogWorkout} className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-          <select
-            value={splitType}
-            onChange={(e) => setSplitType(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-          >
-            <option value="Push">Push</option>
-            <option value="Pull">Pull</option>
-            <option value="Legs">Legs</option>
-            <option value="Cardio">Cardio</option>
-            <option value="Full Body">Full Body</option>
-          </select>
+      {/* ATTENDANCE HEATMAP */}
+      <MemberAttendanceCalendar member={member} checkIns={checkIns} />
 
-          <input
-            type="text"
-            required
-            placeholder="Exercise (e.g. Bench Press)"
-            value={exerciseName}
-            onChange={(e) => setExerciseName(e.target.value)}
-            className="sm:col-span-2 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-          />
-
-          <input
-            type="number"
-            required
-            placeholder="Weight (kg)"
-            value={weightKg}
-            onChange={(e) => setWeightKg(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
-          />
-
-          <button
-            type="submit"
-            className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold py-2.5 rounded-xl transition flex items-center justify-center space-x-1 shadow-lg shadow-indigo-600/30"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Log PR</span>
-          </button>
-        </form>
-
-        {workouts.length === 0 ? (
-          <p className="text-xs text-slate-500 text-center py-6 border border-dashed border-slate-800 rounded-2xl font-mono">
-            No personal best sets logged yet. Log your top lift above!
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-400">
-              <thead className="bg-slate-950 text-slate-300 uppercase text-[10px] font-mono border-b border-slate-800">
-                <tr>
-                  <th className="p-3">Split</th>
-                  <th className="p-3">Exercise</th>
-                  <th className="p-3">Top Weight</th>
-                  <th className="p-3">Date</th>
-                  <th className="p-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {workouts.map((w) => (
-                  <tr key={w.id} className="hover:bg-slate-900/40 transition">
-                    <td className="p-3">
-                      <span className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2.5 py-0.5 rounded-md font-bold text-[10px]">
-                        {w.split_type}
-                      </span>
-                    </td>
-                    <td className="p-3 font-bold text-white">{w.exercise_name}</td>
-                    <td className="p-3 font-mono text-emerald-400 font-bold">{w.weight_kg} kg</td>
-                    <td className="p-3 font-mono text-slate-500">{new Date(w.logged_at).toLocaleDateString()}</td>
-                    <td className="p-3 text-right">
-                      <button
-                        onClick={() => handleDeleteWorkout(w.id)}
-                        className="text-slate-500 hover:text-rose-400 transition p-1"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* 30-DAY ATTENDANCE GRID */}
-      <div className="glass-panel p-6 rounded-3xl w-full">
-        <div className="flex items-center space-x-2 mb-4">
-          <CalendarCheck className="h-5 w-5 text-emerald-400" />
-          <h3 className="text-sm font-bold text-white uppercase">30-Day Check-In Heatmap</h3>
-        </div>
-        <div className="flex flex-wrap gap-2 justify-between">
-          {render30DayHeatmap()}
-        </div>
-      </div>
-
-      {/* EDIT MODAL */}
+      {/* EDIT CREDENTIALS MODAL */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-100">
@@ -596,7 +378,7 @@ export default function MemberPortal({ session, onLogout }) {
                 <Settings className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Edit Profile & Credentials</h3>
+                <h3 className="text-lg font-bold text-white">Edit Profile Credentials</h3>
                 <p className="text-xs text-slate-400">Update display name and password</p>
               </div>
             </div>

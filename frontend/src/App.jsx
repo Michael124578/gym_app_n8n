@@ -22,17 +22,11 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSession(session)
-        detectRole(session)
-      }
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        setSession(session)
-        detectRole(session)
+    // Single auth state listener to avoid duplicate role detection calls
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      if (currentSession) {
+        setSession(currentSession)
+        detectRole(currentSession)
       } else {
         setSession(null)
         setRole(null)
@@ -45,10 +39,10 @@ export default function App() {
   const detectRole = async (userSession) => {
     const email = userSession.user?.email || ''
     
-    // 1. Admin Check: Member Roster is Default Tab
+    // 1. Admin Check: Default tab is Member Roster
     if (email === 'admin@irongym.com' || email.includes('admin')) {
       setRole('admin')
-      setActiveTab('members') // Member Roster is 1st & default
+      setActiveTab('members')
       return
     }
 
@@ -65,7 +59,7 @@ export default function App() {
       return
     }
 
-    // 3. Fallback Member
+    // 3. Fallback Member View
     setRole('member')
     setActiveTab('portal')
   }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { supabaseAdminAuth } from '../utils/supabaseAdmin'
 import { UserPlus, CreditCard, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
@@ -28,7 +29,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     }
   }, [isOpen])
 
-  // ESC Listener to close Modal
+  // ESC Listener
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' || e.key === 'Esc') onClose()
@@ -59,14 +60,16 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     const cleanEmail = email.trim().toLowerCase()
 
     try {
-      // 1. Create Auth user via admin function to protect active session
+      // 1. Create Auth user via Edge Function first
       const { data: authData, error: authError } = await supabase.functions.invoke('create-member-user', {
         body: { email: cleanEmail, password, fullName: fullName.trim() }
       })
 
       let userId = authData?.user?.id
+
+      // 2. Safe Fallback: Use isolated non-persisted client so Admin session is protected
       if (authError || !userId) {
-        const { data: fallbackAuth, error: fallbackError } = await supabase.auth.signUp({
+        const { data: fallbackAuth, error: fallbackError } = await supabaseAdminAuth.auth.signUp({
           email: cleanEmail,
           password: password,
           options: { data: { full_name: fullName.trim() } }
@@ -74,6 +77,8 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
         if (fallbackError) throw new Error(`Auth Creation: ${fallbackError.message}`)
         userId = fallbackAuth.user?.id
       }
+
+      if (!userId) throw new Error('Failed to resolve valid Auth User ID.')
 
       const expiryDate = new Date()
       expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays, 10))
@@ -100,11 +105,16 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
         plan_name: planName
       }])
 
-      fetch('/api/send-welcome', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, full_name: fullName.trim(), plan_name: planName })
-      }).catch(err => console.warn('Welcome email dispatch warning:', err))
+      // Safe Non-blocking Welcome Email API Dispatch
+      try {
+        await fetch('/api/send-welcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, full_name: fullName.trim(), plan_name: planName })
+        })
+      } catch (err) {
+        console.warn('Welcome email dispatch warning:', err)
+      }
 
       if (onMemberAdded) onMemberAdded(member)
       onClose()

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Users, UserCheck, Activity, CalendarCheck, Clock, Search, RefreshCw, X, CheckCircle, Trash2 } from 'lucide-react'
+import { formatReadableDate } from '../utils/dateUtils'
 
 export default function MemberList({ refreshTrigger }) {
   const [members, setMembers] = useState([])
@@ -83,7 +84,7 @@ export default function MemberList({ refreshTrigger }) {
   }, [refreshTrigger, fetchMembersAndStats])
 
   const handleDeleteMember = async (member) => {
-    if (!window.confirm(`Are you sure you want to delete ${member.full_name}? This will remove their credentials and history.`)) return
+    if (!window.confirm(`Are you sure you want to delete ${member.full_name}?`)) return
 
     if (member.auth_id) {
       const { error } = await supabase.functions.invoke('delete-user', {
@@ -91,12 +92,12 @@ export default function MemberList({ refreshTrigger }) {
       })
 
       if (error) {
-        alert(`Failed to delete user: ${error.message}`)
-        return
+        console.warn(`Auth User Delete warning: ${error.message}`)
       }
-    } else {
-      await supabase.from('members').delete().eq('id', member.id)
     }
+
+    // Always ensure database row cleanup
+    await supabase.from('members').delete().eq('id', member.id)
 
     showToast(`Deleted ${member.full_name}`)
     fetchMembersAndStats()
@@ -290,8 +291,8 @@ export default function MemberList({ refreshTrigger }) {
                       <td className="p-4">
                         <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
                           member.status === 'active' && !isExpired
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm shadow-emerald-500/10'
-                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 shadow-sm shadow-rose-500/10'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                         }`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${member.status === 'active' && !isExpired ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`}></span>
                           <span>{isExpired ? 'Expired' : member.status}</span>
@@ -299,7 +300,7 @@ export default function MemberList({ refreshTrigger }) {
                       </td>
 
                       <td className="p-4 text-xs font-mono text-slate-400">
-                        {member.membership_end_date ? new Date(member.membership_end_date).toLocaleDateString() : 'N/A'}
+                        {formatReadableDate(member.membership_end_date)}
                       </td>
                       <td className="p-4 text-right space-x-2">
                         <button

@@ -63,7 +63,7 @@ export default function AdminAnalytics() {
   }, [fetchAnalytics])
 
   if (loading) {
-    return <div className="p-8 text-center text-slate-500 font-bold animate-pulse">Loading Analytics Matrix...</div>
+    return <div className="p-8 text-center text-slate-500 font-bold animate-pulse font-mono">Loading Analytics Matrix...</div>
   }
 
   const activeCount = retentionStats[0]?.value || 0
@@ -106,10 +106,10 @@ export default function AdminAnalytics() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
+        <div className="lg:col-span-2 bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl min-h-[320px]">
           <h3 className="text-sm font-bold text-white mb-4">Revenue Growth ($)</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="w-full h-64">
+            <ResponsiveContainer width="100%" height="100%" minHeight={240}>
               <AreaChart data={monthlyRevenue}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
@@ -126,10 +126,10 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col justify-between">
+        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col justify-between min-h-[320px]">
           <h3 className="text-sm font-bold text-white mb-2">Member Retention Ratio</h3>
-          <div className="h-48 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="w-full h-48 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%" minHeight={180}>
               <PieChart>
                 <Pie data={retentionStats} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5}>
                   {retentionStats.map((entry, index) => (
@@ -153,10 +153,10 @@ export default function AdminAnalytics() {
         </div>
       </div>
 
-      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
+      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl min-h-[280px]">
         <h3 className="text-sm font-bold text-white mb-4">Check-In Traffic Heatmap</h3>
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full h-56">
+          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
             <BarChart data={hourlyTraffic}>
               <XAxis dataKey="hourLabel" stroke="#64748b" fontSize={10} interval={1} />
               <YAxis stroke="#64748b" fontSize={11} />

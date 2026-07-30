@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Wrench, AlertTriangle, CheckCircle2, Clock, QrCode, Plus } from 'lucide-react'
+import { Wrench, AlertTriangle, CheckCircle2, Clock, Plus, Trash2, Dumbbell, ShieldAlert, Sparkles, X } from 'lucide-react'
 
 export default function EquipmentMaintenance({ userRole }) {
   const [tickets, setTickets] = useState([])
@@ -11,8 +11,30 @@ export default function EquipmentMaintenance({ userRole }) {
   const [submitting, setSubmitting] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
 
+  // Add Equipment Form State (Admin Only)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [newEqName, setNewEqName] = useState('')
+  const [newEqCategory, setNewEqCategory] = useState('Strength')
+  const [newEqZone, setNewEqZone] = useState('Main Floor')
+  const [addingEquipment, setAddingEquipment] = useState(false)
+
   useEffect(() => {
     fetchEquipmentAndTickets()
+
+    // Realtime channel listener for instant maintenance queue sync
+    const channel = supabase
+      .channel('realtime-maintenance-tickets')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'maintenance_tickets' }, () => {
+        fetchEquipmentAndTickets()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment' }, () => {
+        fetchEquipmentAndTickets()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const fetchEquipmentAndTickets = async () => {
@@ -24,6 +46,48 @@ export default function EquipmentMaintenance({ userRole }) {
       .select('*, equipment(name, location_zone)')
       .order('created_at', { ascending: false })
     if (t) setTickets(t)
+  }
+
+  // Admin Registers New Machine
+  const handleAddEquipment = async (e) => {
+    e.preventDefault()
+    if (!newEqName.trim()) return
+    setAddingEquipment(true)
+
+    const { error } = await supabase.from('equipment').insert([
+      {
+        name: newEqName.trim(),
+        category: newEqCategory,
+        location_zone: newEqZone,
+        status: 'operational'
+      }
+    ])
+
+    if (!error) {
+      setSuccessMsg(`Registered ${newEqName.trim()} into gym inventory!`)
+      setNewEqName('')
+      setIsAddModalOpen(false)
+      fetchEquipmentAndTickets()
+      setTimeout(() => setSuccessMsg(''), 4000)
+    } else {
+      alert(`Failed to add machine: ${error.message}`)
+    }
+    setAddingEquipment(false)
+  }
+
+  // Admin Deletes Equipment
+  const handleDeleteEquipment = async (item) => {
+    if (!window.confirm(`Decommission and delete ${item.name}? This will also remove associated repair tickets.`)) return
+
+    const { error } = await supabase.from('equipment').delete().eq('id', item.id)
+
+    if (!error) {
+      setSuccessMsg(`Decommissioned ${item.name}.`)
+      fetchEquipmentAndTickets()
+      setTimeout(() => setSuccessMsg(''), 3000)
+    } else {
+      alert(`Delete Error: ${error.message}`)
+    }
   }
 
   const handleReportIssue = async (e) => {
@@ -77,7 +141,7 @@ export default function EquipmentMaintenance({ userRole }) {
     <div className="space-y-6">
       {/* SUCCESS TOAST */}
       {successMsg && (
-        <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl flex items-center space-x-2 text-xs font-bold animate-bounce">
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl flex items-center space-x-2 text-xs font-bold animate-bounce shadow-xl">
           <CheckCircle2 className="h-5 w-5 text-emerald-400" />
           <span>{successMsg}</span>
         </div>
@@ -85,14 +149,27 @@ export default function EquipmentMaintenance({ userRole }) {
 
       {/* REPORT ISSUE CARD */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl">
-            <Wrench className="h-5 w-5" />
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl">
+              <Wrench className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Report Broken Gym Equipment</h3>
+              <p className="text-xs text-slate-400">Flag malfunctioning machinery for maintenance dispatch</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-bold text-white">Report Broken Gym Equipment</h3>
-            <p className="text-xs text-slate-400">Select machine or report via machine QR tag</p>
-          </div>
+
+          {/* ADMIN ADD EQUIPMENT BUTTON */}
+          {userRole === 'admin' && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5 shadow-lg shadow-amber-600/20"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add New Equipment</span>
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleReportIssue} className="space-y-4">
@@ -107,7 +184,7 @@ export default function EquipmentMaintenance({ userRole }) {
               required
               className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
             >
-              <option value="">-- Choose Equipment --</option>
+              <option value="">-- Choose Equipment ({equipmentList.length} Listed) --</option>
               {equipmentList.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name} ({item.location_zone}) - [{item.status.toUpperCase()}]
@@ -155,6 +232,51 @@ export default function EquipmentMaintenance({ userRole }) {
         </form>
       </div>
 
+      {/* ADMIN ONLY: REGISTERED MACHINERY INVENTORY ROSTER */}
+      {userRole === 'admin' && (
+        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center space-x-2">
+              <Dumbbell className="h-4 w-4 text-indigo-400" />
+              <span>Gym Machinery Inventory Roster ({equipmentList.length})</span>
+            </h3>
+            <span className="text-xs font-mono text-slate-400">Total Registered: {equipmentList.length}</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {equipmentList.length === 0 ? (
+              <p className="text-xs text-slate-500 col-span-full py-8 text-center border border-dashed border-slate-800 rounded-2xl font-mono">
+                No machinery currently registered in inventory. Click "Add New Equipment" above!
+              </p>
+            ) : (
+              equipmentList.map((item) => (
+                <div key={item.id} className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex justify-between items-center">
+                  <div>
+                    <h4 className="text-xs font-black text-white">{item.name}</h4>
+                    <p className="text-[10px] font-mono text-slate-400 mt-0.5">{item.category} • {item.location_zone}</p>
+                    <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mt-2 uppercase ${
+                      item.status === 'operational' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                      item.status === 'needs_repair' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                      'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }`}>
+                      {item.status.replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => handleDeleteEquipment(item)}
+                    className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition border border-transparent hover:border-rose-500/20"
+                    title="Decommission Equipment"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       {/* STAFF MAINTENANCE QUEUE */}
       <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
         <h3 className="text-sm font-bold text-white mb-4 flex items-center space-x-2">
@@ -164,7 +286,9 @@ export default function EquipmentMaintenance({ userRole }) {
 
         <div className="space-y-3">
           {tickets.length === 0 ? (
-            <p className="text-xs text-slate-500 text-center py-6">All machinery is operational!</p>
+            <p className="text-xs text-slate-500 text-center py-6 border border-dashed border-slate-800 rounded-2xl">
+              All machinery is operational!
+            </p>
           ) : (
             tickets.map((t) => (
               <div key={t.id} className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -201,6 +325,88 @@ export default function EquipmentMaintenance({ userRole }) {
           )}
         </div>
       </div>
+
+      {/* ADMIN ADD EQUIPMENT MODAL */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-100">
+            <button onClick={() => setIsAddModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="bg-amber-500/20 border border-amber-500/30 p-2.5 rounded-xl text-amber-400">
+                <Dumbbell className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Register Gym Equipment</h3>
+                <p className="text-xs text-slate-400">Add new machine into maintenance tracking database</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddEquipment} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Equipment Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Leg Press Machine #2"
+                  value={newEqName}
+                  onChange={(e) => setNewEqName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Category</label>
+                  <select
+                    value={newEqCategory}
+                    onChange={(e) => setNewEqCategory(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="Strength">Strength</option>
+                    <option value="Cardio">Cardio</option>
+                    <option value="Free Weights">Free Weights</option>
+                    <option value="Cable Machine">Cable Machine</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Location Zone</label>
+                  <select
+                    value={newEqZone}
+                    onChange={(e) => setNewEqZone(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="Main Floor">Main Floor</option>
+                    <option value="Cardio Deck">Cardio Deck</option>
+                    <option value="Free Weight Area">Free Weight Area</option>
+                    <option value="Recovery Room">Recovery Room</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingEquipment}
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-amber-600/20"
+                >
+                  {addingEquipment ? 'Adding...' : 'Add Equipment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
