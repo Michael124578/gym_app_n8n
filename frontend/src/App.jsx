@@ -18,7 +18,7 @@ export default function App() {
   const [role, setRole] = useState(null) // 'member' | 'admin' | 'trainer'
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [activeTab, setActiveTab] = useState(null) // Start null so initial role load sets default tab
+  const [activeTab, setActiveTab] = useState(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function App() {
 
     setRole(detectedRole)
 
-    // ONLY set default tab on initial sign-in (INITIAL_SESSION or SIGNED_IN), NOT on TOKEN_REFRESHED / window focus
+    // ONLY set default tab on initial sign-in, NOT on window focus / token refresh
     if (!activeTab || authEvent === 'SIGNED_IN') {
       if (detectedRole === 'admin') setActiveTab('members')
       else if (detectedRole === 'trainer') setActiveTab('trainer_dashboard')
