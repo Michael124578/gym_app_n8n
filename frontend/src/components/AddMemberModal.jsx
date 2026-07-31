@@ -118,7 +118,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
       try {
         const rawUrl = import.meta.env.VITE_WHATSAPP_BOT_URL || 'http://localhost:3001'
         const botUrl = rawUrl.replace(/\/+$/, '') // Prevents double slashes like //send-pass
-        const botSecret = import.meta.env.VITE_WHATSAPP_BOT_SECRET || 'my_super_secret_gym_key_12345'
+        const botSecret = import.meta.env.VITE_WHATSAPP_BOT_SECRET || 'my_super_secret_gym_key_124578@'
 
         await fetch(`${botUrl}/send-pass`, {
           method: 'POST',
