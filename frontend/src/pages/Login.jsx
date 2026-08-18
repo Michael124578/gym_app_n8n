@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { 
-  QrCode, ArrowRight, Lock, Mail, 
-  Dumbbell, ChevronRight, Flame, Zap, 
-  CheckCircle2, Trophy, KeyRound, Activity, 
+import {
+  QrCode, ArrowRight, Lock, Mail,
+  Dumbbell, ChevronRight, Flame, Zap,
+  CheckCircle2, Trophy, KeyRound, Activity,
   Eye, EyeOff, Radio
 } from 'lucide-react'
 
@@ -140,7 +140,7 @@ export default function Login({ onLoginSuccess }) {
           </p>
 
           <div className="w-full bg-slate-900 border border-slate-800 h-2.5 rounded-full overflow-hidden p-0.5 mb-3 shadow-inner">
-            <div 
+            <div
               className="bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-400 h-full transition-all duration-75 ease-out rounded-full shadow-lg shadow-indigo-500/50"
               style={{ width: `${loadingProgress}%` }}
             />
@@ -155,9 +155,16 @@ export default function Login({ onLoginSuccess }) {
     )
   }
 
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans relative overflow-x-hidden pt-20 scroll-smooth">
-      
+
       {/* GLOWING AMBIENT BACKGROUND */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 left-1/4 w-[800px] h-[500px] bg-indigo-600/10 rounded-full blur-[140px]" />
@@ -181,9 +188,27 @@ export default function Login({ onLoginSuccess }) {
           </div>
 
           <nav className="hidden md:flex items-center space-x-8 text-xs font-bold uppercase tracking-wider text-slate-300">
-            <a href="#programs" className="hover:text-indigo-400 transition">Programs</a>
-            <a href="#facilities" className="hover:text-indigo-400 transition">Facilities</a>
-            <a href="#plans" className="hover:text-indigo-400 transition">Plans</a>
+            <button 
+              type="button" 
+              onClick={() => scrollToSection('programs')} 
+              className="hover:text-indigo-400 transition cursor-pointer"
+            >
+              Programs
+            </button>
+            <button 
+              type="button" 
+              onClick={() => scrollToSection('facilities')} 
+              className="hover:text-indigo-400 transition cursor-pointer"
+            >
+              Facilities
+            </button>
+            <button 
+              type="button" 
+              onClick={() => scrollToSection('plans')} 
+              className="hover:text-indigo-400 transition cursor-pointer"
+            >
+              Plans
+            </button>
           </nav>
 
           <div className="flex items-center space-x-3">
@@ -201,7 +226,7 @@ export default function Login({ onLoginSuccess }) {
       {/* HERO SECTION */}
       <section className="relative py-20 px-6 z-10">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          
+
           <div className="lg:col-span-7">
             <div className="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/30 px-4 py-2 rounded-full text-indigo-400 text-xs font-bold uppercase tracking-widest mb-6">
               <Flame className="h-4 w-4 text-indigo-400 animate-pulse" />
@@ -349,13 +374,12 @@ export default function Login({ onLoginSuccess }) {
               { name: 'Monthly Pass', price: '$50', period: '/ month', featured: true, features: ['Unlimited 24/7 club access', 'Member portal & QR pass', 'Guest pass eligibility', 'Free initial fitness assessment'] },
               { name: 'Annual VIP Pass', price: '$450', period: '/ year', features: ['All Monthly benefits included', '2 Months FREE savings', 'Complimentary guest passes', 'Recovery lounge access'] }
             ].map((plan, idx) => (
-              <div 
-                key={idx} 
-                className={`rounded-3xl p-8 relative flex flex-col justify-between border ${
-                  plan.featured 
-                    ? 'bg-gradient-to-b from-indigo-950/60 to-slate-900 border-indigo-500 shadow-2xl shadow-indigo-600/20' 
+              <div
+                key={idx}
+                className={`rounded-3xl p-8 relative flex flex-col justify-between border ${plan.featured
+                    ? 'bg-gradient-to-b from-indigo-950/60 to-slate-900 border-indigo-500 shadow-2xl shadow-indigo-600/20'
                     : 'bg-slate-900/60 border-slate-800'
-                }`}
+                  }`}
               >
                 {plan.featured && (
                   <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-indigo-600 text-white font-mono text-[10px] uppercase font-bold tracking-widest px-4 py-1 rounded-full shadow-lg">
@@ -382,11 +406,10 @@ export default function Login({ onLoginSuccess }) {
 
                 <button
                   onClick={handleOpenAuth}
-                  className={`w-full font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition ${
-                    plan.featured
+                  className={`w-full font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition ${plan.featured
                       ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-600/30'
                       : 'bg-slate-800 hover:bg-slate-700 text-white'
-                  }`}
+                    }`}
                 >
                   Get Started
                 </button>
@@ -405,7 +428,7 @@ export default function Login({ onLoginSuccess }) {
       {isAuthModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-slate-100 relative">
-            
+
             {/* ESC Key Badge & Close Button */}
             <button
               onClick={closeAuthModal}
