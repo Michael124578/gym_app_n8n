@@ -2,7 +2,11 @@ import React, { useState, useEffect, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Settings, LogOut, Sparkles, Flame, Users, X, KeyRound, Save, FileText } from 'lucide-react'
+import { 
+  Settings, LogOut, Sparkles, Flame, Users, X, KeyRound, Save, 
+  FileText, Target, Dumbbell, Scale, Droplet, Headphones, 
+  ArrowRight, Play, Activity, Radio
+} from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { formatLocalDate } from '../utils/dateUtils'
 
@@ -11,7 +15,7 @@ import GuestPassGenerator from '../components/GuestPassGenerator'
 import WorkoutPRTracker from '../components/WorkoutPRTracker'
 import MemberAttendanceCalendar from '../components/MemberAttendanceCalendar'
 
-export default function MemberPortal({ session, onLogout }) {
+export default function MemberPortal({ session, onLogout, onNavigateTab }) {
   const [member, setMember] = useState(null)
   const [checkIns, setCheckIns] = useState([])
   const [workouts, setWorkouts] = useState([])
@@ -268,11 +272,16 @@ export default function MemberPortal({ session, onLogout }) {
 
       {/* OCCUPANCY & STREAK METRICS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-        <div className="md:col-span-2 glass-panel p-5 rounded-3xl flex flex-col justify-between">
+        <div 
+          onClick={() => onNavigateTab && onNavigateTab('occupancy')}
+          className="md:col-span-2 glass-panel p-5 rounded-3xl flex flex-col justify-between cursor-pointer hover:border-indigo-500/50 transition group"
+        >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5 text-indigo-400" />
-              <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wider">LIVE GYM OCCUPANCY</h4>
+              <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wider group-hover:text-indigo-300 transition">
+                LIVE GYM OCCUPANCY • CLICK FOR HEATMAP
+              </h4>
             </div>
             <span className="text-xs font-mono text-indigo-400 font-bold">{activeOccupancy} / {maxCapacity} ({occupancyPercent}%)</span>
           </div>
@@ -301,6 +310,88 @@ export default function MemberPortal({ session, onLogout }) {
           </div>
         </div>
       </div>
+
+      {/* QUICK-LAUNCH WORKOUT ECOSYSTEM CARDS */}
+      {onNavigateTab && (
+        <div className="w-full space-y-3">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 font-bold block px-1">
+            ⚡ Quick Launch Workout Terminal
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <button
+              type="button"
+              onClick={() => onNavigateTab('workout_tracker')}
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+            >
+              <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
+                <Flame className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-black uppercase text-white">Live Logger</span>
+              <span className="text-[10px] font-mono text-slate-500">Sets & 1RM</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('exercises')}
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+            >
+              <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
+                <Target className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-black uppercase text-white">Exercise Atlas</span>
+              <span className="text-[10px] font-mono text-slate-500">Form & Anatomy</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('ai_generator')}
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+            >
+              <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-black uppercase text-white">AI Routines</span>
+              <span className="text-[10px] font-mono text-slate-500">Split Generator</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('body_vault')}
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+            >
+              <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
+                <Scale className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-black uppercase text-white">Body Vault</span>
+              <span className="text-[10px] font-mono text-slate-500">Metrics & Slider</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('wellness')}
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+            >
+              <div className="p-2.5 rounded-xl bg-cyan-600/20 text-cyan-400 group-hover:scale-110 transition">
+                <Droplet className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-black uppercase text-white">Hydration</span>
+              <span className="text-[10px] font-mono text-slate-500">Daily Habits</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab('music')}
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+            >
+              <div className="p-2.5 rounded-xl bg-rose-600/20 text-rose-400 group-hover:scale-110 transition">
+                <Headphones className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-black uppercase text-white">Beats Hub</span>
+              <span className="text-[10px] font-mono text-slate-500">Hardstyle/Phonk</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* PASS & GUEST MODULAR CALLS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">

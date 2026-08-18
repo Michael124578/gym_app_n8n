@@ -10,6 +10,13 @@ import GymShop from './components/GymShop'
 import GymCommunityFeed from './components/GymCommunityFeed'
 import LockerManagement from './components/LockerManagement'
 import MacroCalculator from './components/MacroCalculator'
+import ExerciseLibrary from './components/ExerciseLibrary'
+import LiveWorkoutTracker from './components/LiveWorkoutTracker'
+import BodyProgressVault from './components/BodyProgressVault'
+import GymOccupancyHeatmap from './components/GymOccupancyHeatmap'
+import WellnessHabitTracker from './components/WellnessHabitTracker'
+import WorkoutMusicHub from './components/WorkoutMusicHub'
+import AiRoutineGenerator from './components/AiRoutineGenerator'
 import TrainerDashboard from './pages/TrainerDashboard'
 import MemberPortal from './pages/MemberPortal'
 import Login from './pages/Login'
@@ -18,7 +25,8 @@ import Sidebar from './components/Sidebar'
 import { supabase } from './lib/supabaseClient'
 import { 
   QrCode, Dumbbell, Wrench, Users, Award, BarChart3, 
-  Calendar, ShoppingBag, Megaphone, User, KeyRound, Calculator 
+  Calendar, ShoppingBag, Megaphone, User, KeyRound, Calculator,
+  Sparkles, Target, Activity, Scale, Radio, Droplet, Headphones, Flame
 } from 'lucide-react'
 
 export default function App() {
@@ -28,6 +36,7 @@ export default function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [activeTab, setActiveTab] = useState(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [selectedExerciseForWorkout, setSelectedExerciseForWorkout] = useState(null)
 
   useEffect(() => {
     // 1. Initial Session Check (Runs ONCE on app load)
@@ -134,7 +143,42 @@ export default function App() {
           {role === 'member' && (
             <div className="w-full flex-1">
               {(activeTab === 'portal' || !activeTab) && (
-                <MemberPortal session={session} onLogout={handleLogout} />
+                <MemberPortal 
+                  session={session} 
+                  onLogout={handleLogout} 
+                  onNavigateTab={(tab) => setActiveTab(tab)}
+                />
+              )}
+              {activeTab === 'workout_tracker' && (
+                <LiveWorkoutTracker 
+                  session={session} 
+                  initialExercise={selectedExerciseForWorkout} 
+                />
+              )}
+              {activeTab === 'exercises' && (
+                <ExerciseLibrary 
+                  onSelectExerciseForWorkout={(ex) => {
+                    setSelectedExerciseForWorkout(ex)
+                    setActiveTab('workout_tracker')
+                  }} 
+                />
+              )}
+              {activeTab === 'ai_generator' && (
+                <AiRoutineGenerator 
+                  onLaunchRoutineInTracker={() => setActiveTab('workout_tracker')} 
+                />
+              )}
+              {activeTab === 'body_vault' && (
+                <BodyProgressVault session={session} />
+              )}
+              {activeTab === 'wellness' && (
+                <WellnessHabitTracker session={session} />
+              )}
+              {activeTab === 'occupancy' && (
+                <GymOccupancyHeatmap userRole={role} />
+              )}
+              {activeTab === 'music' && (
+                <WorkoutMusicHub />
               )}
               {activeTab === 'classes' && (
                 <ClassSchedule session={session} userRole={role} />
@@ -172,6 +216,12 @@ export default function App() {
               {activeTab === 'analytics' && (
                 <AdminAnalytics />
               )}
+              {activeTab === 'occupancy' && (
+                <GymOccupancyHeatmap userRole={role} />
+              )}
+              {activeTab === 'exercises' && (
+                <ExerciseLibrary />
+              )}
               {activeTab === 'classes' && (
                 <ClassSchedule session={session} userRole={role} />
               )}
@@ -204,6 +254,25 @@ export default function App() {
             <div className="w-full flex-1">
               {(activeTab === 'trainer_dashboard' || !activeTab) && (
                 <TrainerDashboard session={session} />
+              )}
+              {activeTab === 'exercises' && (
+                <ExerciseLibrary 
+                  onSelectExerciseForWorkout={(ex) => {
+                    setSelectedExerciseForWorkout(ex)
+                    setActiveTab('workout_tracker')
+                  }} 
+                />
+              )}
+              {activeTab === 'ai_generator' && (
+                <AiRoutineGenerator 
+                  onLaunchRoutineInTracker={() => setActiveTab('workout_tracker')} 
+                />
+              )}
+              {activeTab === 'workout_tracker' && (
+                <LiveWorkoutTracker 
+                  session={session} 
+                  initialExercise={selectedExerciseForWorkout} 
+                />
               )}
               {activeTab === 'classes' && (
                 <ClassSchedule session={session} userRole={role} />

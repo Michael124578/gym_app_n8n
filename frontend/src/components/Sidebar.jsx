@@ -2,7 +2,8 @@ import React from 'react'
 import { 
   Users, QrCode, BarChart3, PlusCircle, LogOut, Shield, 
   X, User, Wrench, Dumbbell, Award, Calendar, ShoppingBag, 
-  Megaphone, KeyRound, Calculator, Sparkles 
+  Megaphone, KeyRound, Calculator, Sparkles, Target, Activity,
+  Scale, Radio, Droplet, Headphones, Flame
 } from 'lucide-react'
 
 export default function Sidebar({ 
@@ -18,8 +19,10 @@ export default function Sidebar({
     { id: 'members', label: 'Member Roster', icon: Users },
     { id: 'scanner', label: 'QR Gate Scanner', icon: QrCode },
     { id: 'analytics', label: 'Analytics & Revenue', icon: BarChart3 },
+    { id: 'occupancy', label: 'Live Gym Traffic', icon: Radio },
     { id: 'classes', label: 'Group Classes', icon: Calendar },
     { id: 'shop', label: 'Fuel Bar & POS', icon: ShoppingBag },
+    { id: 'exercises', label: 'Exercise Library', icon: Target },
     { id: 'community', label: 'Community Feed', icon: Megaphone },
     { id: 'lockers', label: 'Digital Lockers', icon: KeyRound },
     { id: 'maintenance', label: 'Equipment & Repairs', icon: Wrench },
@@ -28,6 +31,9 @@ export default function Sidebar({
 
   const trainerNavItems = [
     { id: 'trainer_dashboard', label: 'Coach Dashboard', icon: Award },
+    { id: 'exercises', label: 'Exercise Library', icon: Target },
+    { id: 'ai_generator', label: 'AI Routine Builder', icon: Sparkles },
+    { id: 'workout_tracker', label: 'Live Workout Logger', icon: Flame },
     { id: 'classes', label: 'Group Classes', icon: Calendar },
     { id: 'community', label: 'Community Feed', icon: Megaphone },
     { id: 'nutrition', label: 'Macro Calculator', icon: Calculator },
@@ -36,6 +42,13 @@ export default function Sidebar({
 
   const memberNavItems = [
     { id: 'portal', label: 'Pass & Workouts', icon: User },
+    { id: 'workout_tracker', label: 'Live Workout Tracker', icon: Flame },
+    { id: 'exercises', label: 'Exercise Library', icon: Target },
+    { id: 'ai_generator', label: 'AI Routine Builder', icon: Sparkles },
+    { id: 'body_vault', label: 'Body Progress Vault', icon: Scale },
+    { id: 'wellness', label: 'Hydration & Habits', icon: Droplet },
+    { id: 'occupancy', label: 'Live Gym Heatmap', icon: Radio },
+    { id: 'music', label: 'Workout Beats Hub', icon: Headphones },
     { id: 'classes', label: 'Book Classes', icon: Calendar },
     { id: 'shop', label: 'Fuel Bar & Shop', icon: ShoppingBag },
     { id: 'community', label: 'Community Feed', icon: Megaphone },
