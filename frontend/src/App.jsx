@@ -5,13 +5,21 @@ import QRScanner from './components/QRScanner'
 import AdminAnalytics from './components/AdminAnalytics'
 import EquipmentMaintenance from './components/EquipmentMaintenance'
 import TrainerManagement from './components/TrainerManagement'
+import ClassSchedule from './components/ClassSchedule'
+import GymShop from './components/GymShop'
+import GymCommunityFeed from './components/GymCommunityFeed'
+import LockerManagement from './components/LockerManagement'
+import MacroCalculator from './components/MacroCalculator'
 import TrainerDashboard from './pages/TrainerDashboard'
 import MemberPortal from './pages/MemberPortal'
 import Login from './pages/Login'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import { supabase } from './lib/supabaseClient'
-import { QrCode, Dumbbell, Wrench, Users, Award } from 'lucide-react'
+import { 
+  QrCode, Dumbbell, Wrench, Users, Award, BarChart3, 
+  Calendar, ShoppingBag, Megaphone, User, KeyRound, Calculator 
+} from 'lucide-react'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -101,7 +109,7 @@ export default function App() {
       
       {/* SIDEBAR NAVIGATION */}
       <Sidebar
-        activeTab={activeTab || 'portal'}
+        activeTab={activeTab || (role === 'admin' ? 'members' : role === 'trainer' ? 'trainer_dashboard' : 'portal')}
         setActiveTab={setActiveTab}
         role={role}
         onRegisterClick={() => setIsModalOpen(true)}
@@ -120,13 +128,35 @@ export default function App() {
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
-        <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1 flex flex-col">
+        <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1 flex flex-col mb-16 lg:mb-0">
+          
           {/* MEMBER ROLE VIEWS */}
           {role === 'member' && (
             <div className="w-full flex-1">
-              {(activeTab === 'portal' || !activeTab) && <MemberPortal session={session} onLogout={handleLogout} />}
-              {activeTab === 'trainers' && <TrainerManagement session={session} userRole={role} />}
-              {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
+              {(activeTab === 'portal' || !activeTab) && (
+                <MemberPortal session={session} onLogout={handleLogout} />
+              )}
+              {activeTab === 'classes' && (
+                <ClassSchedule session={session} userRole={role} />
+              )}
+              {activeTab === 'shop' && (
+                <GymShop session={session} userRole={role} />
+              )}
+              {activeTab === 'community' && (
+                <GymCommunityFeed session={session} userRole={role} />
+              )}
+              {activeTab === 'nutrition' && (
+                <MacroCalculator session={session} />
+              )}
+              {activeTab === 'lockers' && (
+                <LockerManagement session={session} userRole={role} />
+              )}
+              {activeTab === 'trainers' && (
+                <TrainerManagement session={session} userRole={role} />
+              )}
+              {activeTab === 'maintenance' && (
+                <EquipmentMaintenance userRole={role} />
+              )}
             </div>
           )}
 
@@ -141,6 +171,18 @@ export default function App() {
               )}
               {activeTab === 'analytics' && (
                 <AdminAnalytics />
+              )}
+              {activeTab === 'classes' && (
+                <ClassSchedule session={session} userRole={role} />
+              )}
+              {activeTab === 'shop' && (
+                <GymShop session={session} userRole={role} />
+              )}
+              {activeTab === 'community' && (
+                <GymCommunityFeed session={session} userRole={role} />
+              )}
+              {activeTab === 'lockers' && (
+                <LockerManagement session={session} userRole={role} />
               )}
               {activeTab === 'maintenance' && (
                 <EquipmentMaintenance userRole={role} />
@@ -160,45 +202,78 @@ export default function App() {
           {/* TRAINER ROLE VIEWS */}
           {role === 'trainer' && (
             <div className="w-full flex-1">
-              {(activeTab === 'trainer_dashboard' || !activeTab) && <TrainerDashboard session={session} />}
-              {activeTab === 'maintenance' && <EquipmentMaintenance userRole={role} />}
+              {(activeTab === 'trainer_dashboard' || !activeTab) && (
+                <TrainerDashboard session={session} />
+              )}
+              {activeTab === 'classes' && (
+                <ClassSchedule session={session} userRole={role} />
+              )}
+              {activeTab === 'community' && (
+                <GymCommunityFeed session={session} userRole={role} />
+              )}
+              {activeTab === 'nutrition' && (
+                <MacroCalculator session={session} />
+              )}
+              {activeTab === 'maintenance' && (
+                <EquipmentMaintenance userRole={role} />
+              )}
             </div>
           )}
         </main>
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/90 backdrop-blur-xl border-t border-slate-800 flex justify-around items-center py-2 px-1 shadow-2xl">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-2xl border-t border-slate-800 flex justify-around items-center py-2 px-1 shadow-2xl">
         {role === 'member' && (
           <>
             <button
               onClick={() => setActiveTab('portal')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'portal' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
+                activeTab === 'portal' || !activeTab ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
               }`}
             >
-              <QrCode className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] uppercase font-mono">Pass</span>
+              <User className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">Pass</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('trainers')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'trainers' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              onClick={() => setActiveTab('classes')}
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
+                activeTab === 'classes' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
               }`}
             >
-              <Dumbbell className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] uppercase font-mono">Coaches</span>
+              <Calendar className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">Classes</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('maintenance')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'maintenance' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              onClick={() => setActiveTab('shop')}
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
+                activeTab === 'shop' ? 'text-emerald-400 font-extrabold' : 'text-slate-400'
               }`}
             >
-              <Wrench className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] uppercase font-mono">Repairs</span>
+              <ShoppingBag className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">Shop</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('community')}
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
+                activeTab === 'community' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              }`}
+            >
+              <Megaphone className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">Feed</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('nutrition')}
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
+                activeTab === 'nutrition' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              }`}
+            >
+              <Calculator className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">Macros</span>
             </button>
           </>
         )}
@@ -207,32 +282,96 @@ export default function App() {
           <>
             <button
               onClick={() => setActiveTab('members')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'members' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
+                activeTab === 'members' || !activeTab ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
               }`}
             >
               <Users className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] uppercase font-mono">Roster</span>
+              <span className="text-[9px] uppercase font-mono">Roster</span>
             </button>
 
             <button
               onClick={() => setActiveTab('scanner')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
                 activeTab === 'scanner' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
               }`}
             >
               <QrCode className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] uppercase font-mono">Gate</span>
+              <span className="text-[9px] uppercase font-mono">Gate</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('trainers')}
+              onClick={() => setActiveTab('analytics')}
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
+                activeTab === 'analytics' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              }`}
+            >
+              <BarChart3 className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">Analytics</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('classes')}
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
+                activeTab === 'classes' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              }`}
+            >
+              <Calendar className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">Classes</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('shop')}
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
+                activeTab === 'shop' ? 'text-emerald-400 font-extrabold' : 'text-slate-400'
+              }`}
+            >
+              <ShoppingBag className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">POS</span>
+            </button>
+          </>
+        )}
+
+        {role === 'trainer' && (
+          <>
+            <button
+              onClick={() => setActiveTab('trainer_dashboard')}
               className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'trainers' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+                activeTab === 'trainer_dashboard' || !activeTab ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
               }`}
             >
               <Award className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] uppercase font-mono">Coaches</span>
+              <span className="text-[9px] uppercase font-mono">Clients</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('classes')}
+              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
+                activeTab === 'classes' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              }`}
+            >
+              <Calendar className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">Schedule</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('community')}
+              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
+                activeTab === 'community' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              }`}
+            >
+              <Megaphone className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">Feed</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('nutrition')}
+              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
+                activeTab === 'nutrition' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
+              }`}
+            >
+              <Calculator className="h-5 w-5 mb-0.5" />
+              <span className="text-[9px] uppercase font-mono">Macros</span>
             </button>
           </>
         )}

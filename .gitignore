@@ -21,3 +21,4 @@ build/
 # Logs & Docker volumes
 *.log
 docker-data/
+*.exe

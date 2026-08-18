@@ -1,7 +1,8 @@
 import React from 'react'
 import { 
   Users, QrCode, BarChart3, PlusCircle, LogOut, Shield, 
-  X, User, Wrench, Dumbbell, Award 
+  X, User, Wrench, Dumbbell, Award, Calendar, ShoppingBag, 
+  Megaphone, KeyRound, Calculator, Sparkles 
 } from 'lucide-react'
 
 export default function Sidebar({ 
@@ -13,22 +14,33 @@ export default function Sidebar({
   isOpen,
   setIsOpen 
 }) {
-  // Member Roster is 1st item for Admin
   const adminNavItems = [
     { id: 'members', label: 'Member Roster', icon: Users },
     { id: 'scanner', label: 'QR Gate Scanner', icon: QrCode },
     { id: 'analytics', label: 'Analytics & Revenue', icon: BarChart3 },
+    { id: 'classes', label: 'Group Classes', icon: Calendar },
+    { id: 'shop', label: 'Fuel Bar & POS', icon: ShoppingBag },
+    { id: 'community', label: 'Community Feed', icon: Megaphone },
+    { id: 'lockers', label: 'Digital Lockers', icon: KeyRound },
     { id: 'maintenance', label: 'Equipment & Repairs', icon: Wrench },
     { id: 'trainers', label: 'PT & Coaching', icon: Dumbbell },
   ]
 
   const trainerNavItems = [
     { id: 'trainer_dashboard', label: 'Coach Dashboard', icon: Award },
+    { id: 'classes', label: 'Group Classes', icon: Calendar },
+    { id: 'community', label: 'Community Feed', icon: Megaphone },
+    { id: 'nutrition', label: 'Macro Calculator', icon: Calculator },
     { id: 'maintenance', label: 'Report Machine Issue', icon: Wrench },
   ]
 
   const memberNavItems = [
-    { id: 'portal', label: 'Digital Pass & Portal', icon: User },
+    { id: 'portal', label: 'Pass & Workouts', icon: User },
+    { id: 'classes', label: 'Book Classes', icon: Calendar },
+    { id: 'shop', label: 'Fuel Bar & Shop', icon: ShoppingBag },
+    { id: 'community', label: 'Community Feed', icon: Megaphone },
+    { id: 'nutrition', label: 'Macro Calculator', icon: Calculator },
+    { id: 'lockers', label: 'Digital Lockers', icon: KeyRound },
     { id: 'trainers', label: 'Hire a Trainer', icon: Dumbbell },
     { id: 'maintenance', label: 'Report Machine Issue', icon: Wrench },
   ]
@@ -51,8 +63,8 @@ export default function Sidebar({
         flex flex-col justify-between p-4 transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div>
-          <div className="flex items-center justify-between px-2 py-3 mb-6">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex items-center justify-between px-2 py-3 mb-4 shrink-0">
             <div className="flex items-center space-x-3">
               <div className="bg-gradient-to-tr from-indigo-600 to-violet-500 p-2.5 rounded-2xl shadow-lg shadow-indigo-600/25">
                 <QrCode className="h-6 w-6 text-white" />
@@ -80,16 +92,16 @@ export default function Sidebar({
                 onRegisterClick()
                 setIsOpen(false)
               }}
-              className="w-full mb-6 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold py-3 px-4 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center space-x-2"
+              className="w-full mb-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold py-3 px-4 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center space-x-2 shrink-0"
             >
               <PlusCircle className="h-4 w-4" />
               <span>Register Member</span>
             </button>
           )}
 
-          <nav className="space-y-1.5">
+          <div className="flex-1 overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
             <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-              Navigation
+              Navigation Hub
             </p>
             {navItems.map((item) => {
               const Icon = item.icon
@@ -101,21 +113,21 @@ export default function Sidebar({
                     setActiveTab(item.id)
                     setIsOpen(false)
                   }}
-                  className={`w-full flex items-center space-x-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition-all duration-200 ${
+                  className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                       : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
+                  <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">{item.label}</span>
                 </button>
               )
             })}
-          </nav>
+          </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-800/80">
+        <div className="pt-3 border-t border-slate-800/80 shrink-0">
           <button
             onClick={onLogout}
             className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-2xl transition-all border border-transparent hover:border-rose-500/20"
@@ -124,7 +136,7 @@ export default function Sidebar({
               <LogOut className="h-4 w-4" />
               <span>Sign Out</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">v2.4</span>
+            <span className="text-[10px] font-mono opacity-60">v3.0 Pro</span>
           </button>
         </div>
       </aside>
