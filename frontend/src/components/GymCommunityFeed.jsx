@@ -14,7 +14,7 @@ const DEFAULT_POSTS = [
     category: 'Announcement',
     timestamp: '2 hours ago',
     title: '🏆 Fall Powerlifting & Hypertrophy Challenge Announced!',
-    content: 'We are kicking off our 8-week Iron Gym Winter Transformation & PR Challenge! All members are eligible. Grand prize includes 6 months of free VIP membership, custom lifting belt, and $250 in Pro Shop fuel credits. Registration is open at the front desk or via your trainer.',
+    content: 'We are kicking off our 8-week Iron Gym Winter Transformation & PR Challenge! All members are eligible. Grand prize includes 6 months of free VIP membership, custom lifting belt, and 5,000 EGP in Pro Shop fuel credits. Registration is open at the front desk or via your trainer.',
     reactions: { flame: 24, clap: 18, trophy: 12 },
     comments: [
       { id: 'c1', author: 'Marcus Brody', text: 'Count me in for the deadlift bracket! 🔥' },
