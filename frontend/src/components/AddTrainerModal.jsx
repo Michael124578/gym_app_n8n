@@ -9,8 +9,8 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [specialty, setSpecialty] = useState('Strength & Conditioning')
-  const [hourlyRate, setHourlyRate] = useState('40')
-  const [monthlyPrice, setMonthlyPrice] = useState('120')
+  const [hourlyRate, setHourlyRate] = useState('400')
+  const [monthlyPrice, setMonthlyPrice] = useState('2500')
   const [bio, setBio] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -23,8 +23,8 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
       setPassword('')
       setShowPassword(false)
       setSpecialty('Strength & Conditioning')
-      setHourlyRate('40')
-      setMonthlyPrice('120')
+      setHourlyRate('400')
+      setMonthlyPrice('2500')
       setBio('')
       setErrorMsg('')
       setLoading(false)
@@ -174,7 +174,7 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Hourly Session ($)</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Hourly Session (EGP)</label>
               <input
                 type="number"
                 required
@@ -184,7 +184,7 @@ export default function AddTrainerModal({ isOpen, onClose, onTrainerAdded }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Monthly Plan ($)</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Monthly Plan (EGP)</label>
               <input
                 type="number"
                 required

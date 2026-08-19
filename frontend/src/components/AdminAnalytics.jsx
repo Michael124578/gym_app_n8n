@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { 
-  ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, 
-  Tooltip, PieChart, Pie, Cell, CartesianGrid, Legend 
+import {
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
+  Tooltip, PieChart, Pie, Cell, CartesianGrid, Legend
 } from 'recharts'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  TrendingUp, TrendingDown, DollarSign, Activity, Users, Calendar, 
-  Clock, ArrowUpRight, ArrowDownRight, Download, RefreshCw, Zap, 
-  ShieldAlert, CheckCircle2, Filter, BarChart3, CreditCard, 
+import {
+  TrendingUp, TrendingDown, DollarSign, Activity, Users, Calendar,
+  Clock, ArrowUpRight, ArrowDownRight, Download, RefreshCw, Zap,
+  ShieldAlert, CheckCircle2, Filter, BarChart3, CreditCard,
   Search, FileSpreadsheet, Phone, Mail, ChevronRight, AlertTriangle
 } from 'lucide-react'
 import { formatReadableDate } from '../utils/dateUtils'
@@ -18,15 +18,15 @@ const PLAN_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06
 export default function AdminAnalytics() {
   const [timeRange, setTimeRange] = useState('30d') // '7d', '30d', '90d', 'month', 'year', 'all'
   const [activeTab, setActiveTab] = useState('overview') // 'overview', 'revenue', 'attendance', 'retention'
-  
+
   const [rawCheckIns, setRawCheckIns] = useState([])
   const [rawPayments, setRawPayments] = useState([])
   const [rawMembers, setRawMembers] = useState([])
-  
+
   const [loading, setLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
-  
+
   const [txSearch, setTxSearch] = useState('')
   const [txPlanFilter, setTxPlanFilter] = useState('all')
 
@@ -221,7 +221,7 @@ export default function AdminAnalytics() {
       // Group by Day
       const dailyMap = {}
       const daysCount = timeRange === '7d' ? 7 : 30
-      
+
       for (let i = daysCount - 1; i >= 0; i--) {
         const d = new Date()
         d.setDate(d.getDate() - i)
@@ -246,7 +246,7 @@ export default function AdminAnalytics() {
         const d = new Date(p.paid_at)
         const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
         const label = d.toLocaleDateString('default', { month: 'short', year: '2-digit' })
-        
+
         if (!monthlyMap[yearMonth]) {
           monthlyMap[yearMonth] = { yearMonth, label, revenue: 0, count: 0 }
         }
@@ -332,7 +332,7 @@ export default function AdminAnalytics() {
       const member = membersMap[p.member_id]
       const memberName = member?.full_name || 'Anonymous'
       const matchesSearch = memberName.toLowerCase().includes(txSearch.toLowerCase()) ||
-                            (p.plan_name || '').toLowerCase().includes(txSearch.toLowerCase())
+        (p.plan_name || '').toLowerCase().includes(txSearch.toLowerCase())
       const matchesPlan = txPlanFilter === 'all' || p.plan_name === txPlanFilter
       return matchesSearch && matchesPlan
     })
@@ -431,7 +431,7 @@ export default function AdminAnalytics() {
 
   return (
     <div className="space-y-6">
-      
+
       {/* TOP HEADER CONTROLS */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-950/60 backdrop-blur-xl border border-slate-800/80 p-4 sm:p-5 rounded-3xl shadow-xl">
         <div>
@@ -464,11 +464,10 @@ export default function AdminAnalytics() {
               <button
                 key={tf.id}
                 onClick={() => setTimeRange(tf.id)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
-                  timeRange === tf.id
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${timeRange === tf.id
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
               >
                 {tf.label}
               </button>
@@ -519,9 +518,9 @@ export default function AdminAnalytics() {
 
       {/* EXECUTIVE KPI COMMAND CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
+
         {/* REVENUE CARD */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
@@ -534,29 +533,28 @@ export default function AdminAnalytics() {
             <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 shadow-sm">
               <DollarSign className="h-6 w-6" />
             </div>
-            <span className={`inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full border ${
-              revenueGrowthPct >= 0 
-                ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
-                : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
-            }`}>
+            <span className={`inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full border ${revenueGrowthPct >= 0
+              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+              : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+              }`}>
               {revenueGrowthPct >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
               {Math.abs(revenueGrowthPct)}%
             </span>
           </div>
           <div>
-            <p className="text-3xl font-black text-white tracking-tight">${totalRevenue.toLocaleString()}</p>
+            <p className="text-3xl font-black text-white tracking-tight">{totalRevenue.toLocaleString()} EGP</p>
             <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center space-x-1">
               <span>Gross Volume</span>
               <span className="text-[10px] text-slate-500 uppercase">({timeRange})</span>
             </p>
             <p className="text-[11px] text-slate-500 mt-2 font-mono">
-              Prior: ${priorRevenue.toLocaleString()}
+              Prior: {priorRevenue.toLocaleString()} EGP
             </p>
           </div>
         </motion.div>
 
         {/* ACTIVE MEMBERSHIP & RETENTION CARD */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.05 }}
@@ -583,7 +581,7 @@ export default function AdminAnalytics() {
         </motion.div>
 
         {/* CHECK-IN VELOCITY & CURRENT OCCUPANCY */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
@@ -611,7 +609,7 @@ export default function AdminAnalytics() {
         </motion.div>
 
         {/* ARPU / UNIT ECONOMICS */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
@@ -629,7 +627,7 @@ export default function AdminAnalytics() {
             </span>
           </div>
           <div>
-            <p className="text-3xl font-black text-white tracking-tight">${arpu}</p>
+            <p className="text-3xl font-black text-white tracking-tight">{arpu} EGP</p>
             <p className="text-xs text-slate-400 font-medium mt-0.5">ARPU (Rev / Active Member)</p>
             <p className="text-[11px] text-slate-500 mt-2 font-mono">
               Peak Day: <span className="text-violet-400 font-bold">{busiestDay}</span>
@@ -652,11 +650,10 @@ export default function AdminAnalytics() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-4 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
-                isActive
-                  ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
-              }`}
+              className={`flex items-center space-x-2 px-4 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${isActive
+                ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                }`}
             >
               <Icon className="h-4 w-4" />
               <span>{tab.label}</span>
@@ -672,7 +669,7 @@ export default function AdminAnalytics() {
 
       {/* TAB CONTENT PANELS */}
       <AnimatePresence mode="wait">
-        
+
         {/* 1. OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <motion.div
@@ -685,7 +682,7 @@ export default function AdminAnalytics() {
           >
             {/* REVENUE TIMELINE & RETENTION PIE */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
+
               {/* REVENUE TIMELINE CHART */}
               <div className="lg:col-span-2 bg-slate-950/80 backdrop-blur-xl border border-slate-800/80 p-6 rounded-3xl shadow-xl flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-4">
@@ -706,14 +703,14 @@ export default function AdminAnalytics() {
                     <AreaChart data={revenueTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorRevOverview" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0}/>
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                       <XAxis dataKey="label" stroke="#64748b" fontSize={11} tickLine={false} />
-                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} tickFormatter={val => `$${val}`} />
-                      <Tooltip content={<CustomChartTooltip prefix="$" />} />
+                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} tickFormatter={val => `${val} EGP`} />
+                      <Tooltip content={<CustomChartTooltip suffix=" EGP" />} />
                       <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorRevOverview)" />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -733,14 +730,14 @@ export default function AdminAnalytics() {
                 <div className="w-full h-52 flex items-center justify-center my-2">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie 
-                        data={retentionPieData} 
-                        dataKey="value" 
-                        nameKey="name" 
-                        cx="50%" 
-                        cy="50%" 
-                        innerRadius={55} 
-                        outerRadius={75} 
+                      <Pie
+                        data={retentionPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={75}
                         paddingAngle={5}
                       >
                         {retentionPieData.map((entry, index) => (
@@ -771,7 +768,7 @@ export default function AdminAnalytics() {
 
             {/* CHECK-IN HEATMAP & WEEKDAY DENSITY */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
+
               {/* 24-HOUR TRAFFIC BAR */}
               <div className="lg:col-span-2 bg-slate-950/80 backdrop-blur-xl border border-slate-800/80 p-6 rounded-3xl shadow-xl">
                 <div className="flex items-center justify-between mb-4">
@@ -843,7 +840,7 @@ export default function AdminAnalytics() {
           >
             {/* PLAN REVENUE BREAKDOWN & SUMMARY */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
+
               {/* PLAN REVENUE DONUT */}
               <div className="bg-slate-950/80 backdrop-blur-xl border border-slate-800/80 p-6 rounded-3xl shadow-xl flex flex-col justify-between">
                 <div>
@@ -857,21 +854,21 @@ export default function AdminAnalytics() {
                 <div className="w-full h-56 my-2">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie 
-                        data={planBreakdown} 
-                        dataKey="revenue" 
-                        nameKey="name" 
-                        cx="50%" 
-                        cy="50%" 
-                        innerRadius={50} 
-                        outerRadius={75} 
+                      <Pie
+                        data={planBreakdown}
+                        dataKey="revenue"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={75}
                         paddingAngle={5}
                       >
                         {planBreakdown.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip content={<CustomChartTooltip prefix="$" />} />
+                      <Tooltip content={<CustomChartTooltip suffix=" EGP" />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -883,7 +880,7 @@ export default function AdminAnalytics() {
                         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color }} />
                         <span className="text-slate-300 font-medium">{p.name}</span>
                       </div>
-                      <span className="font-bold text-white font-mono">${p.revenue.toLocaleString()}</span>
+                      <span className="font-bold text-white font-mono">{p.revenue.toLocaleString()} EGP</span>
                     </div>
                   ))}
                 </div>
@@ -902,7 +899,7 @@ export default function AdminAnalytics() {
                   <div className="text-right">
                     <p className="text-xs font-mono text-slate-400">Avg Transaction</p>
                     <p className="text-sm font-bold text-white">
-                      ${filteredPayments.length > 0 ? Math.round(totalRevenue / filteredPayments.length) : 0}
+                      {filteredPayments.length > 0 ? Math.round(totalRevenue / filteredPayments.length).toLocaleString() : 0} EGP
                     </p>
                   </div>
                 </div>
@@ -912,8 +909,8 @@ export default function AdminAnalytics() {
                     <BarChart data={revenueTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                       <XAxis dataKey="label" stroke="#64748b" fontSize={11} tickLine={false} />
-                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} tickFormatter={val => `$${val}`} />
-                      <Tooltip content={<CustomChartTooltip prefix="$" />} />
+                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} tickFormatter={val => `${val} EGP`} />
+                      <Tooltip content={<CustomChartTooltip suffix=" EGP" />} />
                       <Bar dataKey="revenue" name="Revenue" fill="#6366f1" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -991,7 +988,7 @@ export default function AdminAnalytics() {
                               </span>
                             </td>
                             <td className="py-3 px-4 font-black text-emerald-400 font-mono text-sm">
-                              +${Number(tx.amount || 0).toLocaleString()}
+                              +{Number(tx.amount || 0).toLocaleString()} EGP
                             </td>
                             <td className="py-3 px-4 text-slate-400 font-mono">
                               {tx.paid_at ? new Date(tx.paid_at).toLocaleString() : 'N/A'}
@@ -1191,11 +1188,10 @@ export default function AdminAnalytics() {
                             {m.membership_end_date ? formatReadableDate(m.membership_end_date) : 'N/A'}
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
-                              m.daysLeft <= 2
-                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse'
-                                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                            }`}>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${m.daysLeft <= 2
+                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse'
+                              : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              }`}>
                               {m.daysLeft === 0 ? 'Expires Today' : `${m.daysLeft} Day${m.daysLeft > 1 ? 's' : ''} Left`}
                             </span>
                           </td>

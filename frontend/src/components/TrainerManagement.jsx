@@ -244,7 +244,7 @@ export default function TrainerManagement({ session, userRole }) {
                     <div className="flex justify-between items-start">
                       <h4 className="text-sm font-black text-white">{t.full_name}</h4>
                       <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
-                        ${t.monthly_plan_price || 120}/mo
+                        {(t.monthly_plan_price || 2500).toLocaleString()} EGP/mo
                       </span>
                     </div>
                     <p className="text-xs font-semibold text-indigo-300 mt-0.5">{t.specialty || 'Pro Coach'}</p>

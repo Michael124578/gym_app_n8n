@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Download, RefreshCw, QrCode, Sparkles, CheckCircle2 } from 'lucide-react'
+import { ShieldCheck, Download, RefreshCw, QrCode, CheckCircle2 } from 'lucide-react'
 
 export default function MemberPassCard({ member, cardRef, onDownload, onZoom }) {
   const [totpToken, setTotpToken] = useState('')

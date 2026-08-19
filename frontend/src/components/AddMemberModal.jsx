@@ -10,7 +10,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [planName, setPlanName] = useState('Monthly Pass')
-  const [amount, setAmount] = useState('50')
+  const [amount, setAmount] = useState('1200')
   const [durationDays, setDurationDays] = useState(30)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -24,7 +24,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
       setPassword('')
       setShowPassword(false)
       setPlanName('Monthly Pass')
-      setAmount('50')
+      setAmount('1200')
       setDurationDays(30)
       setErrorMsg('')
       setLoading(false)
@@ -43,10 +43,10 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const handlePlanChange = (plan) => {
     setPlanName(plan)
     const presets = {
-      'Day Pass': { amount: '10', days: 1 },
-      'Monthly Pass': { amount: '50', days: 30 },
-      '3-Month VIP': { amount: '130', days: 90 },
-      'Annual Pass': { amount: '450', days: 365 }
+      'Day Pass': { amount: '250', days: 1 },
+      'Monthly Pass': { amount: '1200', days: 30 },
+      '3-Month VIP': { amount: '3000', days: 90 },
+      'Annual Pass': { amount: '9600', days: 365 }
     }
     if (presets[plan]) {
       setAmount(presets[plan].amount)
@@ -279,7 +279,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Payment Amount ($)</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Payment Amount (EGP)</label>
               <input
                 type="number"
                 required

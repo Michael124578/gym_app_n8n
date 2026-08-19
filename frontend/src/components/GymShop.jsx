@@ -12,7 +12,7 @@ const DEFAULT_PRODUCTS = [
     id: 'p-1',
     name: 'Iron ISO-100 Hydrolyzed Whey',
     category: 'Proteins & Shakes',
-    price: 64.99,
+    price: 2450,
     stock: 24,
     rating: 4.9,
     tag: 'Best Seller',
@@ -24,7 +24,7 @@ const DEFAULT_PRODUCTS = [
     id: 'p-2',
     name: 'CyberPUMP High-Stim Pre-Workout',
     category: 'Pre-Workouts & Energy',
-    price: 44.99,
+    price: 1650,
     stock: 18,
     rating: 4.8,
     tag: 'High Stim',
@@ -36,7 +36,7 @@ const DEFAULT_PRODUCTS = [
     id: 'p-3',
     name: 'Heavy Duty Figure-8 Lifting Straps',
     category: 'Lifting Gear & Straps',
-    price: 19.99,
+    price: 450,
     stock: 40,
     rating: 5.0,
     tag: 'Pro Gear',
@@ -48,7 +48,7 @@ const DEFAULT_PRODUCTS = [
     id: 'p-4',
     name: 'Iron Gym Oversized Heavyweight Pump Cover',
     category: 'Apparel',
-    price: 34.99,
+    price: 850,
     stock: 15,
     rating: 4.9,
     tag: 'Limited Edition',
@@ -60,7 +60,7 @@ const DEFAULT_PRODUCTS = [
     id: 'p-5',
     name: 'Electrolyte Hyper-Hydration Fuel (30 Pack)',
     category: 'Snacks & Hydration',
-    price: 29.99,
+    price: 750,
     stock: 30,
     rating: 4.7,
     tag: 'Essential',
@@ -72,7 +72,7 @@ const DEFAULT_PRODUCTS = [
     id: 'p-6',
     name: 'Creapure Micronized Creatine Monohydrate',
     category: 'Proteins & Shakes',
-    price: 32.99,
+    price: 1250,
     stock: 22,
     rating: 5.0,
     tag: 'Muscle Mass',
@@ -84,7 +84,7 @@ const DEFAULT_PRODUCTS = [
     id: 'p-7',
     name: '10mm Lever Action Powerlifting Belt',
     category: 'Lifting Gear & Straps',
-    price: 89.99,
+    price: 3200,
     stock: 8,
     rating: 4.9,
     tag: 'IPF Spec',
@@ -96,7 +96,7 @@ const DEFAULT_PRODUCTS = [
     id: 'p-8',
     name: 'Cold Pressed Protein Shake (Vanilla Cream)',
     category: 'Snacks & Hydration',
-    price: 4.50,
+    price: 120,
     stock: 50,
     rating: 4.6,
     tag: 'Ready to Drink',
@@ -421,7 +421,7 @@ export default function GymShop({ session, userRole }) {
                   <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 mb-3">
                     <div>
                       <p className="text-xs text-slate-500">Price</p>
-                      <p className="text-xl font-black text-white font-mono">${prod.price.toFixed(2)}</p>
+                      <p className="text-xl font-black text-white font-mono">{prod.price.toLocaleString()} EGP</p>
                     </div>
 
                     <span className={`text-[11px] font-mono font-bold ${
@@ -497,7 +497,7 @@ export default function GymShop({ session, userRole }) {
                           <div className="text-2xl">{item.imageIcon}</div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-white truncate">{item.name}</p>
-                            <p className="text-emerald-400 font-mono font-bold">${item.price.toFixed(2)} each</p>
+                            <p className="text-emerald-400 font-mono font-bold">{item.price.toLocaleString()} EGP each</p>
                           </div>
 
                           <div className="flex items-center space-x-2 bg-slate-950 border border-slate-800 px-2 py-1 rounded-xl">
@@ -525,15 +525,15 @@ export default function GymShop({ session, userRole }) {
                     <div className="space-y-1.5 text-xs font-mono">
                       <div className="flex justify-between text-slate-400">
                         <span>Items ({cartTotalItems}):</span>
-                        <span>${cartSubtotal.toFixed(2)}</span>
+                        <span>{cartSubtotal.toLocaleString()} EGP</span>
                       </div>
                       <div className="flex justify-between text-slate-400">
                         <span>Tax / Surcharge:</span>
-                        <span className="text-emerald-400">$0.00 (Gym Member Exemption)</span>
+                        <span className="text-emerald-400">0 EGP (Gym Member Exemption)</span>
                       </div>
                       <div className="flex justify-between text-sm font-bold text-white pt-2 border-t border-slate-800/80">
                         <span>Total Due:</span>
-                        <span className="text-emerald-400 font-black text-base">${cartSubtotal.toFixed(2)}</span>
+                        <span className="text-emerald-400 font-black text-base">{cartSubtotal.toLocaleString()} EGP</span>
                       </div>
                     </div>
 
@@ -544,7 +544,7 @@ export default function GymShop({ session, userRole }) {
                         className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 transition disabled:opacity-50"
                       >
                         <CreditCard className="h-4 w-4" />
-                        <span>{isCheckingOut ? 'Processing...' : 'Charge to Member Pass ($' + cartSubtotal.toFixed(2) + ')'}</span>
+                        <span>{isCheckingOut ? 'Processing...' : `Charge to Member Pass (${cartSubtotal.toLocaleString()} EGP)`}</span>
                       </button>
 
                       <button
@@ -591,14 +591,14 @@ export default function GymShop({ session, userRole }) {
                   {receiptData.items.map(item => (
                     <div key={item.id} className="flex justify-between items-center text-slate-300">
                       <span>{item.quantity}x {item.name}</span>
-                      <span className="font-mono font-bold text-white">${(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="font-mono font-bold text-white">{(item.price * item.quantity).toLocaleString()} EGP</span>
                     </div>
                   ))}
                 </div>
 
                 <div className="pt-2 border-t border-slate-800 flex justify-between font-bold text-white text-sm">
                   <span>Grand Total</span>
-                  <span className="text-emerald-400 font-black font-mono">${receiptData.subtotal.toFixed(2)}</span>
+                  <span className="text-emerald-400 font-black font-mono">{receiptData.subtotal.toLocaleString()} EGP</span>
                 </div>
               </div>
 
@@ -673,7 +673,7 @@ export default function GymShop({ session, userRole }) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-400 font-bold mb-1">Price ($)</label>
+                    <label className="block text-slate-400 font-bold mb-1">Price (EGP)</label>
                     <input
                       type="number"
                       step="0.01"

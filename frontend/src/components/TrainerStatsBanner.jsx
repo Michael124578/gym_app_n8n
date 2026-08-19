@@ -2,7 +2,7 @@ import React from 'react'
 import { Award, DollarSign, Users, TrendingUp, ShieldCheck, Flame } from 'lucide-react'
 
 export default function TrainerStatsBanner({ trainerProfile, subscribers = [] }) {
-  const planPrice = trainerProfile?.monthly_plan_price || 120
+  const planPrice = trainerProfile?.monthly_plan_price || 2500
   const totalMonthlyEarnings = subscribers.length * planPrice
 
   return (
@@ -18,7 +18,7 @@ export default function TrainerStatsBanner({ trainerProfile, subscribers = [] })
           Coach {trainerProfile?.full_name || 'Staff Instructor'}
         </h2>
         <p className="text-xs text-slate-400 font-mono">
-          Specialization: <span className="text-amber-400 font-bold uppercase">{trainerProfile?.specialty || 'Strength & Conditioning'}</span> • ${planPrice}/mo Rate
+          Specialization: <span className="text-amber-400 font-bold uppercase">{trainerProfile?.specialty || 'Strength & Conditioning'}</span> • {planPrice.toLocaleString()} EGP/mo Rate
         </p>
       </div>
 
@@ -28,7 +28,7 @@ export default function TrainerStatsBanner({ trainerProfile, subscribers = [] })
             <DollarSign className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-lg font-black text-white font-mono">${totalMonthlyEarnings.toLocaleString()}</p>
+            <p className="text-lg font-black text-white font-mono">{totalMonthlyEarnings.toLocaleString()} EGP</p>
             <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Monthly MRR</p>
           </div>
         </div>

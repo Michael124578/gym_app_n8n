@@ -182,38 +182,38 @@ export default function Login({ onLoginSuccess }) {
   }
 
   const facilitiesList = [
-    { 
+    {
       category: 'weights',
-      name: 'Olympic Free Weight Arena', 
+      name: 'Olympic Free Weight Arena',
       tag: 'Heavy Iron & Calibrated Plates',
       desc: 'Competition bench presses, deadlift dead-drop platforms, Eleiko calibrated steel discs, and dumbbells ranging from 2.5 kg up to 75 kg.',
-      img: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=800' 
+      img: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=800'
     },
-    { 
+    {
       category: 'machines',
-      name: 'Hammer Strength & Custom Biomechanics', 
+      name: 'Hammer Strength & Custom Biomechanics',
       tag: 'Pin & Plate-Loaded Stacks',
       desc: 'Precision iso-lateral chest presses, dual-axis leg presses, converging lat pulldowns, and custom multi-pulley cable towers.',
-      img: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?q=80&w=800' 
+      img: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?q=80&w=800'
     },
-    { 
+    {
       category: 'recovery',
-      name: 'Hydro-Recovery & Contrast Lounge', 
+      name: 'Hydro-Recovery & Contrast Lounge',
       tag: 'Therapy & Cold Immersion',
       desc: 'State-of-the-art Finnish cedar saunas, 4°C cold plunge tanks, infrared light therapy suites, and pneumatic compression boots.',
-      img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=800' 
+      img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=800'
     },
-    { 
+    {
       category: 'turf',
-      name: 'Athletic Conditioning & Sprint Track', 
+      name: 'Athletic Conditioning & Sprint Track',
       tag: 'Functional Agility Turf',
       desc: '50-meter indoor sprint turf, weighted push sleds, Concept2 rowers, SkiErgs, assault bikes, and plyometric jump towers.',
-      img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800' 
+      img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800'
     }
   ]
 
-  const filteredFacilities = activeFacilityCategory === 'all' 
-    ? facilitiesList 
+  const filteredFacilities = activeFacilityCategory === 'all'
+    ? facilitiesList
     : facilitiesList.filter(f => f.category === activeFacilityCategory)
 
   return (
@@ -243,37 +243,37 @@ export default function Login({ onLoginSuccess }) {
           </div>
 
           <nav className="hidden md:flex items-center space-x-8 text-xs font-bold uppercase tracking-wider text-slate-300">
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('ecosystem')} 
+            <button
+              type="button"
+              onClick={() => scrollToSection('ecosystem')}
               className="hover:text-indigo-400 transition cursor-pointer"
             >
               Ecosystem
             </button>
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('facilities')} 
+            <button
+              type="button"
+              onClick={() => scrollToSection('facilities')}
               className="hover:text-indigo-400 transition cursor-pointer"
             >
               Facilities
             </button>
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('plans')} 
+            <button
+              type="button"
+              onClick={() => scrollToSection('plans')}
               className="hover:text-indigo-400 transition cursor-pointer"
             >
               Membership
             </button>
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('coaches')} 
+            <button
+              type="button"
+              onClick={() => scrollToSection('coaches')}
               className="hover:text-indigo-400 transition cursor-pointer"
             >
               Coaching
             </button>
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('faq')} 
+            <button
+              type="button"
+              onClick={() => scrollToSection('faq')}
               className="hover:text-indigo-400 transition cursor-pointer"
             >
               FAQ
@@ -307,7 +307,7 @@ export default function Login({ onLoginSuccess }) {
               <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black uppercase tracking-tight leading-[0.92] text-white">
                 WHERE TITANS <br />
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-amber-300 to-white">
-                  ARE FORGED.
+                  ARE FORGED
                 </span>
               </h1>
               <p className="text-slate-400 text-base sm:text-lg max-w-xl font-normal leading-relaxed">
@@ -354,7 +354,7 @@ export default function Login({ onLoginSuccess }) {
           <div className="lg:col-span-5 relative">
             <div className="absolute -inset-2 bg-gradient-to-r from-indigo-500 to-amber-500 rounded-3xl blur-2xl opacity-20 animate-pulse" />
             <div className="relative bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-              
+
               {/* TERMINAL HEADER */}
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div className="flex items-center space-x-3">
@@ -462,8 +462,8 @@ export default function Login({ onLoginSuccess }) {
             ].map((feature, idx) => {
               const Icon = feature.icon
               return (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 hover:border-slate-700 transition duration-300 flex flex-col justify-between space-y-4 group shadow-xl"
                 >
                   <div className="space-y-4">
@@ -488,7 +488,7 @@ export default function Login({ onLoginSuccess }) {
       {/* SECTION 2: CLUB FACILITIES */}
       <section id="facilities" className="py-24 px-6 border-t border-slate-900 bg-slate-950/60 relative z-10">
         <div className="max-w-7xl mx-auto space-y-12">
-          
+
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="max-w-2xl">
               <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold block mb-2">
@@ -514,11 +514,10 @@ export default function Login({ onLoginSuccess }) {
                 <button
                   key={cat.id}
                   onClick={() => setActiveFacilityCategory(cat.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition ${
-                    activeFacilityCategory === cat.id
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition ${activeFacilityCategory === cat.id
                       ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                       : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                  }`}
+                    }`}
                 >
                   {cat.label}
                 </button>
@@ -529,14 +528,14 @@ export default function Login({ onLoginSuccess }) {
           {/* FACILITY CARDS GRID */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {filteredFacilities.map((fac, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden group shadow-2xl flex flex-col justify-between"
               >
                 <div className="relative h-64 overflow-hidden">
-                  <img 
-                    src={fac.img} 
-                    alt={fac.name} 
+                  <img
+                    src={fac.img}
+                    alt={fac.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-700 opacity-75"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
@@ -558,7 +557,7 @@ export default function Login({ onLoginSuccess }) {
       {/* SECTION 3: MEMBERSHIP PLANS */}
       <section id="plans" className="py-24 px-6 border-t border-slate-900 bg-slate-950 relative z-10">
         <div className="max-w-7xl mx-auto space-y-12">
-          
+
           <div className="text-center max-w-2xl mx-auto space-y-4">
             <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold block">
               03 // Straightforward Membership
@@ -575,22 +574,20 @@ export default function Login({ onLoginSuccess }) {
               <button
                 type="button"
                 onClick={() => setBillingCycle('monthly')}
-                className={`px-5 py-2 rounded-xl text-xs font-bold uppercase transition ${
-                  billingCycle === 'monthly'
+                className={`px-5 py-2 rounded-xl text-xs font-bold uppercase transition ${billingCycle === 'monthly'
                     ? 'bg-indigo-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white'
-                }`}
+                  }`}
               >
                 Monthly Billing
               </button>
               <button
                 type="button"
                 onClick={() => setBillingCycle('annual')}
-                className={`px-5 py-2 rounded-xl text-xs font-bold uppercase transition flex items-center space-x-1.5 ${
-                  billingCycle === 'annual'
+                className={`px-5 py-2 rounded-xl text-xs font-bold uppercase transition flex items-center space-x-1.5 ${billingCycle === 'annual'
                     ? 'bg-indigo-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <span>Annual VIP Pass</span>
                 <span className="bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">Save 20%</span>
@@ -599,7 +596,7 @@ export default function Login({ onLoginSuccess }) {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-            
+
             {/* DAY PASS */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 flex flex-col justify-between space-y-8 shadow-xl">
               <div className="space-y-6">
@@ -607,8 +604,8 @@ export default function Login({ onLoginSuccess }) {
                   <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 font-bold block">Single Session</span>
                   <h3 className="text-xl font-black uppercase text-white mt-1">24-Hour Day Pass</h3>
                 </div>
-                <div className="flex items-baseline space-x-1">
-                  <span className="text-4xl font-black text-white font-mono">$10</span>
+                <div className="flex items-baseline space-x-1.5">
+                  <span className="text-4xl font-black text-white font-mono">250 EGP</span>
                   <span className="text-xs text-slate-400 font-mono">/ single day</span>
                 </div>
                 <ul className="space-y-3 text-xs text-slate-300">
@@ -629,7 +626,7 @@ export default function Login({ onLoginSuccess }) {
 
               <button
                 onClick={handleOpenAuth}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition"
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition cursor-pointer"
               >
                 Get Day Pass
               </button>
@@ -651,9 +648,9 @@ export default function Login({ onLoginSuccess }) {
                   </h3>
                 </div>
 
-                <div className="flex items-baseline space-x-1">
+                <div className="flex items-baseline space-x-1.5">
                   <span className="text-5xl font-black text-white font-mono">
-                    {billingCycle === 'annual' ? '$450' : '$50'}
+                    {billingCycle === 'annual' ? '9,600 EGP' : '1,200 EGP'}
                   </span>
                   <span className="text-xs text-slate-400 font-mono">
                     {billingCycle === 'annual' ? '/ year' : '/ month'}
@@ -686,7 +683,7 @@ export default function Login({ onLoginSuccess }) {
 
               <button
                 onClick={handleOpenAuth}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition shadow-lg shadow-indigo-600/30"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider py-4 rounded-xl transition shadow-lg shadow-indigo-600/30 cursor-pointer"
               >
                 Join Iron Gym Today
               </button>
@@ -699,8 +696,8 @@ export default function Login({ onLoginSuccess }) {
                   <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold block">1-on-1 Dedicated Coaching</span>
                   <h3 className="text-xl font-black uppercase text-white mt-1">Coaching Elite Pass</h3>
                 </div>
-                <div className="flex items-baseline space-x-1">
-                  <span className="text-4xl font-black text-white font-mono">$180</span>
+                <div className="flex items-baseline space-x-1.5">
+                  <span className="text-4xl font-black text-white font-mono">3,500 EGP</span>
                   <span className="text-xs text-slate-400 font-mono">/ month</span>
                 </div>
                 <ul className="space-y-3 text-xs text-slate-300">
@@ -739,7 +736,7 @@ export default function Login({ onLoginSuccess }) {
       {/* SECTION 4: COACHING ROSTER PREVIEW */}
       <section id="coaches" className="py-24 px-6 border-t border-slate-900 bg-slate-950/60 relative z-10">
         <div className="max-w-7xl mx-auto space-y-12">
-          
+
           <div className="max-w-2xl">
             <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold block mb-2">
               04 // Professional Coaching Staff
@@ -776,8 +773,8 @@ export default function Login({ onLoginSuccess }) {
                 img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=600'
               }
             ].map((coach, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden group shadow-xl"
               >
                 <div className="h-64 overflow-hidden relative">
@@ -802,7 +799,7 @@ export default function Login({ onLoginSuccess }) {
       {/* SECTION 5: FREQUENTLY ASKED QUESTIONS */}
       <section id="faq" className="py-24 px-6 border-t border-slate-900 bg-slate-950 relative z-10">
         <div className="max-w-4xl mx-auto space-y-12">
-          
+
           <div className="text-center space-y-3">
             <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold block">
               05 // Common Questions
@@ -833,8 +830,8 @@ export default function Login({ onLoginSuccess }) {
             ].map((faq, idx) => {
               const isOpen = activeTabFaq === idx
               return (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden transition"
                 >
                   <button

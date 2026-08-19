@@ -17,10 +17,10 @@ export default function POSInvoiceGenerator({ session }) {
   const [discountAmount, setDiscountAmount] = useState(0)
 
   const [items, setItems] = useState([
-    { id: '1', description: 'Annual VIP All-Access Membership Pass', qty: 1, unitPrice: 450.00 },
-    { id: '2', description: 'Optimum Nutrition Gold Standard Whey (5 lbs)', qty: 1, unitPrice: 65.00 },
-    { id: '3', description: 'Pre-Workout Energy Drink (Ghost C4 Can)', qty: 2, unitPrice: 4.50 },
-    { id: '4', description: 'Digital Smart Locker 6-Month Reservation', qty: 1, unitPrice: 30.00 },
+    { id: '1', description: 'Annual VIP All-Access Membership Pass', qty: 1, unitPrice: 9600.00 },
+    { id: '2', description: 'Iron ISO-100 Hydrolyzed Whey (5 lbs)', qty: 1, unitPrice: 2450.00 },
+    { id: '3', description: 'Pre-Workout Energy Drink (C4 Can)', qty: 2, unitPrice: 120.00 },
+    { id: '4', description: 'Digital Smart Locker 6-Month Reservation', qty: 1, unitPrice: 650.00 },
   ])
 
   const [newItemDesc, setNewItemDesc] = useState('')
@@ -204,11 +204,11 @@ export default function POSInvoiceGenerator({ session }) {
               </div>
 
               <div>
-                <label className="text-[10px] font-mono text-slate-400 block mb-1">Unit Price ($)</label>
+                <label className="text-[10px] font-mono text-slate-400 block mb-1">Unit Price (EGP)</label>
                 <input
                   type="number"
-                  step="0.01"
-                  placeholder="0.00"
+                  step="1"
+                  placeholder="0"
                   value={newItemPrice}
                   onChange={(e) => setNewItemPrice(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
@@ -218,7 +218,7 @@ export default function POSInvoiceGenerator({ session }) {
 
             <button
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase py-3 rounded-xl transition flex items-center justify-center space-x-2"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase py-3 rounded-xl transition flex items-center justify-center space-x-2 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span>Add to Invoice</span>
@@ -298,13 +298,13 @@ export default function POSInvoiceGenerator({ session }) {
                     <tr key={item.id} className="hover:bg-slate-900/40 transition">
                       <td className="py-3 px-2 font-sans font-bold text-white">{item.description}</td>
                       <td className="py-3 px-2 text-center text-slate-300">{item.qty}</td>
-                      <td className="py-3 px-2 text-right text-slate-300">${item.unitPrice.toFixed(2)}</td>
-                      <td className="py-3 px-2 text-right font-bold text-white">${(item.qty * item.unitPrice).toFixed(2)}</td>
+                      <td className="py-3 px-2 text-right text-slate-300">{item.unitPrice.toLocaleString()} EGP</td>
+                      <td className="py-3 px-2 text-right font-bold text-white">{(item.qty * item.unitPrice).toLocaleString()} EGP</td>
                       <td className="py-3 px-1 text-right">
                         <button
                           type="button"
                           onClick={() => handleDeleteItem(item.id)}
-                          className="text-slate-600 hover:text-rose-400 p-1 transition"
+                          className="text-slate-600 hover:text-rose-400 p-1 transition cursor-pointer"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -327,24 +327,24 @@ export default function POSInvoiceGenerator({ session }) {
                 </div>
               </div>
 
-              <div className="w-56 space-y-1.5 text-xs font-mono">
+              <div className="w-60 space-y-1.5 text-xs font-mono">
                 <div className="flex justify-between text-slate-400">
                   <span>Subtotal:</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>{subtotal.toLocaleString()} EGP</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-400">
                     <span>Discount:</span>
-                    <span>-${discountAmount.toFixed(2)}</span>
+                    <span>-{discountAmount.toLocaleString()} EGP</span>
                   </div>
                 )}
                 <div className="flex justify-between text-slate-400">
                   <span>Sales Tax ({taxRate}%):</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span>{tax.toLocaleString()} EGP</span>
                 </div>
                 <div className="flex justify-between text-sm font-black text-white border-t border-slate-800 pt-2">
                   <span>Grand Total:</span>
-                  <span className="text-emerald-400">${grandTotal.toFixed(2)}</span>
+                  <span className="text-emerald-400">{grandTotal.toLocaleString()} EGP</span>
                 </div>
               </div>
             </div>

@@ -529,23 +529,23 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
                   value={renewPlan}
                   onChange={(e) => {
                     setRenewPlan(e.target.value)
-                    if (e.target.value === 'Day Pass') { setRenewAmount('10'); setRenewDays(1) }
-                    else if (e.target.value === 'Monthly Pass') { setRenewAmount('50'); setRenewDays(30) }
-                    else if (e.target.value === '3-Month VIP') { setRenewAmount('130'); setRenewDays(90) }
-                    else if (e.target.value === 'Annual Pass') { setRenewAmount('450'); setRenewDays(365) }
+                    if (e.target.value === 'Day Pass') { setRenewAmount('250'); setRenewDays(1) }
+                    else if (e.target.value === 'Monthly Pass') { setRenewAmount('1200'); setRenewDays(30) }
+                    else if (e.target.value === '3-Month VIP') { setRenewAmount('3000'); setRenewDays(90) }
+                    else if (e.target.value === 'Annual Pass') { setRenewAmount('9600'); setRenewDays(365) }
                   }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
                 >
-                  <option value="Day Pass">24-Hour Day Pass ($10 / 1 Day)</option>
-                  <option value="Monthly Pass">Monthly Pass ($50 / 30 Days)</option>
-                  <option value="3-Month VIP">3-Month VIP Pass ($130 / 90 Days)</option>
-                  <option value="Annual Pass">Annual Titan Pass ($450 / 365 Days)</option>
+                  <option value="Day Pass">24-Hour Day Pass (250 EGP / 1 Day)</option>
+                  <option value="Monthly Pass">Monthly Pass (1,200 EGP / 30 Days)</option>
+                  <option value="3-Month VIP">3-Month VIP Pass (3,000 EGP / 90 Days)</option>
+                  <option value="Annual Pass">Annual Titan Pass (9,600 EGP / 365 Days)</option>
                 </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Payment Amount ($)</label>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Payment Amount (EGP)</label>
                   <input
                     type="number"
                     required
