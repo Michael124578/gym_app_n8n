@@ -32,7 +32,7 @@ import { supabase } from './lib/supabaseClient'
 import { 
   QrCode, Dumbbell, Wrench, Users, Award, BarChart3, 
   Calendar, ShoppingBag, Megaphone, User, KeyRound, Calculator,
-  Sparkles, Target, Activity, Scale, Radio, Droplet, Headphones, Flame
+  Target, Activity, Scale, Radio, Droplet, Headphones, Flame, Layers
 } from 'lucide-react'
 
 export default function App() {

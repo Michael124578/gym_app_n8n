@@ -3,10 +3,10 @@ import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Settings, LogOut, Sparkles, Flame, Users, X, KeyRound, Save, 
+  Settings, LogOut, Flame, Users, X, KeyRound, Save, 
   FileText, Target, Dumbbell, Scale, Droplet, Headphones, 
   ArrowRight, Play, Activity, Radio, Heart, MessageSquare, 
-  Receipt, Layers, Utensils
+  Receipt, Layers, Utensils, Award
 } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { formatLocalDate } from '../utils/dateUtils'
@@ -234,7 +234,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
       <AnimatePresence>
         {toastMessage && (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center space-x-2">
-            <Sparkles className="h-4 w-4 text-emerald-300" />
+            <Award className="h-4 w-4 text-emerald-300" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
@@ -397,10 +397,10 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
               className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
             >
               <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
-                <Sparkles className="h-5 w-5" />
+                <Layers className="h-5 w-5" />
               </div>
-              <span className="text-xs font-black uppercase text-white">AI Routines</span>
-              <span className="text-[10px] font-mono text-slate-500">Split Generator</span>
+              <span className="text-xs font-black uppercase text-white">Program Architect</span>
+              <span className="text-[10px] font-mono text-slate-500">Periodization</span>
             </button>
 
             <button

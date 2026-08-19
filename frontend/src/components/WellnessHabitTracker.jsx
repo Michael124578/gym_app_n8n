@@ -247,7 +247,7 @@ export default function WellnessHabitTracker({ session }) {
               animate={{ opacity: 1, scale: 1 }}
               className="bg-gradient-to-r from-emerald-950/60 to-teal-950/60 border border-emerald-500/40 p-4 rounded-2xl flex items-center space-x-3 text-xs text-emerald-300"
             >
-              <Sparkles className="h-5 w-5 text-emerald-400 shrink-0" />
+              <Award className="h-5 w-5 text-emerald-400 shrink-0" />
               <span><strong>Perfect Day Achieved!</strong> All recovery and nutritional targets completed for today.</span>
             </motion.div>
           )}

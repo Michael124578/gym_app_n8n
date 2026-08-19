@@ -178,7 +178,7 @@ export default function GymCommunityFeed({ session, userRole }) {
       {/* TABS */}
       <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
         {[
-          { id: 'all', label: 'All Updates', icon: Sparkles },
+          { id: 'all', label: 'All Updates', icon: Flame },
           { id: 'announcements', label: 'Gym Announcements', icon: Megaphone },
           { id: 'prs', label: 'PRs & Milestones', icon: Trophy }
         ].map(tab => {

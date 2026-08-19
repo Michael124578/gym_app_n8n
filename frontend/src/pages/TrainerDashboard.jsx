@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Users, Calendar, Dumbbell, Sparkles, Activity, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { Users, Calendar, Dumbbell, Award, Activity, Clock, CheckCircle2, XCircle } from 'lucide-react'
 
 import TrainerStatsBanner from '../components/TrainerStatsBanner'
 import TrainerProgramBuilder from '../components/TrainerProgramBuilder'
@@ -188,7 +188,7 @@ export default function TrainerDashboard({ session }) {
     <div className="space-y-6">
       {msg && (
         <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl flex items-center space-x-3 text-xs font-bold animate-bounce shadow-xl">
-          <Sparkles className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+          <Award className="h-5 w-5 text-emerald-400 flex-shrink-0" />
           <span>{msg}</span>
         </div>
       )}

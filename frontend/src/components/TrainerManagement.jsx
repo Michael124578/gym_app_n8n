@@ -194,7 +194,7 @@ export default function TrainerManagement({ session, userRole }) {
     <div className="space-y-6">
       {msg && (
         <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl flex items-center space-x-3 text-xs font-bold animate-bounce shadow-xl">
-          <Sparkles className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+          <Award className="h-5 w-5 text-emerald-400 flex-shrink-0" />
           <span>{msg}</span>
         </div>
       )}

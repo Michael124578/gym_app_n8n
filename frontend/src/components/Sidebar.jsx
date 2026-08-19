@@ -2,7 +2,7 @@ import React from 'react'
 import { 
   Users, QrCode, BarChart3, PlusCircle, LogOut, Shield, 
   X, User, Wrench, Dumbbell, Award, Calendar, ShoppingBag, 
-  Megaphone, KeyRound, Calculator, Sparkles, Target, Activity,
+  Megaphone, KeyRound, Calculator, Target, Activity,
   Scale, Radio, Droplet, Headphones, Flame, Heart, MessageSquare, 
   Receipt, Layers, FileText
 } from 'lucide-react'
@@ -38,7 +38,7 @@ export default function Sidebar({
     { id: 'printable_sheets', label: 'Printable Routine Sheets', icon: FileText },
     { id: 'recovery_insights', label: 'Recovery & Volume', icon: Activity },
     { id: 'exercises', label: 'Exercise Library', icon: Target },
-    { id: 'ai_generator', label: 'AI Routine Builder', icon: Sparkles },
+    { id: 'ai_generator', label: 'Program Architect', icon: Layers },
     { id: 'workout_tracker', label: 'Live Workout Logger', icon: Flame },
     { id: 'warmup_calc', label: 'Warmup Calculator', icon: Layers },
     { id: 'mobility', label: 'Mobility & Warmup', icon: Heart },
@@ -56,7 +56,7 @@ export default function Sidebar({
     { id: 'exercises', label: 'Exercise Library', icon: Target },
     { id: 'mobility', label: 'Mobility & Warmup', icon: Heart },
     { id: 'printable_sheets', label: 'Printable Workout Logs', icon: FileText },
-    { id: 'ai_generator', label: 'AI Routine Builder', icon: Sparkles },
+    { id: 'ai_generator', label: 'Program Architect', icon: Layers },
     { id: 'body_vault', label: 'Body Progress Vault', icon: Scale },
     { id: 'wellness', label: 'Hydration & Habits', icon: Droplet },
     { id: 'nutrition', label: 'Food Diary & Macros', icon: Calculator },

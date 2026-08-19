@@ -420,7 +420,7 @@ export default function AdminAnalytics() {
       <div className="min-h-[400px] flex flex-col items-center justify-center p-8 space-y-4">
         <div className="relative">
           <div className="h-14 w-14 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-          <Sparkles className="h-6 w-6 text-indigo-400 absolute inset-0 m-auto animate-pulse" />
+          <Activity className="h-6 w-6 text-indigo-400 absolute inset-0 m-auto animate-pulse" />
         </div>
         <p className="text-sm font-bold text-slate-400 font-mono tracking-wider animate-pulse">
           INITIALIZING REVENUE & TRAFFIC MATRIX...

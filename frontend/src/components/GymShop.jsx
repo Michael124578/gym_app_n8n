@@ -750,7 +750,7 @@ export default function GymShop({ session, userRole }) {
             exit={{ opacity: 0, y: 50 }}
             className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-emerald-500/40 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 text-xs font-bold"
           >
-            <Sparkles className="h-4 w-4 text-emerald-400" />
+            <Award className="h-4 w-4 text-emerald-400" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
