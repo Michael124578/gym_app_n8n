@@ -97,12 +97,14 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
     }
   }, [refreshTrigger, fetchMembersAndStats])
 
-  const handleDeleteMember = async (member) => {
-    if (!window.confirm(`Are you sure you want to permanently delete athlete record: ${member.full_name}?`)) return
+  const [memberToDelete, setMemberToDelete] = useState(null)
 
-    if (member.auth_id) {
+  const confirmDeleteMember = async () => {
+    if (!memberToDelete) return
+
+    if (memberToDelete.auth_id) {
       const { error } = await supabase.functions.invoke('delete-user', {
-        body: { auth_id: member.auth_id }
+        body: { auth_id: memberToDelete.auth_id }
       })
 
       if (error) {
@@ -111,9 +113,10 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
     }
 
     // Always ensure database row cleanup
-    await supabase.from('members').delete().eq('id', member.id)
+    await supabase.from('members').delete().eq('id', memberToDelete.id)
 
-    showToast(`Deleted ${member.full_name}`)
+    showToast(`Permanently deleted athlete: ${memberToDelete.full_name}`)
+    setMemberToDelete(null)
     fetchMembersAndStats()
   }
 
@@ -564,7 +567,7 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
                         
                         <button
                           type="button"
-                          onClick={() => handleDeleteMember(member)}
+                          onClick={() => setMemberToDelete(member)}
                           className="p-2 bg-slate-950 hover:bg-rose-600 border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-white rounded-xl transition inline-flex items-center cursor-pointer shadow-sm"
                           title="Delete Athlete Record"
                         >
@@ -740,7 +743,33 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
           </div>
         </div>
       )}
-
+      {/* DELETE ATHLETE CONFIRMATION MODAL */}
+      {memberToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4 animate-fadeIn">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-100 space-y-4">
+            <h3 className="text-lg font-black text-white uppercase">Confirm Athlete Deletion</h3>
+            <p className="text-xs text-slate-400">
+              Are you sure you want to permanently delete athlete record for <strong className="text-white">{memberToDelete.full_name}</strong>? This action cannot be undone.
+            </p>
+            <div className="flex space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setMemberToDelete(null)}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteMember}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold uppercase rounded-xl transition cursor-pointer shadow-lg shadow-rose-600/30"
+              >
+                Delete Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

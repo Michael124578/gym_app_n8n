@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Calendar, Clock, Users, Flame, Plus, CheckCircle, XCircle, 
-  MapPin, UserCheck, Search, Filter, ChevronRight, X, AlertCircle 
+  MapPin, UserCheck, Search, Filter, ChevronRight, X, AlertCircle, Trash2
 } from 'lucide-react'
 
 // Default classes seed if database table is initially unpopulated
@@ -251,11 +251,14 @@ export default function ClassSchedule({ session, userRole }) {
     setNewDesc('')
   }
 
-  const handleDeleteClass = (classId) => {
-    if (!window.confirm('Are you sure you want to remove this class from the schedule?')) return
-    setClasses(prev => prev.filter(c => c.id !== classId))
-    setUserBookings(prev => prev.filter(id => id !== classId))
-    showToast('Class removed from schedule.')
+  const [classToDelete, setClassToDelete] = useState(null)
+
+  const confirmDeleteClass = () => {
+    if (!classToDelete) return
+    setClasses(prev => prev.filter(c => c.id !== classToDelete.id))
+    setUserBookings(prev => prev.filter(id => id !== classToDelete.id))
+    showToast(`Removed "${classToDelete.title}" from schedule.`)
+    setClassToDelete(null)
   }
 
   // Filtered Classes
@@ -493,10 +496,19 @@ export default function ClassSchedule({ session, userRole }) {
                     {(userRole === 'admin' || userRole === 'trainer') && (
                       <button
                         onClick={() => setRosterClass(cls)}
-                        className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 rounded-2xl transition"
+                        className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 rounded-2xl transition cursor-pointer"
                         title="View Attendee Roster"
                       >
                         <Users className="h-4 w-4" />
+                      </button>
+                    )}
+                    {userRole === 'admin' && (
+                      <button
+                        onClick={() => setClassToDelete(cls)}
+                        className="p-2.5 bg-slate-900 hover:bg-rose-600/20 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-500/30 rounded-2xl transition cursor-pointer"
+                        title="Remove Class from Schedule"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     )}
                   </div>
@@ -757,6 +769,33 @@ export default function ClassSchedule({ session, userRole }) {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* DELETE CLASS CONFIRMATION MODAL */}
+      {classToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4 animate-fadeIn">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-100 space-y-4">
+            <h3 className="text-lg font-black text-white uppercase">Confirm Class Cancellation</h3>
+            <p className="text-xs text-slate-400">
+              Are you sure you want to remove <strong className="text-white">{classToDelete.title}</strong> ({classToDelete.day} at {classToDelete.time}) from the club schedule?
+            </p>
+            <div className="flex space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setClassToDelete(null)}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Keep Class
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteClass}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold uppercase rounded-xl transition cursor-pointer shadow-lg shadow-rose-600/30"
+              >
+                Remove Class
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

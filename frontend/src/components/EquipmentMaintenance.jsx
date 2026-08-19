@@ -70,24 +70,26 @@ export default function EquipmentMaintenance({ userRole }) {
       fetchEquipmentAndTickets()
       setTimeout(() => setSuccessMsg(''), 4000)
     } else {
-      alert(`Failed to add machine: ${error.message}`)
+      setSuccessMsg(`Failed to add machine: ${error.message}`)
     }
     setAddingEquipment(false)
   }
 
-  // Admin Deletes Equipment
-  const handleDeleteEquipment = async (item) => {
-    if (!window.confirm(`Decommission and delete ${item.name}? This will also remove associated repair tickets.`)) return
+  const [itemToDelete, setItemToDelete] = useState(null)
 
-    const { error } = await supabase.from('equipment').delete().eq('id', item.id)
+  // Admin Deletes Equipment
+  const confirmDeleteEquipment = async () => {
+    if (!itemToDelete) return
+    const { error } = await supabase.from('equipment').delete().eq('id', itemToDelete.id)
 
     if (!error) {
-      setSuccessMsg(`Decommissioned ${item.name}.`)
+      setSuccessMsg(`Decommissioned ${itemToDelete.name}.`)
       fetchEquipmentAndTickets()
       setTimeout(() => setSuccessMsg(''), 3000)
     } else {
-      alert(`Delete Error: ${error.message}`)
+      setSuccessMsg(`Delete Error: ${error.message}`)
     }
+    setItemToDelete(null)
   }
 
   const handleReportIssue = async (e) => {
@@ -264,8 +266,9 @@ export default function EquipmentMaintenance({ userRole }) {
                   </div>
 
                   <button
-                    onClick={() => handleDeleteEquipment(item)}
-                    className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition border border-transparent hover:border-rose-500/20"
+                    type="button"
+                    onClick={() => setItemToDelete(item)}
+                    className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition border border-transparent hover:border-rose-500/20 cursor-pointer"
                     title="Decommission Equipment"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -404,6 +407,34 @@ export default function EquipmentMaintenance({ userRole }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {itemToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4 animate-fadeIn">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-100 space-y-4">
+            <h3 className="text-lg font-black text-white uppercase">Confirm Machine Decommission</h3>
+            <p className="text-xs text-slate-400">
+              Are you sure you want to decommission and remove <strong className="text-white">{itemToDelete.name}</strong> from facility inventory? This will also remove associated repair tickets.
+            </p>
+            <div className="flex space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setItemToDelete(null)}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteEquipment}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold uppercase rounded-xl transition cursor-pointer shadow-lg shadow-rose-600/30"
+              >
+                Decommission
+              </button>
+            </div>
           </div>
         </div>
       )}

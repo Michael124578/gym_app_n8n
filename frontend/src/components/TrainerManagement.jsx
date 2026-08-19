@@ -89,14 +89,22 @@ export default function TrainerManagement({ session, userRole }) {
     fetchData()
   }, [fetchData])
 
+  const [toastMsg, setToastMsg] = useState(null)
+  const [trainerToDelete, setTrainerToDelete] = useState(null)
+
+  const showToast = (message, isError = false) => {
+    setToastMsg({ message, isError })
+    setTimeout(() => setToastMsg(null), 3500)
+  }
+
   const handleSubscribeToTrainer = async (trainer) => {
     if (userRole === 'admin' || userRole === 'trainer') {
-      alert("Staff and Coaches cannot request personal trainers.")
+      showToast("Staff and Coaches cannot request personal trainers.", true)
       return
     }
 
     if (!currentMember) {
-      alert("Please ensure your member profile is registered before requesting a coach.")
+      showToast("Please ensure your member profile is registered before requesting a coach.", true)
       return
     }
 
@@ -107,18 +115,17 @@ export default function TrainerManagement({ session, userRole }) {
         trainer_id: trainer.id,
         member_id: currentMember.id,
         plan_type: 'Personal Coaching Monthly',
-        price: trainer.monthly_plan_price || 120.00,
+        price: trainer.monthly_plan_price || 2500,
         status: 'pending'
       }
     ])
 
     if (!error) {
       playSuccessSound()
-      setMsg(`⚡ Request sent to Coach ${trainer.full_name}! Waiting for coach approval.`)
+      showToast(`⚡ Request sent to Coach ${trainer.full_name}! Waiting for coach approval.`)
       fetchData()
-      setTimeout(() => setMsg(''), 4500)
     } else {
-      alert(`Request Error: ${error.message}`)
+      showToast(`Request Error: ${error.message}`, true)
     }
 
     setSubscribingId(null)
@@ -131,11 +138,10 @@ export default function TrainerManagement({ session, userRole }) {
       .eq('id', subscriptionId)
 
     if (!error) {
-      setMsg('Hiring request withdrawn successfully.')
+      showToast('Hiring request withdrawn successfully.')
       fetchData()
-      setTimeout(() => setMsg(''), 3000)
     } else {
-      alert(`Withdraw Error: ${error.message}`)
+      showToast(`Withdraw Error: ${error.message}`, true)
     }
   }
 
@@ -146,7 +152,7 @@ export default function TrainerManagement({ session, userRole }) {
     const targetMember = currentMember?.id || selectedMember
 
     if (!selectedTrainer) {
-      alert('Please select a valid active coach.')
+      showToast('Please select a valid active coach.', true)
       setLoading(false)
       return
     }
@@ -162,20 +168,21 @@ export default function TrainerManagement({ session, userRole }) {
 
     if (!error) {
       playSuccessSound()
-      setMsg('PT Appointment scheduled successfully!')
+      showToast('PT Appointment scheduled successfully!')
       setSessionNotes('')
       setSessionDate('')
       fetchData()
-      setTimeout(() => setMsg(''), 3500)
     } else {
-      alert(`Booking Error: ${error.message}`)
+      showToast(`Booking Error: ${error.message}`, true)
     }
     setLoading(false)
   }
 
-  const handleDeleteTrainer = async (trainer) => {
-    if (!window.confirm(`Delete Coach ${trainer.full_name}?`)) return
-    await supabase.from('trainers').delete().eq('id', trainer.id)
+  const confirmDeleteTrainer = async () => {
+    if (!trainerToDelete) return
+    await supabase.from('trainers').delete().eq('id', trainerToDelete.id)
+    showToast(`Deleted Coach ${trainerToDelete.full_name}`)
+    setTrainerToDelete(null)
     fetchData()
   }
 
@@ -286,8 +293,8 @@ export default function TrainerManagement({ session, userRole }) {
 
                     {userRole === 'admin' && (
                       <button
-                        onClick={() => handleDeleteTrainer(t)}
-                        className="p-2.5 bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 rounded-xl transition w-full flex items-center justify-center space-x-1"
+                        onClick={() => setTrainerToDelete(t)}
+                        className="p-2.5 bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 rounded-xl transition w-full flex items-center justify-center space-x-1 cursor-pointer"
                       >
                         <Trash2 className="h-3.5 w-3.5 mr-1" />
                         <span className="text-xs font-bold">Remove Trainer</span>
@@ -377,7 +384,7 @@ export default function TrainerManagement({ session, userRole }) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-1"
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-1 cursor-pointer"
                 >
                   <PlusCircle className="h-4 w-4 mr-1" />
                   <span>{loading ? 'Booking Session...' : 'Confirm Appointment'}</span>
@@ -417,7 +424,7 @@ export default function TrainerManagement({ session, userRole }) {
                       {s.status === 'scheduled' ? (
                         <button
                           onClick={() => markSessionComplete(s.id)}
-                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold rounded-xl transition"
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold rounded-xl transition cursor-pointer"
                         >
                           Complete Session
                         </button>
@@ -435,14 +442,51 @@ export default function TrainerManagement({ session, userRole }) {
         </>
       )}
 
+      {/* TOAST POPUP NOTIFICATION */}
+      {toastMsg && (
+        <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-2xl border text-xs font-bold shadow-2xl flex items-center space-x-2 ${
+          toastMsg.isError ? 'bg-slate-900 border-rose-500/50 text-rose-300' : 'bg-slate-900 border-emerald-500/50 text-emerald-300'
+        }`}>
+          <Award className="h-4 w-4" />
+          <span>{toastMsg.message}</span>
+        </div>
+      )}
+
+      {/* DELETE TRAINER CONFIRMATION MODAL */}
+      {trainerToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4 animate-fadeIn">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-100 space-y-4">
+            <h3 className="text-lg font-black text-white uppercase">Confirm Coach Decommission</h3>
+            <p className="text-xs text-slate-400">
+              Are you sure you want to delete <strong className="text-white">{trainerToDelete.full_name}</strong> from the gym coaching roster?
+            </p>
+            <div className="flex space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setTrainerToDelete(null)}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteTrainer}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold uppercase rounded-xl transition cursor-pointer shadow-lg shadow-rose-600/30"
+              >
+                Delete Coach
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ADMIN REGISTRATION MODAL */}
       <AddTrainerModal
         isOpen={isAddTrainerModalOpen}
         onClose={() => setIsAddTrainerModalOpen(false)}
         onTrainerAdded={() => {
-          setMsg('New trainer account created!')
+          showToast('New trainer account created!')
           fetchData()
-          setTimeout(() => setMsg(''), 3000)
         }}
       />
     </div>

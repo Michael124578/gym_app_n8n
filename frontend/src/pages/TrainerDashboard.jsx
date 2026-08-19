@@ -166,7 +166,8 @@ export default function TrainerDashboard({ session }) {
       fetchTrainerData()
       setTimeout(() => setMsg(''), 4000)
     } else {
-      alert(`Error assigning routine: ${error.message}`)
+      setMsg(`Error assigning routine: ${error.message}`)
+      setTimeout(() => setMsg(''), 4000)
     }
     setSavingPlan(false)
   }

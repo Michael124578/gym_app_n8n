@@ -99,29 +99,42 @@ export default function LockerManagement({ session, userRole }) {
     showToast(`Locker #${locker.number} claimed! Your digital PIN is ${generatedPin}`)
   }
 
+  const [confirmModalConfig, setConfirmModalConfig] = useState(null)
+
   const handleReleaseLocker = () => {
     if (!activeUserLocker) return
-    if (!window.confirm('Are you sure you want to release your locker? Please ensure your belongings are retrieved.')) return
-
-    setLockers(prev => prev.map(l => {
-      if (l.id === activeUserLocker.lockerId) {
-        return { ...l, status: 'available', occupant: null, pin: null }
+    setConfirmModalConfig({
+      title: 'Confirm Locker Release',
+      message: 'Are you sure you want to release your locker? Please ensure your belongings have been retrieved.',
+      onConfirm: () => {
+        setLockers(prev => prev.map(l => {
+          if (l.id === activeUserLocker.lockerId) {
+            return { ...l, status: 'available', occupant: null, pin: null }
+          }
+          return l
+        }))
+        setActiveUserLocker(null)
+        showToast('Locker released and reset to available.')
+        setConfirmModalConfig(null)
       }
-      return l
-    }))
-
-    setActiveUserLocker(null)
-    showToast('Locker released and reset to available.')
+    })
   }
 
-  const handleAdminResetLocker = (lockerId) => {
-    setLockers(prev => prev.map(l => {
-      if (l.id === lockerId) {
-        return { ...l, status: 'available', occupant: null, pin: null }
+  const handleAdminResetLocker = (lockerId, occupantName, lockerNumber) => {
+    setConfirmModalConfig({
+      title: `Force Clear Locker #${lockerNumber}`,
+      message: `Are you sure you want to force clear Locker #${lockerNumber} (Occupant: ${occupantName || 'Unknown'})?`,
+      onConfirm: () => {
+        setLockers(prev => prev.map(l => {
+          if (l.id === lockerId) {
+            return { ...l, status: 'available', occupant: null, pin: null }
+          }
+          return l
+        }))
+        showToast(`Locker #${lockerNumber} force-reset to available.`)
+        setConfirmModalConfig(null)
       }
-      return l
-    }))
-    showToast('Locker force-reset to available.')
+    })
   }
 
   const filteredLockers = useMemo(() => {
@@ -241,9 +254,7 @@ export default function LockerManagement({ session, userRole }) {
                 onClick={() => {
                   if (isAvailable && !activeUserLocker) setSelectedLockerToClaim(l)
                   else if (userRole === 'admin' && isOccupied) {
-                    if (window.confirm(`Force clear Locker #${l.number} (Occupant: ${l.occupant || 'Unknown'})?`)) {
-                      handleAdminResetLocker(l.id)
-                    }
+                    handleAdminResetLocker(l.id, l.occupant, l.number)
                   }
                 }}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center justify-between text-center transition-all cursor-pointer select-none min-h-[95px] ${
@@ -341,6 +352,31 @@ export default function LockerManagement({ session, userRole }) {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* CONFIRMATION DIALOG MODAL */}
+      {confirmModalConfig && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4 animate-fadeIn">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-100 space-y-4">
+            <h3 className="text-lg font-black text-white uppercase">{confirmModalConfig.title}</h3>
+            <p className="text-xs text-slate-400">{confirmModalConfig.message}</p>
+            <div className="flex space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModalConfig(null)}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmModalConfig.onConfirm}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold uppercase rounded-xl transition cursor-pointer shadow-lg shadow-rose-600/30"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
