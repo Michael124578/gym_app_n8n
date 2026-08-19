@@ -1,10 +1,9 @@
 import React, { useRef } from 'react'
-import { Flame, Download, CalendarCheck } from 'lucide-react'
+import { Flame, Download, CalendarCheck, CheckCircle2, Award } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { formatLocalDate } from '../utils/dateUtils'
 
 export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
-  // DIRECT IMAGE DATA CAPTURE TARGET REF
   const passCardRef = useRef(null)
 
   const calculateStreak = () => {
@@ -34,7 +33,6 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
     return streak
   }
 
-  // Direct Image Data Capture Target
   const handleDownloadPass = async () => {
     if (!passCardRef.current) return
     try {
@@ -64,10 +62,10 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
         <div
           key={dateStr}
           title={`${dateStr}: ${hasCheckedIn ? 'Checked In' : 'No visit'}`}
-          className={`h-7 w-7 rounded-lg flex items-center justify-center text-[9px] font-bold transition ${
+          className={`h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center text-[10px] font-mono font-bold transition ${
             hasCheckedIn
-              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-              : 'bg-slate-900 border border-slate-800 text-slate-600'
+              ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 font-black'
+              : 'bg-slate-950 border border-slate-800/80 text-slate-500'
           }`}
         >
           {d.getDate()}
@@ -82,47 +80,67 @@ export default function MemberAttendanceCalendar({ member, checkIns = [] }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-xl">
-          <div className="flex items-center space-x-3">
-            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl text-amber-400">
+        
+        {/* STREAK WIDGET */}
+        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl flex items-center justify-between shadow-xl">
+          <div className="flex items-center space-x-3.5">
+            <div className="bg-amber-500/10 border border-amber-500/20 p-3.5 rounded-2xl text-amber-400">
               <Flame className="h-6 w-6 animate-pulse" />
             </div>
             <div>
-              <p className="text-2xl font-black text-white">{streak} Days</p>
-              <p className="text-xs text-slate-400 font-medium">Active Gym Streak 🔥</p>
+              <p className="text-2xl font-black text-white font-mono">{streak} Consecutive Days</p>
+              <p className="text-xs text-slate-400 font-medium">Training Consistency Streak</p>
             </div>
           </div>
-          <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-            {streak > 3 ? 'On Fire!' : 'Keep Going!'}
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+            {streak > 3 ? 'Elite Momentum' : 'Active'}
           </span>
         </div>
 
-        {/* TARGET ELEMENT FOR DIRECT IMAGE DATA CAPTURE */}
+        {/* OFFLINE PASS BACKUP */}
         <div 
           ref={passCardRef} 
-          className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-xl"
+          className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl flex items-center justify-between shadow-xl"
         >
           <div>
-            <h4 className="text-sm font-bold text-white">Offline Pass Card</h4>
-            <p className="text-xs text-slate-400">Save pass image to device gallery</p>
+            <h4 className="text-sm font-black text-white uppercase tracking-tight">Offline Gate Pass Backup</h4>
+            <p className="text-xs text-slate-400 mt-0.5">Export high-resolution pass to phone gallery</p>
           </div>
           <button
             onClick={handleDownloadPass}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition shadow-lg shadow-indigo-600/20"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center space-x-1.5 transition shadow-lg shadow-indigo-600/20 border border-indigo-400/30 cursor-pointer"
           >
             <Download className="h-4 w-4" />
-            <span>Save Pass Image</span>
+            <span>Export Pass</span>
           </button>
         </div>
       </div>
 
-      <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-xl">
-        <div className="flex items-center space-x-2 mb-4">
-          <CalendarCheck className="h-5 w-5 text-emerald-400" />
-          <h3 className="text-sm font-bold text-white">30-Day Attendance Grid</h3>
+      {/* 30-DAY ATTENDANCE HEATMAP */}
+      <div className="bg-slate-900/90 border border-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center space-x-2.5">
+            <CalendarCheck className="h-5 w-5 text-emerald-400" />
+            <h3 className="text-base font-black text-white uppercase tracking-tight">30-Day Turnstile Attendance Matrix</h3>
+          </div>
+          <span className="text-[10px] font-mono font-bold uppercase text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+            {checkIns.length} Total Visits
+          </span>
         </div>
-        <div className="flex flex-wrap gap-2 justify-between">
+
+        <div className="grid grid-cols-6 sm:grid-cols-10 md:grid-cols-15 gap-2 pt-2">
           {render30DayHeatmap()}
+        </div>
+
+        <div className="flex items-center space-x-4 pt-2 text-[10px] font-mono text-slate-400 border-t border-slate-800/80">
+          <div className="flex items-center space-x-1.5">
+            <span className="h-3 w-3 rounded-md bg-emerald-500" />
+            <span>Check-in Verified</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <span className="h-3 w-3 rounded-md bg-slate-950 border border-slate-800" />
+            <span>Rest Day</span>
+          </div>
         </div>
       </div>
     </div>

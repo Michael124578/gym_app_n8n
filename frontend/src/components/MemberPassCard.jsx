@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Download, RefreshCw } from 'lucide-react'
+import { ShieldCheck, Download, RefreshCw, QrCode, Sparkles, CheckCircle2 } from 'lucide-react'
 
 export default function MemberPassCard({ member, cardRef, onDownload, onZoom }) {
   const [totpToken, setTotpToken] = useState('')
@@ -36,61 +36,70 @@ export default function MemberPassCard({ member, cardRef, onDownload, onZoom }) 
   if (!member) return null
 
   return (
-    <div ref={cardRef} className="holo-card p-6 rounded-3xl flex flex-col justify-between shadow-2xl relative overflow-hidden w-full">
-      <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
+    <div 
+      ref={cardRef} 
+      className="bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border border-slate-800 p-6 sm:p-7 rounded-3xl flex flex-col justify-between shadow-2xl relative overflow-hidden w-full"
+    >
+      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* CARD TOP HEADER */}
+      <div className="flex justify-between items-center border-b border-slate-800 pb-3.5 mb-4 relative z-10">
         <div className="flex items-center space-x-2">
           <ShieldCheck className="h-5 w-5 text-indigo-400" />
-          <span className="text-xs font-black tracking-widest text-indigo-300 uppercase">IRON GYM DIGITAL PASS</span>
+          <span className="text-xs font-black tracking-widest text-white uppercase">IRON GYM DIGITAL GATE PASS</span>
         </div>
-        <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-          {member.status}
+        <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+          {member.status || 'Active'}
         </span>
       </div>
 
-      <div className="flex justify-between items-center">
-        <div>
-          <p className="text-2xl font-black text-white uppercase tracking-tight">{member.full_name}</p>
-          <p className="text-xs text-indigo-300 font-semibold mt-1">{member.plan_name || 'Monthly Pass'}</p>
-          <p className="text-xs text-slate-400 font-mono mt-0.5">{member.email}</p>
+      {/* CARD BODY */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
+        <div className="space-y-1">
+          <p className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">{member.full_name}</p>
+          <p className="text-xs text-indigo-400 font-bold uppercase">{member.plan_name || 'Annual Titan Pass'}</p>
+          <p className="text-xs text-slate-400 font-mono">{member.email}</p>
 
-          <div className="mt-3 space-y-1 max-w-[140px]">
+          <div className="pt-2 space-y-1 max-w-[160px]">
             <div className="flex justify-between text-[10px] font-mono text-slate-400">
               <span className="flex items-center space-x-1">
                 <RefreshCw className={`h-2.5 w-2.5 ${timeLeft <= 5 ? 'animate-spin text-rose-400' : 'text-indigo-400'}`} />
-                <span>Rotates:</span>
+                <span>Dynamic Cycle:</span>
               </span>
-              <span className={`font-bold ${timeLeft <= 5 ? 'text-rose-400' : 'text-slate-200'}`}>{timeLeft}s</span>
+              <span className={`font-bold ${timeLeft <= 5 ? 'text-rose-400' : 'text-indigo-300'}`}>{timeLeft}s</span>
             </div>
-            <div className="w-full bg-slate-900 rounded-full h-1 overflow-hidden border border-slate-800">
+            <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
               <div
-                className={`h-full transition-all duration-1000 ${timeLeft <= 5 ? 'bg-rose-500' : 'bg-indigo-500'}`}
+                className={`h-full transition-all duration-1000 ${timeLeft <= 5 ? 'bg-rose-500' : 'bg-gradient-to-r from-indigo-500 to-violet-500'}`}
                 style={{ width: `${(timeLeft / 30) * 100}%` }}
               />
             </div>
           </div>
 
-          <button
-            onClick={onDownload}
-            className="mt-4 text-[10px] font-bold text-indigo-400 hover:text-white inline-flex items-center space-x-1"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>Save Pass PNG</span>
-          </button>
+          <div className="pt-3">
+            <button
+              onClick={onDownload}
+              className="text-[11px] font-bold text-slate-400 hover:text-white inline-flex items-center space-x-1.5 transition cursor-pointer"
+            >
+              <Download className="h-3.5 w-3.5 text-indigo-400" />
+              <span>Save Pass PNG</span>
+            </button>
+          </div>
         </div>
 
-        {/* CLICKABLE QR CODE CONTAINER WITH CLICK EVENT PROPAGATION */}
+        {/* CLICKABLE QR CODE CONTAINER */}
         <motion.button 
           type="button"
-          whileHover={{ scale: 1.08 }} 
+          whileHover={{ scale: 1.05 }} 
           whileTap={{ scale: 0.95 }}
           onClick={(e) => {
             e.stopPropagation()
             if (onZoom) onZoom()
           }}
-          className="bg-white p-3 rounded-2xl shadow-2xl cursor-pointer relative z-20 pointer-events-auto focus:outline-none"
+          className="bg-white p-3.5 rounded-2xl shadow-2xl cursor-pointer relative z-20 pointer-events-auto border-2 border-slate-200 shrink-0 self-center sm:self-auto"
         >
-          <QRCodeSVG value={totpToken || member.qr_code_token || member.id} size={100} bgColor="#ffffff" fgColor="#0f172a" level="H" />
-          <span className="block text-[8px] font-bold text-slate-500 mt-1 uppercase text-center">Tap to Zoom</span>
+          <QRCodeSVG value={totpToken || member.qr_code_token || member.id} size={110} bgColor="#ffffff" fgColor="#090d16" level="H" />
+          <span className="block text-[8px] font-bold text-slate-600 mt-1 uppercase text-center font-mono tracking-wider">Tap to Zoom</span>
         </motion.button>
       </div>
     </div>
