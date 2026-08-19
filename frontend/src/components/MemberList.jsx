@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { QRCodeSVG } from 'qrcode.react'
 import { 
   Users, UserCheck, Activity, CalendarCheck, Clock, Search, 
   RefreshCw, X, CheckCircle, Trash2, Plus, Download, Filter, 
   ChevronRight, ArrowUpRight, ShieldCheck, AlertTriangle, 
-  CreditCard, Calendar, Mail, Phone, ExternalLink
+  CreditCard, Calendar, Mail, Phone, ExternalLink, QrCode, Sparkles
 } from 'lucide-react'
 import { formatReadableDate } from '../utils/dateUtils'
 
@@ -19,8 +20,9 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
   const [planFilter, setPlanFilter] = useState('all')
   
   const [editingMember, setEditingMember] = useState(null)
+  const [inspectingMember, setInspectingMember] = useState(null)
   const [renewPlan, setRenewPlan] = useState('Monthly Pass')
-  const [renewAmount, setRenewAmount] = useState('50')
+  const [renewAmount, setRenewAmount] = useState('1200')
   const [renewDays, setRenewDays] = useState(30)
   const [isProcessing, setIsProcessing] = useState(false)
   const [toastMessage, setToastMessage] = useState(null)
@@ -91,7 +93,7 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
       .subscribe()
 
     return () => {
-      memberChannel.unsubscribe()
+      supabase.removeChannel(memberChannel)
     }
   }, [refreshTrigger, fetchMembersAndStats])
 
@@ -180,8 +182,8 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
       in7Days.setDate(now.getDate() + 7)
       const isExpiringSoon = m.membership_end_date && new Date(m.membership_end_date) > now && new Date(m.membership_end_date) <= in7Days
 
-      const query = searchQuery.toLowerCase()
-      const matchesSearch = 
+      const query = searchQuery.toLowerCase().trim()
+      const matchesSearch = !query || 
         (m.full_name && m.full_name.toLowerCase().includes(query)) ||
         (m.email && m.email.toLowerCase().includes(query)) ||
         (m.phone && m.phone.toLowerCase().includes(query)) ||
@@ -212,10 +214,24 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
     return members.filter(m => m.membership_end_date && new Date(m.membership_end_date) > now && new Date(m.membership_end_date) <= in7Days).length
   }, [members])
 
+  const getPlanBadgeStyle = (planName) => {
+    const p = (planName || '').toLowerCase()
+    if (p.includes('annual') || p.includes('titan')) {
+      return 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+    }
+    if (p.includes('vip') || p.includes('3-month')) {
+      return 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+    }
+    if (p.includes('day')) {
+      return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+    }
+    return 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30'
+  }
+
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-6">
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-emerald-500/40 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center space-x-2">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-emerald-500/40 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center space-x-2 animate-fadeIn">
           <CheckCircle className="h-4 w-4 text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
@@ -225,193 +241,230 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* TOTAL ROSTER */}
-        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all group">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl">
-              <Users className="h-6 w-6" />
+        <div className="bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-slate-950/90 border border-slate-800/80 p-5 sm:p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all duration-300 hover:border-indigo-500/40 group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-600/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl group-hover:scale-110 transition-transform">
+              <Users className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
               Live Database
             </span>
           </div>
-          <div>
-            <p className="text-3xl font-black text-white font-mono">{loading ? '...' : members.length}</p>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">Total Registered Athletes</p>
+          <div className="space-y-1">
+            <p className="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight">{loading ? '...' : members.length}</p>
+            <p className="text-xs text-slate-400 font-medium">Total Registered Athletes</p>
           </div>
         </div>
 
         {/* ACTIVE PASSES */}
-        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all group">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl">
-              <UserCheck className="h-6 w-6" />
+        <div className="bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-slate-950/90 border border-slate-800/80 p-5 sm:p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all duration-300 hover:border-emerald-500/40 group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-600/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl group-hover:scale-110 transition-transform">
+              <UserCheck className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
               {members.length > 0 ? `${Math.round((activeMembersCount / members.length) * 100)}% Active` : '0%'}
             </span>
           </div>
-          <div>
-            <p className="text-3xl font-black text-emerald-400 font-mono">{loading ? '...' : activeMembersCount}</p>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">Active Gate Passes</p>
+          <div className="space-y-1">
+            <p className="text-3xl sm:text-4xl font-black text-emerald-400 font-mono tracking-tight">{loading ? '...' : activeMembersCount}</p>
+            <p className="text-xs text-slate-400 font-medium">Active Gate Passes</p>
           </div>
         </div>
 
         {/* TODAY'S VISITS */}
-        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all group">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-2xl">
-              <CalendarCheck className="h-6 w-6" />
+        <div className="bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-slate-950/90 border border-slate-800/80 p-5 sm:p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all duration-300 hover:border-cyan-500/40 group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-600/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-2xl group-hover:scale-110 transition-transform">
+              <CalendarCheck className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/20">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
               Today's Flow
             </span>
           </div>
-          <div>
-            <p className="text-3xl font-black text-white font-mono">{loading ? '...' : todayCheckInsCount}</p>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">Turnstile Check-Ins</p>
+          <div className="space-y-1">
+            <p className="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight">{loading ? '...' : todayCheckInsCount}</p>
+            <p className="text-xs text-slate-400 font-medium">Turnstile Check-Ins</p>
           </div>
         </div>
 
         {/* PEAK GATE HOUR */}
-        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all group">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl">
-              <Clock className="h-6 w-6" />
+        <div className="bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-slate-950/90 border border-slate-800/80 p-5 sm:p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all duration-300 hover:border-amber-500/40 group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-600/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl group-hover:scale-110 transition-transform">
+              <Clock className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
               Rush Velocity
             </span>
           </div>
-          <div>
-            <p className="text-2xl font-black text-amber-400 font-mono">{loading ? '...' : peakHour}</p>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">Peak Floor Density</p>
+          <div className="space-y-1">
+            <p className="text-3xl sm:text-4xl font-black text-amber-400 font-mono tracking-tight">{loading ? '...' : peakHour}</p>
+            <p className="text-xs text-slate-400 font-medium">Peak Floor Density</p>
           </div>
         </div>
 
       </div>
 
-      {/* MEMBER DIRECTORY CONTAINER */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+      {/* ATHLETE DIRECTORY CONTAINER */}
+      <div className="bg-slate-900/90 border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
         
-        {/* HEADER CONTROLS */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        {/* DIRECTORY HEADER & PRIMARY ACTIONS */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
           <div>
-            <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight flex items-center space-x-2.5">
-              <Activity className="h-6 w-6 text-indigo-400" />
-              <span>Athlete Directory & Access Control</span>
-            </h2>
+            <div className="flex items-center space-x-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+                Athlete Directory & Access Control
+              </h2>
+            </div>
             <p className="text-xs text-slate-400 mt-1">
-              Showing {filteredMembers.length} of {members.length} athlete passes in database.
+              Showing <span className="text-white font-bold font-mono">{filteredMembers.length}</span> of <span className="text-slate-300 font-mono">{members.length}</span> athlete passes in database.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* SEARCH INPUT */}
-            <div className="relative flex-1 sm:flex-none">
-              <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
-              <input
-                type="text"
-                placeholder="Search athlete, email, phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition w-full sm:w-64"
-              />
-            </div>
-
-            {/* STATUS FILTER PILLS */}
-            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
-              <button
-                type="button"
-                onClick={() => setStatusFilter('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  statusFilter === 'all' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                All ({members.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('active')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  statusFilter === 'active' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Active ({activeMembersCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('expired')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  statusFilter === 'expired' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Expired
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('expiring_soon')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 ${
-                  statusFilter === 'expiring_soon' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>Expiring</span>
-                {expiringSoonCount > 0 && (
-                  <span className="text-[9px] bg-slate-900 px-1.5 py-0.2 rounded-full font-mono font-black">{expiringSoonCount}</span>
-                )}
-              </button>
-            </div>
-
-            {/* ACTION BUTTONS */}
+          <div className="flex items-center space-x-3">
             {onOpenAddMemberModal && (
               <button
                 type="button"
                 onClick={onOpenAddMemberModal}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-lg shadow-indigo-600/30 border border-indigo-400/30 uppercase"
+                className="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-lg shadow-indigo-600/30 border border-indigo-400/30 uppercase tracking-wider"
               >
                 <Plus className="h-4 w-4" />
-                <span>Add Athlete</span>
+                <span>Register Athlete</span>
               </button>
             )}
 
-            {/* EXPORT CSV BUTTON */}
             <button
               type="button"
               onClick={exportMembersCSV}
               className="bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-md"
-              title="Export Athlete Roster"
+              title="Export Athlete Roster as CSV"
             >
               <Download className="h-4 w-4" />
-              <span>Export CSV</span>
+              <span className="hidden sm:inline">Export CSV</span>
             </button>
           </div>
         </div>
 
-        {/* MEMBER TABLE */}
+        {/* SEARCH & FILTER CONTROLS TOOLBAR */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          
+          {/* SEARCH BAR */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by name, email, phone, or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-9 py-2.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 p-0.5 rounded-md"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* SEGMENTED FILTER TABS */}
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800/90 shrink-0 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('all')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                statusFilter === 'all' 
+                  ? 'bg-indigo-600 text-white shadow-md' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              All ({members.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('active')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                statusFilter === 'active' 
+                  ? 'bg-emerald-600 text-white shadow-md' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Active ({activeMembersCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('expiring_soon')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 flex items-center space-x-1.5 ${
+                statusFilter === 'expiring_soon' 
+                  ? 'bg-amber-600 text-white shadow-md' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>Expiring</span>
+              {expiringSoonCount > 0 && (
+                <span className="text-[9px] bg-slate-900 px-1.5 py-0.5 rounded-md font-mono font-black">{expiringSoonCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('expired')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                statusFilter === 'expired' 
+                  ? 'bg-rose-600 text-white shadow-md' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Expired
+            </button>
+          </div>
+
+        </div>
+
+        {/* ROSTER TABLE */}
         {loading ? (
           <div className="space-y-3 animate-pulse py-4">
-            {[...Array(6)].map((_, i) => (
+            {[...Array(5)].map((_, i) => (
               <div key={i} className="h-16 bg-slate-950 border border-slate-800/80 rounded-2xl w-full" />
             ))}
           </div>
         ) : filteredMembers.length === 0 ? (
-          <div className="text-center py-16 text-slate-500 text-sm border border-dashed border-slate-800 rounded-3xl font-mono space-y-2">
+          <div className="text-center py-16 text-slate-500 text-sm border border-dashed border-slate-800 rounded-3xl font-mono space-y-3 bg-slate-950/40">
             <Users className="h-8 w-8 text-slate-600 mx-auto" />
-            <p className="font-bold text-slate-400">No matching athletes found.</p>
-            <p className="text-xs text-slate-600">Try adjusting your search query or filter tags.</p>
+            <div>
+              <p className="font-bold text-slate-300">No matching athlete records found</p>
+              <p className="text-xs text-slate-600 mt-1">Try resetting your search filters or add a new athlete pass.</p>
+            </div>
+            {(searchQuery || statusFilter !== 'all') && (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-indigo-400 text-xs font-bold rounded-xl transition"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border border-slate-800/70">
             <table className="w-full text-left text-xs text-slate-300">
               <thead>
-                <tr className="text-[10px] font-mono uppercase text-slate-500 border-b border-slate-800 pb-3">
-                  <th className="py-3 px-4 font-bold">Athlete Profile</th>
-                  <th className="py-3 px-4 font-bold">Membership Tier</th>
-                  <th className="py-3 px-4 font-bold">Gate Status</th>
-                  <th className="py-3 px-4 font-bold">Pass Expiration</th>
-                  <th className="py-3 px-4 text-right font-bold">Command Actions</th>
+                <tr className="text-[10px] font-mono uppercase text-slate-400 bg-slate-950/80 border-b border-slate-800">
+                  <th className="py-3.5 px-4 font-bold">Athlete Profile</th>
+                  <th className="py-3.5 px-4 font-bold">Membership Tier</th>
+                  <th className="py-3.5 px-4 font-bold">Gate Status</th>
+                  <th className="py-3.5 px-4 font-bold">Pass Expiration</th>
+                  <th className="py-3.5 px-4 text-right font-bold">Command Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-slate-800/60 bg-slate-950/30">
                 {filteredMembers.map((member) => {
                   const isExpired = member.membership_end_date && new Date() > new Date(member.membership_end_date)
                   const daysRemaining = member.membership_end_date
@@ -423,15 +476,27 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
                     : 'AT'
 
                   return (
-                    <tr key={member.id} className="hover:bg-slate-950/60 transition group">
+                    <tr 
+                      key={member.id} 
+                      className="hover:bg-slate-800/30 transition duration-150 group"
+                    >
                       {/* PROFILE */}
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-4">
                         <div className="flex items-center space-x-3">
-                          <div className="h-10 w-10 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-300 font-mono font-bold flex items-center justify-center text-xs shrink-0 shadow-inner">
+                          <button
+                            type="button"
+                            onClick={() => setInspectingMember(member)}
+                            className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-600/30 to-purple-600/30 border border-indigo-500/30 text-indigo-200 font-mono font-black flex items-center justify-center text-xs shrink-0 shadow-inner group-hover:border-indigo-400/60 transition cursor-pointer"
+                            title="Inspect Athlete Gate Pass"
+                          >
                             {initials}
-                          </div>
+                          </button>
                           <div>
-                            <p className="font-black text-white uppercase text-sm">{member.full_name}</p>
+                            <div className="flex items-center space-x-2">
+                              <p className="font-black text-white uppercase text-sm tracking-tight group-hover:text-indigo-300 transition">
+                                {member.full_name}
+                              </p>
+                            </div>
                             <p className="text-[11px] font-mono text-slate-400">{member.email}</p>
                             {member.phone && (
                               <p className="text-[10px] font-mono text-slate-500 mt-0.5">{member.phone}</p>
@@ -441,14 +506,14 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
                       </td>
 
                       {/* PLAN */}
-                      <td className="py-4 px-4">
-                        <span className="font-bold text-xs uppercase px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-indigo-300">
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-block font-mono font-bold text-[11px] uppercase px-3 py-1 rounded-xl border ${getPlanBadgeStyle(member.plan_name)}`}>
                           {member.plan_name || 'Monthly Pass'}
                         </span>
                       </td>
                       
                       {/* GATE STATUS */}
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-4">
                         <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase font-mono ${
                           member.status === 'active' && !isExpired
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
@@ -460,9 +525,9 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
                       </td>
 
                       {/* EXPIRATION */}
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-4">
                         <div>
-                          <p className="font-mono text-slate-300 text-xs">
+                          <p className="font-mono text-slate-200 text-xs font-semibold">
                             {formatReadableDate(member.membership_end_date)}
                           </p>
                           <span className={`text-[10px] font-mono font-bold ${
@@ -478,11 +543,20 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
                       </td>
 
                       {/* ACTIONS */}
-                      <td className="py-4 px-4 text-right space-x-2">
+                      <td className="py-3.5 px-4 text-right space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setInspectingMember(member)}
+                          className="p-2 bg-slate-950 hover:bg-indigo-600/30 border border-slate-800 hover:border-indigo-500/40 text-slate-400 hover:text-indigo-200 rounded-xl transition inline-flex items-center cursor-pointer shadow-sm"
+                          title="View Digital QR Pass"
+                        >
+                          <QrCode className="h-3.5 w-3.5" />
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => setEditingMember(member)}
-                          className="px-3.5 py-2 bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-200 hover:text-white text-xs font-bold rounded-xl transition inline-flex items-center space-x-1.5 shadow-md cursor-pointer"
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-200 hover:text-white text-xs font-bold rounded-xl transition inline-flex items-center space-x-1.5 shadow-md cursor-pointer"
                         >
                           <RefreshCw className="h-3 w-3" />
                           <span>Renew / Extend</span>
@@ -491,7 +565,7 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
                         <button
                           type="button"
                           onClick={() => handleDeleteMember(member)}
-                          className="p-2 bg-slate-950 hover:bg-rose-600 border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-white rounded-xl transition inline-flex items-center cursor-pointer shadow-md"
+                          className="p-2 bg-slate-950 hover:bg-rose-600 border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-white rounded-xl transition inline-flex items-center cursor-pointer shadow-sm"
                           title="Delete Athlete Record"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -506,13 +580,81 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
         )}
       </div>
 
+      {/* INSPECT ATHLETE DIGITAL PASS MODAL */}
+      {inspectingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4 animate-fadeIn">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl text-slate-100 relative space-y-6">
+            <button
+              onClick={() => setInspectingMember(null)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white transition text-xs font-mono bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 cursor-pointer"
+            >
+              ESC
+            </button>
+
+            <div className="text-center space-y-1">
+              <div className="inline-flex items-center space-x-1.5 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1 rounded-full text-indigo-400 text-[10px] font-mono font-bold uppercase mb-1">
+                <ShieldCheck className="h-3 w-3" />
+                <span>Verified Turnstile Pass</span>
+              </div>
+              <h3 className="text-xl font-black text-white uppercase">{inspectingMember.full_name}</h3>
+              <p className="text-xs text-indigo-400 font-bold uppercase font-mono">{inspectingMember.plan_name || 'Monthly Pass'}</p>
+            </div>
+
+            <div className="flex justify-center bg-white p-4 rounded-2xl shadow-inner">
+              <QRCodeSVG 
+                value={inspectingMember.qr_code_token || inspectingMember.id}
+                size={160}
+                bgColor="#ffffff"
+                fgColor="#0f172a"
+                level="H"
+              />
+            </div>
+
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800/80 space-y-2 text-xs font-mono">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Gate ID:</span>
+                <span className="text-slate-300 font-bold">{inspectingMember.id.substring(0, 13)}...</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Status:</span>
+                <span className="text-emerald-400 font-bold uppercase">{inspectingMember.status || 'Active'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Expires:</span>
+                <span className="text-slate-200">{formatReadableDate(inspectingMember.membership_end_date)}</span>
+              </div>
+            </div>
+
+            <div className="flex space-x-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingMember(inspectingMember)
+                  setInspectingMember(null)
+                }}
+                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase rounded-xl transition cursor-pointer shadow-lg"
+              >
+                Renew Subscription
+              </button>
+              <button
+                type="button"
+                onClick={() => setInspectingMember(null)}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* RENEW MEMBERSHIP MODAL */}
       {editingMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4 animate-fadeIn">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-slate-100 relative space-y-6">
             <button
               onClick={() => setEditingMember(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white transition text-xs font-mono bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white transition text-xs font-mono bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 cursor-pointer"
             >
               ESC
             </button>
@@ -581,7 +723,7 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
                 <button
                   type="button"
                   onClick={() => setEditingMember(null)}
-                  className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white transition"
+                  className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
                 >
                   Cancel
                 </button>

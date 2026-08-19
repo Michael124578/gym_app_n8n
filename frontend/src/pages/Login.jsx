@@ -515,8 +515,8 @@ export default function Login({ onLoginSuccess }) {
                   key={cat.id}
                   onClick={() => setActiveFacilityCategory(cat.id)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition ${activeFacilityCategory === cat.id
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                     }`}
                 >
                   {cat.label}
@@ -575,8 +575,8 @@ export default function Login({ onLoginSuccess }) {
                 type="button"
                 onClick={() => setBillingCycle('monthly')}
                 className={`px-5 py-2 rounded-xl text-xs font-bold uppercase transition ${billingCycle === 'monthly'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 Monthly Billing
@@ -585,8 +585,8 @@ export default function Login({ onLoginSuccess }) {
                 type="button"
                 onClick={() => setBillingCycle('annual')}
                 className={`px-5 py-2 rounded-xl text-xs font-bold uppercase transition flex items-center space-x-1.5 ${billingCycle === 'annual'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <span>Annual VIP Pass</span>
