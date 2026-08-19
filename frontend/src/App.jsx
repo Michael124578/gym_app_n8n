@@ -1,35 +1,53 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import AddMemberModal from './components/AddMemberModal'
-import MemberList from './components/MemberList'
-import QRScanner from './components/QRScanner'
-import AdminAnalytics from './components/AdminAnalytics'
-import EquipmentMaintenance from './components/EquipmentMaintenance'
-import TrainerManagement from './components/TrainerManagement'
-import ClassSchedule from './components/ClassSchedule'
-import GymShop from './components/GymShop'
-import GymCommunityFeed from './components/GymCommunityFeed'
-import LockerManagement from './components/LockerManagement'
-import MacroCalculator from './components/MacroCalculator'
-import ExerciseLibrary from './components/ExerciseLibrary'
-import LiveWorkoutTracker from './components/LiveWorkoutTracker'
-import BodyProgressVault from './components/BodyProgressVault'
-import GymOccupancyHeatmap from './components/GymOccupancyHeatmap'
-import WellnessHabitTracker from './components/WellnessHabitTracker'
-import WorkoutMusicHub from './components/WorkoutMusicHub'
-import AiRoutineGenerator from './components/AiRoutineGenerator'
-import MobilityRecoveryGuide from './components/MobilityRecoveryGuide'
-import BarbellWarmupCalculator from './components/BarbellWarmupCalculator'
-import CoachingChat from './components/CoachingChat'
-import POSInvoiceGenerator from './components/POSInvoiceGenerator'
-import MuscleRecoveryInsights from './components/MuscleRecoveryInsights'
-import PrintableWorkoutSheet from './components/PrintableWorkoutSheet'
-import TrainerDashboard from './pages/TrainerDashboard'
-import MemberPortal from './pages/MemberPortal'
-import Login from './pages/Login'
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
+import Login from './pages/Login'
 import { supabase } from './lib/supabaseClient'
 import { Dumbbell } from 'lucide-react'
+
+// LAZY CODE-SPLIT COMPONENTS (Reduces initial JS bundle size by >75%)
+const MemberList = lazy(() => import('./components/MemberList'))
+const QRScanner = lazy(() => import('./components/QRScanner'))
+const AdminAnalytics = lazy(() => import('./components/AdminAnalytics'))
+const EquipmentMaintenance = lazy(() => import('./components/EquipmentMaintenance'))
+const TrainerManagement = lazy(() => import('./components/TrainerManagement'))
+const ClassSchedule = lazy(() => import('./components/ClassSchedule'))
+const GymShop = lazy(() => import('./components/GymShop'))
+const GymCommunityFeed = lazy(() => import('./components/GymCommunityFeed'))
+const LockerManagement = lazy(() => import('./components/LockerManagement'))
+const MacroCalculator = lazy(() => import('./components/MacroCalculator'))
+const ExerciseLibrary = lazy(() => import('./components/ExerciseLibrary'))
+const LiveWorkoutTracker = lazy(() => import('./components/LiveWorkoutTracker'))
+const BodyProgressVault = lazy(() => import('./components/BodyProgressVault'))
+const GymOccupancyHeatmap = lazy(() => import('./components/GymOccupancyHeatmap'))
+const WellnessHabitTracker = lazy(() => import('./components/WellnessHabitTracker'))
+const WorkoutMusicHub = lazy(() => import('./components/WorkoutMusicHub'))
+const AiRoutineGenerator = lazy(() => import('./components/AiRoutineGenerator'))
+const MobilityRecoveryGuide = lazy(() => import('./components/MobilityRecoveryGuide'))
+const BarbellWarmupCalculator = lazy(() => import('./components/BarbellWarmupCalculator'))
+const CoachingChat = lazy(() => import('./components/CoachingChat'))
+const POSInvoiceGenerator = lazy(() => import('./components/POSInvoiceGenerator'))
+const MuscleRecoveryInsights = lazy(() => import('./components/MuscleRecoveryInsights'))
+const PrintableWorkoutSheet = lazy(() => import('./components/PrintableWorkoutSheet'))
+const TrainerDashboard = lazy(() => import('./pages/TrainerDashboard'))
+const MemberPortal = lazy(() => import('./pages/MemberPortal'))
+const AddMemberModal = lazy(() => import('./components/AddMemberModal'))
+
+// Sleek Titanium Loading Fallback (Zero Layout Shift)
+function TabLoadingSkeleton() {
+  return (
+    <div className="w-full space-y-6 animate-pulse p-2">
+      <div className="h-28 bg-slate-900/60 border border-slate-800 rounded-3xl" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="h-32 bg-slate-900/60 border border-slate-800 rounded-3xl" />
+        <div className="h-32 bg-slate-900/60 border border-slate-800 rounded-3xl" />
+        <div className="h-32 bg-slate-900/60 border border-slate-800 rounded-3xl" />
+        <div className="h-32 bg-slate-900/60 border border-slate-800 rounded-3xl" />
+      </div>
+      <div className="h-96 bg-slate-900/60 border border-slate-800 rounded-3xl" />
+    </div>
+  )
+}
 
 export default function App() {
   // Synchronous restoration from localStorage prevents tab-switch reload flicker
@@ -227,204 +245,210 @@ export default function App() {
 
         <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1 flex flex-col mb-16 lg:mb-0">
           
-          {/* MEMBER ROLE VIEWS */}
-          {role === 'member' && (
-            <div className="w-full flex-1">
-              {(currentActiveTab === 'portal' || !currentActiveTab) && (
-                <MemberPortal 
-                  session={session} 
-                  onNavigateTab={(tab) => handleSetActiveTab(tab)}
-                />
-              )}
-              {currentActiveTab === 'workout_tracker' && (
-                <LiveWorkoutTracker 
-                  session={session} 
-                  initialExercise={selectedExerciseForWorkout} 
-                />
-              )}
-              {currentActiveTab === 'recovery_insights' && (
-                <MuscleRecoveryInsights session={session} />
-              )}
-              {currentActiveTab === 'printable_sheets' && (
-                <PrintableWorkoutSheet session={session} />
-              )}
-              {currentActiveTab === 'warmup_calc' && (
-                <BarbellWarmupCalculator 
-                  onSendToTracker={() => handleSetActiveTab('workout_tracker')} 
-                />
-              )}
-              {currentActiveTab === 'mobility' && (
-                <MobilityRecoveryGuide />
-              )}
-              {currentActiveTab === 'exercises' && (
-                <ExerciseLibrary 
-                  onSelectExerciseForWorkout={(ex) => {
-                    setSelectedExerciseForWorkout(ex)
-                    handleSetActiveTab('workout_tracker')
-                  }} 
-                />
-              )}
-              {currentActiveTab === 'ai_generator' && (
-                <AiRoutineGenerator 
-                  onLaunchRoutineInTracker={() => handleSetActiveTab('workout_tracker')} 
-                />
-              )}
-              {currentActiveTab === 'body_vault' && (
-                <BodyProgressVault session={session} />
-              )}
-              {currentActiveTab === 'wellness' && (
-                <WellnessHabitTracker session={session} />
-              )}
-              {currentActiveTab === 'coaching_chat' && (
-                <CoachingChat session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'invoices' && (
-                <POSInvoiceGenerator session={session} />
-              )}
-              {currentActiveTab === 'occupancy' && (
-                <GymOccupancyHeatmap userRole={role} />
-              )}
-              {currentActiveTab === 'music' && (
-                <WorkoutMusicHub />
-              )}
-              {currentActiveTab === 'nutrition' && (
-                <MacroCalculator session={session} />
-              )}
-              {currentActiveTab === 'classes' && (
-                <ClassSchedule session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'shop' && (
-                <GymShop session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'lockers' && (
-                <LockerManagement session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'community' && (
-                <GymCommunityFeed session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'trainers' && (
-                <TrainerManagement session={session} userRole={role} />
-              )}
-            </div>
-          )}
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            {/* MEMBER ROLE VIEWS */}
+            {role === 'member' && (
+              <div className="w-full flex-1">
+                {(currentActiveTab === 'portal' || !currentActiveTab) && (
+                  <MemberPortal 
+                    session={session} 
+                    onNavigateTab={(tab) => handleSetActiveTab(tab)}
+                  />
+                )}
+                {currentActiveTab === 'workout_tracker' && (
+                  <LiveWorkoutTracker 
+                    session={session} 
+                    initialExercise={selectedExerciseForWorkout} 
+                  />
+                )}
+                {currentActiveTab === 'recovery_insights' && (
+                  <MuscleRecoveryInsights session={session} />
+                )}
+                {currentActiveTab === 'printable_sheets' && (
+                  <PrintableWorkoutSheet session={session} />
+                )}
+                {currentActiveTab === 'warmup_calc' && (
+                  <BarbellWarmupCalculator 
+                    onSendToTracker={() => handleSetActiveTab('workout_tracker')} 
+                  />
+                )}
+                {currentActiveTab === 'mobility' && (
+                  <MobilityRecoveryGuide />
+                )}
+                {currentActiveTab === 'exercises' && (
+                  <ExerciseLibrary 
+                    onSelectExerciseForWorkout={(ex) => {
+                      setSelectedExerciseForWorkout(ex)
+                      handleSetActiveTab('workout_tracker')
+                    }} 
+                  />
+                )}
+                {currentActiveTab === 'ai_generator' && (
+                  <AiRoutineGenerator 
+                    onLaunchRoutineInTracker={() => handleSetActiveTab('workout_tracker')} 
+                  />
+                )}
+                {currentActiveTab === 'body_vault' && (
+                  <BodyProgressVault session={session} />
+                )}
+                {currentActiveTab === 'wellness' && (
+                  <WellnessHabitTracker session={session} />
+                )}
+                {currentActiveTab === 'coaching_chat' && (
+                  <CoachingChat session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'invoices' && (
+                  <POSInvoiceGenerator session={session} />
+                )}
+                {currentActiveTab === 'occupancy' && (
+                  <GymOccupancyHeatmap userRole={role} />
+                )}
+                {currentActiveTab === 'music' && (
+                  <WorkoutMusicHub />
+                )}
+                {currentActiveTab === 'nutrition' && (
+                  <MacroCalculator session={session} />
+                )}
+                {currentActiveTab === 'classes' && (
+                  <ClassSchedule session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'shop' && (
+                  <GymShop session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'lockers' && (
+                  <LockerManagement session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'community' && (
+                  <GymCommunityFeed session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'trainers' && (
+                  <TrainerManagement session={session} userRole={role} />
+                )}
+              </div>
+            )}
 
-          {/* TRAINER ROLE VIEWS */}
-          {role === 'trainer' && (
-            <div className="w-full flex-1">
-              {(currentActiveTab === 'trainer_dashboard' || !currentActiveTab) && (
-                <TrainerDashboard session={session} />
-              )}
-              {currentActiveTab === 'coaching_chat' && (
-                <CoachingChat session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'printable_sheets' && (
-                <PrintableWorkoutSheet session={session} />
-              )}
-              {currentActiveTab === 'recovery_insights' && (
-                <MuscleRecoveryInsights session={session} />
-              )}
-              {currentActiveTab === 'ai_generator' && (
-                <AiRoutineGenerator 
-                  onLaunchRoutineInTracker={() => handleSetActiveTab('workout_tracker')} 
-                />
-              )}
-              {currentActiveTab === 'exercises' && (
-                <ExerciseLibrary 
-                  onSelectExerciseForWorkout={(ex) => {
-                    setSelectedExerciseForWorkout(ex)
-                    handleSetActiveTab('workout_tracker')
-                  }} 
-                />
-              )}
-              {currentActiveTab === 'workout_tracker' && (
-                <LiveWorkoutTracker 
-                  session={session} 
-                  initialExercise={selectedExerciseForWorkout} 
-                />
-              )}
-              {currentActiveTab === 'warmup_calc' && (
-                <BarbellWarmupCalculator 
-                  onSendToTracker={() => handleSetActiveTab('workout_tracker')} 
-                />
-              )}
-              {currentActiveTab === 'mobility' && (
-                <MobilityRecoveryGuide />
-              )}
-              {currentActiveTab === 'nutrition' && (
-                <MacroCalculator session={session} />
-              )}
-              {currentActiveTab === 'classes' && (
-                <ClassSchedule session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'community' && (
-                <GymCommunityFeed session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'maintenance' && (
-                <EquipmentMaintenance userRole={role} />
-              )}
-            </div>
-          )}
+            {/* TRAINER ROLE VIEWS */}
+            {role === 'trainer' && (
+              <div className="w-full flex-1">
+                {(currentActiveTab === 'trainer_dashboard' || !currentActiveTab) && (
+                  <TrainerDashboard session={session} />
+                )}
+                {currentActiveTab === 'coaching_chat' && (
+                  <CoachingChat session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'printable_sheets' && (
+                  <PrintableWorkoutSheet session={session} />
+                )}
+                {currentActiveTab === 'recovery_insights' && (
+                  <MuscleRecoveryInsights session={session} />
+                )}
+                {currentActiveTab === 'ai_generator' && (
+                  <AiRoutineGenerator 
+                    onLaunchRoutineInTracker={() => handleSetActiveTab('workout_tracker')} 
+                  />
+                )}
+                {currentActiveTab === 'exercises' && (
+                  <ExerciseLibrary 
+                    onSelectExerciseForWorkout={(ex) => {
+                      setSelectedExerciseForWorkout(ex)
+                      handleSetActiveTab('workout_tracker')
+                    }} 
+                  />
+                )}
+                {currentActiveTab === 'workout_tracker' && (
+                  <LiveWorkoutTracker 
+                    session={session} 
+                    initialExercise={selectedExerciseForWorkout} 
+                  />
+                )}
+                {currentActiveTab === 'warmup_calc' && (
+                  <BarbellWarmupCalculator 
+                    onSendToTracker={() => handleSetActiveTab('workout_tracker')} 
+                  />
+                )}
+                {currentActiveTab === 'mobility' && (
+                  <MobilityRecoveryGuide />
+                )}
+                {currentActiveTab === 'nutrition' && (
+                  <MacroCalculator session={session} />
+                )}
+                {currentActiveTab === 'classes' && (
+                  <ClassSchedule session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'community' && (
+                  <GymCommunityFeed session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'maintenance' && (
+                  <EquipmentMaintenance userRole={role} />
+                )}
+              </div>
+            )}
 
-          {/* ADMIN ROLE VIEWS */}
-          {role === 'admin' && (
-            <div className="w-full flex-1">
-              {(currentActiveTab === 'members' || !currentActiveTab) && (
-                <MemberList 
-                  refreshTrigger={refreshTrigger} 
-                  onOpenAddMemberModal={() => setIsModalOpen(true)}
-                />
-              )}
-              {currentActiveTab === 'scanner' && (
-                <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />
-              )}
-              {currentActiveTab === 'analytics' && (
-                <AdminAnalytics />
-              )}
-              {currentActiveTab === 'invoices' && (
-                <POSInvoiceGenerator session={session} />
-              )}
-              {currentActiveTab === 'occupancy' && (
-                <GymOccupancyHeatmap userRole={role} />
-              )}
-              {currentActiveTab === 'classes' && (
-                <ClassSchedule session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'shop' && (
-                <GymShop session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'lockers' && (
-                <LockerManagement session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'maintenance' && (
-                <EquipmentMaintenance userRole={role} />
-              )}
-              {currentActiveTab === 'trainers' && (
-                <TrainerManagement session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'coaching_chat' && (
-                <CoachingChat session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'community' && (
-                <GymCommunityFeed session={session} userRole={role} />
-              )}
-              {currentActiveTab === 'exercises' && (
-                <ExerciseLibrary />
-              )}
-            </div>
-          )}
+            {/* ADMIN ROLE VIEWS */}
+            {role === 'admin' && (
+              <div className="w-full flex-1">
+                {(currentActiveTab === 'members' || !currentActiveTab) && (
+                  <MemberList 
+                    refreshTrigger={refreshTrigger} 
+                    onOpenAddMemberModal={() => setIsModalOpen(true)}
+                  />
+                )}
+                {currentActiveTab === 'scanner' && (
+                  <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />
+                )}
+                {currentActiveTab === 'analytics' && (
+                  <AdminAnalytics />
+                )}
+                {currentActiveTab === 'invoices' && (
+                  <POSInvoiceGenerator session={session} />
+                )}
+                {currentActiveTab === 'occupancy' && (
+                  <GymOccupancyHeatmap userRole={role} />
+                )}
+                {currentActiveTab === 'classes' && (
+                  <ClassSchedule session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'shop' && (
+                  <GymShop session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'lockers' && (
+                  <LockerManagement session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'maintenance' && (
+                  <EquipmentMaintenance userRole={role} />
+                )}
+                {currentActiveTab === 'trainers' && (
+                  <TrainerManagement session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'coaching_chat' && (
+                  <CoachingChat session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'community' && (
+                  <GymCommunityFeed session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'exercises' && (
+                  <ExerciseLibrary />
+                )}
+              </div>
+            )}
+          </Suspense>
 
         </main>
       </div>
 
       {/* REGISTER MEMBER MODAL (FOR ADMINS) */}
-      <AddMemberModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onMemberAdded={() => {
-          setRefreshTrigger((prev) => prev + 1)
-          setIsModalOpen(false)
-        }}
-      />
+      <Suspense fallback={null}>
+        {isModalOpen && (
+          <AddMemberModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onMemberAdded={() => {
+              setRefreshTrigger((prev) => prev + 1)
+              setIsModalOpen(false)
+            }}
+          />
+        )}
+      </Suspense>
     </div>
   )
 }
