@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Users, Calendar, Dumbbell, Award, Activity, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { 
+  Users, Calendar, Dumbbell, Award, Activity, Clock, 
+  CheckCircle2, XCircle, Check, ShieldCheck, Flame, 
+  MessageSquare, UserPlus, ArrowRight, UserCheck
+} from 'lucide-react'
 
 import TrainerStatsBanner from '../components/TrainerStatsBanner'
 import TrainerProgramBuilder from '../components/TrainerProgramBuilder'
@@ -185,9 +189,9 @@ export default function TrainerDashboard({ session }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fadeIn">
       {msg && (
-        <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl flex items-center space-x-3 text-xs font-bold animate-bounce shadow-xl">
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl flex items-center space-x-3 text-xs font-bold shadow-xl">
           <Award className="h-5 w-5 text-emerald-400 flex-shrink-0" />
           <span>{msg}</span>
         </div>
@@ -197,10 +201,10 @@ export default function TrainerDashboard({ session }) {
       <TrainerStatsBanner trainerProfile={trainerProfile} subscribers={subscribers} />
 
       {/* DASHBOARD TAB SWITCHER */}
-      <div className="flex space-x-2 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 max-w-xl">
+      <div className="flex space-x-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 max-w-xl shadow-xl">
         <button
           onClick={() => setActiveTab('clients')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 ${
+          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 ${
             activeTab === 'clients' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'
           }`}
         >
@@ -210,7 +214,7 @@ export default function TrainerDashboard({ session }) {
 
         <button
           onClick={() => setActiveTab('builder')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 ${
+          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 ${
             activeTab === 'builder' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'
           }`}
         >
@@ -220,7 +224,7 @@ export default function TrainerDashboard({ session }) {
 
         <button
           onClick={() => setActiveTab('sessions')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 ${
+          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 ${
             activeTab === 'sessions' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'
           }`}
         >
@@ -243,7 +247,7 @@ export default function TrainerDashboard({ session }) {
                 {pendingRequests.map((req) => (
                   <div key={req.id} className="p-4 bg-slate-900 border border-amber-500/30 rounded-2xl flex justify-between items-center">
                     <div>
-                      <h4 className="text-xs font-black text-white">{req.members?.full_name}</h4>
+                      <h4 className="text-xs font-black text-white uppercase">{req.members?.full_name}</h4>
                       <p className="text-[10px] font-mono text-slate-400">{req.members?.email}</p>
                     </div>
 
@@ -269,33 +273,52 @@ export default function TrainerDashboard({ session }) {
             </div>
           )}
 
-          <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center space-x-2">
-                <Users className="h-5 w-5 text-indigo-400" />
-                <span>Active Subscribed Athletes</span>
-              </h3>
-              <span className="text-xs font-mono text-slate-400">Total Active: {subscribers.length}</span>
+          <div className="bg-slate-900/90 border border-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-indigo-400" />
+                  <span>Active Subscribed Athletes</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Athletes currently on your monthly 1-on-1 coaching roster.</p>
+              </div>
+              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3.5 py-1 rounded-full border border-emerald-500/20 uppercase">
+                {subscribers.length} Active Clients
+              </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {subscribers.length === 0 ? (
-                <p className="text-xs text-slate-500 col-span-full py-8 text-center border border-dashed border-slate-800 rounded-2xl font-mono">
-                  No active members currently subscribed to your coaching package.
-                </p>
+                <div className="col-span-full p-12 text-center border border-dashed border-slate-800 rounded-3xl space-y-2 font-mono">
+                  <Users className="h-8 w-8 text-slate-600 mx-auto" />
+                  <p className="text-xs text-slate-400 font-bold">No active members currently subscribed to your roster.</p>
+                  <p className="text-[11px] text-slate-500">When members book your training package, they will appear here automatically.</p>
+                </div>
               ) : (
                 subscribers.map((sub) => (
-                  <div key={sub.id} className="p-5 bg-slate-900 border border-slate-800 hover:border-indigo-500/40 rounded-2xl flex justify-between items-center transition">
-                    <div>
-                      <h4 className="text-sm font-black text-white">{sub.members?.full_name}</h4>
-                      <p className="text-xs font-mono text-slate-400 mt-0.5">{sub.members?.email}</p>
-                      <p className="text-[10px] text-indigo-300 font-mono mt-2">Plan: {sub.plan_type}</p>
+                  <div key={sub.id} className="p-5 bg-slate-950 border border-slate-800/80 hover:border-slate-700 rounded-2xl flex justify-between items-center transition shadow-lg">
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="text-sm font-black text-white uppercase">{sub.members?.full_name}</h4>
+                        <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                          Active
+                        </span>
+                      </div>
+                      <p className="text-xs font-mono text-slate-400">{sub.members?.email}</p>
+                      <p className="text-[10px] text-indigo-300 font-mono">Plan: {sub.plan_type || 'Monthly 1-on-1'}</p>
                     </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                        Active
-                      </span>
-                      <p className="text-[10px] text-slate-500 font-mono mt-2">
+
+                    <div className="text-right space-y-2">
+                      <button
+                        onClick={() => {
+                          setSelectedClient(sub.members?.id)
+                          setActiveTab('builder')
+                        }}
+                        className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-[10px] font-bold uppercase rounded-xl transition"
+                      >
+                        Build Routine →
+                      </button>
+                      <p className="text-[10px] text-slate-500 font-mono">
                         Renews: {new Date(sub.end_date).toLocaleDateString()}
                       </p>
                     </div>
@@ -335,42 +358,52 @@ export default function TrainerDashboard({ session }) {
 
       {/* TAB 3: PT SESSIONS */}
       {activeTab === 'sessions' && (
-        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center space-x-2">
-              <Calendar className="h-5 w-5 text-indigo-400" />
-              <span>Scheduled 1-on-1 PT Appointments</span>
-            </h3>
-            <span className="text-xs font-mono text-slate-400">
+        <div className="bg-slate-900/90 border border-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6">
+          <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+            <div>
+              <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center space-x-2">
+                <Calendar className="h-5 w-5 text-indigo-400" />
+                <span>Scheduled 1-on-1 PT Appointments</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">Calendar schedule of live floor coaching appointments.</p>
+            </div>
+            <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-3.5 py-1 rounded-full border border-indigo-500/20">
               Pending: {upcomingSessions.filter(s => s.status === 'scheduled').length}
             </span>
           </div>
 
           <div className="space-y-3">
             {upcomingSessions.length === 0 ? (
-              <p className="text-xs text-slate-500 py-8 text-center border border-dashed border-slate-800 rounded-2xl font-mono">
-                No personal training sessions scheduled.
-              </p>
+              <div className="p-12 text-center border border-dashed border-slate-800 rounded-3xl space-y-2 font-mono">
+                <Calendar className="h-8 w-8 text-slate-600 mx-auto" />
+                <p className="text-xs text-slate-400 font-bold">No personal training sessions scheduled.</p>
+                <p className="text-[11px] text-slate-500">Upcoming booked sessions with athletes will appear in this timeline.</p>
+              </div>
             ) : (
               upcomingSessions.map((s) => (
-                <div key={s.id} className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                  <div>
-                    <h4 className="text-xs font-black text-white">{s.members?.full_name}</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">{s.notes || '1-on-1 Coaching Session'}</p>
-                    <p className="text-[10px] text-indigo-300 font-mono mt-1">
-                      📅 {new Date(s.scheduled_at).toLocaleString()} ({s.duration_minutes || 60} mins)
+                <div key={s.id} className="p-5 bg-slate-950 border border-slate-800/80 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <h4 className="text-sm font-black text-white uppercase">{s.members?.full_name}</h4>
+                      <span className="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                        {s.duration_minutes || 60} Mins
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400">{s.notes || '1-on-1 Strength & Technique Session'}</p>
+                    <p className="text-[10px] text-slate-500 font-mono">
+                      📅 {new Date(s.scheduled_at).toLocaleString()}
                     </p>
                   </div>
 
                   {s.status === 'scheduled' ? (
                     <button
                       onClick={() => markSessionComplete(s.id)}
-                      className="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold rounded-xl transition"
+                      className="px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold uppercase rounded-xl transition cursor-pointer"
                     >
                       Mark Completed
                     </button>
                   ) : (
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3.5 py-1 rounded-full border border-emerald-500/20 uppercase font-mono">
                       Completed
                     </span>
                   )}

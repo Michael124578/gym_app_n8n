@@ -1,38 +1,55 @@
 import React from 'react'
-import { Zap, DollarSign, Users } from 'lucide-react'
+import { Award, DollarSign, Users, TrendingUp, ShieldCheck, Flame } from 'lucide-react'
 
 export default function TrainerStatsBanner({ trainerProfile, subscribers = [] }) {
-  const totalMonthlyEarnings = subscribers.length * (trainerProfile?.monthly_plan_price || 120)
+  const planPrice = trainerProfile?.monthly_plan_price || 120
+  const totalMonthlyEarnings = subscribers.length * planPrice
 
   return (
-    <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-violet-950 border border-indigo-500/30 p-6 rounded-3xl shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
-      <div className="relative z-10">
-        <span className="inline-flex items-center space-x-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-300 bg-indigo-500/20 px-3.5 py-1 rounded-full border border-indigo-500/30 mb-3">
-          <Zap className="h-3 w-3 text-amber-300" />
-          <span>Master Coach Command</span>
-        </span>
-        <h2 className="text-3xl font-black text-white tracking-tight">Coach {trainerProfile?.full_name || 'Trainer'}</h2>
-        <p className="text-xs text-slate-400 mt-1">Specialization: <strong className="text-indigo-300">{trainerProfile?.specialty || 'Strength & Conditioning'}</strong></p>
+    <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border border-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative z-10 space-y-2">
+        <div className="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/30 px-3.5 py-1 rounded-full text-indigo-300 text-[10px] font-mono font-bold uppercase tracking-widest">
+          <ShieldCheck className="h-3.5 w-3.5 text-indigo-400" />
+          <span>Certified Head Coach Command</span>
+        </div>
+        <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
+          Coach {trainerProfile?.full_name || 'Staff Instructor'}
+        </h2>
+        <p className="text-xs text-slate-400 font-mono">
+          Specialization: <span className="text-amber-400 font-bold uppercase">{trainerProfile?.specialty || 'Strength & Conditioning'}</span> • ${planPrice}/mo Rate
+        </p>
       </div>
 
-      <div className="flex items-center space-x-4 relative z-10 w-full md:w-auto">
-        <div className="flex-1 md:flex-none bg-slate-950/80 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 relative z-10 w-full lg:w-auto">
+        <div className="bg-slate-900/90 border border-slate-800/80 p-4 rounded-2xl flex items-center space-x-3 shadow-lg">
           <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl">
-            <DollarSign className="h-6 w-6" />
+            <DollarSign className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xl font-black text-white">${totalMonthlyEarnings.toLocaleString()}</p>
-            <p className="text-[10px] font-mono text-slate-400 uppercase">Monthly MRR</p>
+            <p className="text-lg font-black text-white font-mono">${totalMonthlyEarnings.toLocaleString()}</p>
+            <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Monthly MRR</p>
           </div>
         </div>
 
-        <div className="flex-1 md:flex-none bg-slate-950/80 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3">
+        <div className="bg-slate-900/90 border border-slate-800/80 p-4 rounded-2xl flex items-center space-x-3 shadow-lg">
           <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl">
-            <Users className="h-6 w-6" />
+            <Users className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xl font-black text-white">{subscribers.length}</p>
-            <p className="text-[10px] font-mono text-slate-400 uppercase">Active Athletes</p>
+            <p className="text-lg font-black text-white font-mono">{subscribers.length}</p>
+            <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Roster Clients</p>
+          </div>
+        </div>
+
+        <div className="col-span-2 sm:col-span-1 bg-slate-900/90 border border-slate-800/80 p-4 rounded-2xl flex items-center space-x-3 shadow-lg">
+          <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl">
+            <Flame className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-lg font-black text-amber-400 font-mono">100%</p>
+            <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Client Retention</p>
           </div>
         </div>
       </div>

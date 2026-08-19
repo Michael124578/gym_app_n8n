@@ -6,7 +6,8 @@ import {
   Settings, LogOut, Flame, Users, X, KeyRound, Save, 
   FileText, Target, Dumbbell, Scale, Droplet, Headphones, 
   ArrowRight, Play, Activity, Radio, Heart, MessageSquare, 
-  Receipt, Layers, Utensils, Award
+  Receipt, Layers, Utensils, Award, ShieldCheck, CheckCircle2,
+  TrendingUp, Calendar, Zap
 } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { formatLocalDate } from '../utils/dateUtils'
@@ -150,53 +151,62 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
     }
   }
 
-  const handleDeleteWorkout = async (id) => {
-    await supabase.from('workouts').delete().eq('id', id)
+  const handleDeleteWorkout = async (workoutId) => {
+    await supabase.from('workouts').delete().eq('id', workoutId)
+    showToast('Logged set removed')
     fetchWorkouts(member.id)
   }
 
   const calculateStreak = () => {
     if (!checkIns.length) return 0
-    const dates = [...new Set(checkIns.map(c => formatLocalDate(c.checked_in_at)))]
-    let streak = 0
-    let today = new Date()
+    const today = new Date().toDateString()
+    const lastCheckIn = new Date(checkIns[0].checked_in_at).toDateString()
 
-    for (let i = 0; i < dates.length; i++) {
-      if (dates[i] === formatLocalDate(today)) {
-        streak++
-        today.setDate(today.getDate() - 1)
-      } else {
+    let streakCount = 1
+    for (let i = 1; i < checkIns.length; i++) {
+      const prevDate = new Date(checkIns[i - 1].checked_in_at)
+      const currDate = new Date(checkIns[i].checked_in_at)
+      const diffTime = Math.abs(prevDate - currDate)
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+      if (diffDays === 1) {
+        streakCount++
+      } else if (diffDays > 1) {
         break
       }
     }
-    return streak
+    return streakCount
   }
 
   const handleDownloadPass = async () => {
-    if (!cardRef.current) return
-    try {
-      const dataUrl = await toPng(cardRef.current, { cacheBust: true })
+    if (cardRef.current) {
+      const dataUrl = await toPng(cardRef.current, { quality: 0.95 })
       const link = document.createElement('a')
-      link.download = `${member.full_name.replace(/\s+/g, '_')}_IronGym_Pass.png`
+      link.download = `IronGym-Pass-${member.full_name}.png`
       link.href = dataUrl
       link.click()
-    } catch (err) {
-      console.error(err)
+      showToast('Pass image downloaded!')
     }
   }
 
   const handleGenerateGuestPass = async (e) => {
     e.preventDefault()
     if (!guestName.trim() || !member) return
-
     setLoading(true)
-    const { data } = await supabase
-      .from('guest_passes')
-      .insert([{ host_member_id: member.id, guest_name: guestName.trim() }])
-      .select()
-      .maybeSingle()
 
-    if (data) {
+    const qrToken = `GUEST-${member.id.substring(0, 5)}-${Date.now()}`
+    const { data, error } = await supabase
+      .from('guest_passes')
+      .insert([{
+        member_id: member.id,
+        guest_name: guestName.trim(),
+        qr_code_token: qrToken,
+        status: 'active'
+      }])
+      .select()
+      .single()
+
+    if (!error && data) {
       setGeneratedGuestPass(data)
       setGuestName('')
       showToast(`Guest pass created for ${data.guest_name}`)
@@ -223,50 +233,57 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
     showToast('Profile updated!')
   }
 
-  if (loading && !member) return <div className="p-8 text-center text-slate-500 font-mono">Initializing Terminal...</div>
+  if (loading && !member) return <div className="p-12 text-center text-slate-500 font-mono">INITIALIZING ATHLETE PORTAL...</div>
   if (!member) return null
 
   const streak = calculateStreak()
   const occupancyPercent = Math.min(100, Math.round((activeOccupancy / maxCapacity) * 100))
 
   return (
-    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto space-y-6">
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto space-y-8 animate-fadeIn">
       <AnimatePresence>
         {toastMessage && (
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center space-x-2">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-emerald-500/40 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center space-x-2">
             <Award className="h-4 w-4 text-emerald-300" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* MEMBER HEADER (TOKEN ID REMOVED) */}
-      <div className="glass-panel p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
-        <div>
-          <div className="flex items-center space-x-3">
-            <h2 className="text-3xl font-black text-white uppercase tracking-tight">{member.full_name}</h2>
+      {/* MEMBER EXECUTIVE HEADER */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border border-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 w-full relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-2">
+          <div className="flex items-center space-x-3 flex-wrap gap-y-1">
+            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">{member.full_name}</h2>
             <span className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-[10px] font-mono font-bold px-3 py-1 rounded-full uppercase">
-              {member.plan_name || 'Member Pass'}
+              {member.plan_name || 'Annual Titan Pass'}
+            </span>
+            <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase">
+              {member.status || 'Active'}
             </span>
           </div>
-          <p className="text-xs text-slate-400 font-mono mt-1">{member.email}</p>
+          <p className="text-xs text-slate-400 font-mono">
+            {member.email} • Member ID: <span className="text-slate-300 font-bold">{member.id?.substring(0, 8).toUpperCase()}</span>
+          </p>
         </div>
 
-        <div className="flex items-center space-x-3 w-full sm:w-auto">
+        <div className="flex items-center space-x-3 w-full sm:w-auto relative z-10">
           <button
             onClick={() => setIsEditModalOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-indigo-300 hover:text-white bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 px-4 py-3 rounded-2xl transition"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 px-4 py-3 rounded-2xl transition cursor-pointer"
           >
-            <Settings className="h-4 w-4" />
-            <span>Edit Credentials</span>
+            <Settings className="h-4 w-4 text-indigo-400" />
+            <span>Profile Settings</span>
           </button>
 
           <button
             onClick={onLogout}
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-800 hover:border-rose-500/30 px-4 py-3 rounded-2xl transition"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900 border border-slate-800 hover:border-rose-500/30 px-4 py-3 rounded-2xl transition cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
-            <span>Exit</span>
+            <span>Exit Portal</span>
           </button>
         </div>
       </div>
@@ -275,38 +292,38 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
         <div 
           onClick={() => onNavigateTab && onNavigateTab('occupancy')}
-          className="md:col-span-2 glass-panel p-5 rounded-3xl flex flex-col justify-between cursor-pointer hover:border-indigo-500/50 transition group"
+          className="md:col-span-2 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl flex flex-col justify-between cursor-pointer hover:border-indigo-500/50 transition group shadow-xl"
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5 text-indigo-400" />
               <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wider group-hover:text-indigo-300 transition">
-                LIVE GYM OCCUPANCY • CLICK FOR HEATMAP
+                LIVE FLOOR OCCUPANCY • CLICK FOR HEATMAP
               </h4>
             </div>
             <span className="text-xs font-mono text-indigo-400 font-bold">{activeOccupancy} / {maxCapacity} ({occupancyPercent}%)</span>
           </div>
 
-          <div className="w-full bg-slate-950 border border-slate-800 h-3.5 rounded-full overflow-hidden p-0.5">
+          <div className="w-full bg-slate-950 border border-slate-800 h-3 rounded-full overflow-hidden p-0.5">
             <motion.div 
               initial={{ width: 0 }}
               animate={{ width: `${occupancyPercent}%` }}
               transition={{ duration: 1 }}
               className={`h-full rounded-full ${
-                occupancyPercent > 80 ? 'bg-rose-500' : occupancyPercent > 50 ? 'bg-amber-500' : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                occupancyPercent > 80 ? 'bg-rose-500' : occupancyPercent > 50 ? 'bg-amber-500' : 'bg-emerald-500 shadow-lg shadow-emerald-500/50'
               }`}
             />
           </div>
         </div>
 
-        <div className="glass-panel p-5 rounded-3xl flex items-center justify-between">
+        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl flex items-center justify-between shadow-xl">
           <div className="flex items-center space-x-3">
-            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl text-amber-400">
+            <div className="bg-amber-500/10 border border-amber-500/20 p-3.5 rounded-2xl text-amber-400">
               <Flame className="h-7 w-7 animate-pulse" />
             </div>
             <div>
-              <p className="text-3xl font-black text-white">{streak}</p>
-              <p className="text-xs text-slate-400 font-medium">Day Workout Streak 🔥</p>
+              <p className="text-3xl font-black text-white font-mono">{streak}</p>
+              <p className="text-xs text-slate-400 font-medium">Day Workout Streak</p>
             </div>
           </div>
         </div>
@@ -316,13 +333,13 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
       {onNavigateTab && (
         <div className="w-full space-y-3">
           <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 font-bold block px-1">
-            ⚡ Quick Launch Workout & Wellness Terminal
+            ⚡ Quick Launch Terminal
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <button
               type="button"
               onClick={() => onNavigateTab('workout_tracker')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
                 <Flame className="h-5 w-5" />
@@ -334,7 +351,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('warmup_calc')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-amber-600/20 text-amber-400 group-hover:scale-110 transition">
                 <Layers className="h-5 w-5" />
@@ -346,7 +363,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('mobility')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-rose-600/20 text-rose-400 group-hover:scale-110 transition">
                 <Heart className="h-5 w-5" />
@@ -358,7 +375,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('nutrition')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-emerald-600/20 text-emerald-400 group-hover:scale-110 transition">
                 <Utensils className="h-5 w-5" />
@@ -370,7 +387,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('coaching_chat')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-violet-600/20 text-violet-400 group-hover:scale-110 transition">
                 <MessageSquare className="h-5 w-5" />
@@ -382,7 +399,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('exercises')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
                 <Target className="h-5 w-5" />
@@ -394,7 +411,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('ai_generator')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
                 <Layers className="h-5 w-5" />
@@ -406,7 +423,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('body_vault')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
                 <Scale className="h-5 w-5" />
@@ -418,7 +435,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('wellness')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-cyan-600/20 text-cyan-400 group-hover:scale-110 transition">
                 <Droplet className="h-5 w-5" />
@@ -430,7 +447,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('recovery_insights')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-emerald-600/20 text-emerald-400 group-hover:scale-110 transition">
                 <Activity className="h-5 w-5" />
@@ -442,7 +459,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('printable_sheets')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
                 <FileText className="h-5 w-5" />
@@ -454,7 +471,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
             <button
               type="button"
               onClick={() => onNavigateTab('invoices')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl"
+              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
             >
               <div className="p-2.5 rounded-xl bg-emerald-600/20 text-emerald-400 group-hover:scale-110 transition">
                 <Receipt className="h-5 w-5" />
@@ -485,28 +502,35 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
 
       {/* ASSIGNED COACH ROUTINES */}
       {assignedRoutines.length > 0 && (
-        <div className="glass-panel p-6 rounded-3xl space-y-4 w-full">
-          <div className="flex items-center space-x-2">
-            <FileText className="h-5 w-5 text-indigo-400" />
-            <h3 className="text-base font-black text-white uppercase">Assigned Programs by Personal Trainer</h3>
+        <div className="bg-slate-900/90 border border-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6 w-full">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div className="flex items-center space-x-2.5">
+              <FileText className="h-5 w-5 text-indigo-400" />
+              <h3 className="text-xl font-black text-white uppercase tracking-tight">Assigned Programs by Coach</h3>
+            </div>
+            <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
+              {assignedRoutines.length} Active Protocols
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {assignedRoutines.map((routine) => (
-              <div key={routine.id} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col justify-between space-y-2">
-                <div>
+              <div key={routine.id} className="p-5 bg-slate-950 border border-slate-800/80 rounded-2xl flex flex-col justify-between space-y-3 shadow-lg">
+                <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-black text-white">{routine.title}</span>
-                    <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                    <span className="text-sm font-black text-white uppercase">{routine.title}</span>
+                    <span className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20 uppercase">
                       {routine.split_day}
                     </span>
                   </div>
-                  <p className="text-xs text-indigo-300 font-bold mt-1">
-                    {routine.exercise_name} — {routine.target_sets} sets × {routine.target_reps} reps @ RPE {routine.target_rpe}
+                  <p className="text-xs text-slate-200 font-semibold mt-1">
+                    {routine.exercise_name} — <span className="font-mono text-indigo-300">{routine.target_sets} Sets</span> × <span className="font-mono text-slate-300">{routine.target_reps} Reps</span> @ <span className="font-mono text-amber-400 font-bold">RPE {routine.target_rpe}</span>
                   </p>
-                  {routine.notes && <p className="text-[11px] text-slate-400 mt-1">Cue: {routine.notes}</p>}
+                  {routine.notes && <p className="text-[11px] text-slate-400 italic">Cue: {routine.notes}</p>}
                 </div>
-                <p className="text-[10px] font-mono text-slate-500">Coach: {routine.trainers?.full_name || 'Personal Trainer'}</p>
+                <p className="text-[10px] font-mono text-slate-500 pt-2 border-t border-slate-900">
+                  Assigned by: <strong className="text-slate-400">{routine.trainers?.full_name || 'Head Coach'}</strong> ({routine.trainers?.specialty})
+                </p>
               </div>
             ))}
           </div>
@@ -531,36 +555,36 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
 
       {/* EDIT CREDENTIALS MODAL */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-slate-100">
-            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative text-slate-100">
+            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-5 right-5 text-slate-400 hover:text-white transition">
               <X className="h-5 w-5" />
             </button>
 
             <div className="flex items-center space-x-3 mb-6">
-              <div className="bg-indigo-600/20 border border-indigo-500/30 p-2.5 rounded-xl text-indigo-400">
+              <div className="bg-indigo-600/20 border border-indigo-500/30 p-3 rounded-2xl text-indigo-400">
                 <Settings className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Edit Profile Credentials</h3>
-                <p className="text-xs text-slate-400">Update display name and password</p>
+                <h3 className="text-xl font-black text-white uppercase tracking-tight">Edit Profile Credentials</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Update display name and password</p>
               </div>
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Full Name</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Full Name</label>
                 <input
                   type="text"
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">New Password (Optional)</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">New Password (Optional)</label>
                 <div className="relative">
                   <input
                     type="password"
@@ -568,26 +592,26 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
                     placeholder="Leave blank to keep current password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 transition"
                   />
-                  <KeyRound className="absolute right-3.5 top-2.5 h-4 w-4 text-slate-600" />
+                  <KeyRound className="absolute right-3.5 top-3.5 h-4 w-4 text-slate-600" />
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end space-x-3 pt-6 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition"
+                  className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1"
+                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition flex items-center space-x-2 shadow-lg shadow-indigo-600/30 cursor-pointer"
                 >
-                  <Save className="h-4 w-4 mr-1" />
+                  <Save className="h-4 w-4" />
                   <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
@@ -598,16 +622,16 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
 
       {/* FULLSCREEN QR MODAL */}
       {isZoomed && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6" onClick={() => setIsZoomed(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl p-6" onClick={() => setIsZoomed(false)}>
           <div className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-4 max-w-sm w-full relative" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setIsZoomed(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition">
               <X className="h-5 w-5" />
             </button>
-            <h3 className="text-slate-900 font-bold text-lg uppercase">{member.full_name}</h3>
+            <h3 className="text-slate-950 font-black text-lg uppercase tracking-tight">{member.full_name}</h3>
             <div className="flex justify-center p-2">
               <QRCodeSVG value={member.qr_code_token || member.id} size={220} bgColor="#ffffff" fgColor="#000000" level="H" />
             </div>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Hold directly to scanner</p>
+            <p className="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest">Hold directly to turnstile scanner</p>
           </div>
         </div>
       )}
