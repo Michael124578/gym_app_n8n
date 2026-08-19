@@ -1,16 +1,22 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Users, UserCheck, Activity, CalendarCheck, Clock, Search, RefreshCw, X, CheckCircle, Trash2 } from 'lucide-react'
+import { 
+  Users, UserCheck, Activity, CalendarCheck, Clock, Search, 
+  RefreshCw, X, CheckCircle, Trash2, Plus, Download, Filter, 
+  ChevronRight, ArrowUpRight, ShieldCheck, AlertTriangle, 
+  CreditCard, Calendar, Mail, Phone, ExternalLink
+} from 'lucide-react'
 import { formatReadableDate } from '../utils/dateUtils'
 
-export default function MemberList({ refreshTrigger }) {
+export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
   const [members, setMembers] = useState([])
   const [todayCheckInsCount, setTodayCheckInsCount] = useState(0)
   const [peakHour, setPeakHour] = useState('N/A')
   const [loading, setLoading] = useState(true)
   
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'active' | 'expired' | 'expiring_soon'
+  const [planFilter, setPlanFilter] = useState('all')
   
   const [editingMember, setEditingMember] = useState(null)
   const [renewPlan, setRenewPlan] = useState('Monthly Pass')
@@ -84,7 +90,7 @@ export default function MemberList({ refreshTrigger }) {
   }, [refreshTrigger, fetchMembersAndStats])
 
   const handleDeleteMember = async (member) => {
-    if (!window.confirm(`Are you sure you want to delete ${member.full_name}?`)) return
+    if (!window.confirm(`Are you sure you want to permanently delete athlete record: ${member.full_name}?`)) return
 
     if (member.auth_id) {
       const { error } = await supabase.functions.invoke('delete-user', {
@@ -132,189 +138,355 @@ export default function MemberList({ refreshTrigger }) {
     ])
 
     setIsProcessing(false)
-    showToast(`Successfully renewed pass for ${editingMember.full_name}!`)
+    showToast(`Renewed pass for ${editingMember.full_name} (+${renewDays} Days)`)
     setEditingMember(null)
     fetchMembersAndStats()
   }
 
-  const filteredMembers = members.filter((m) => {
-    const isExpired = m.membership_end_date && new Date() > new Date(m.membership_end_date)
-    const matchesSearch = m.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || m.email.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    if (statusFilter === 'active') return matchesSearch && m.status === 'active' && !isExpired
-    if (statusFilter === 'expired') return matchesSearch && (m.status !== 'active' || isExpired)
-    return matchesSearch
-  })
+  const exportMembersCSV = () => {
+    if (!members.length) return
+    const headers = ['Full Name', 'Email', 'Phone', 'Plan', 'Status', 'Expires', 'Created At']
+    const rows = members.map(m => [
+      `"${m.full_name || ''}"`,
+      `"${m.email || ''}"`,
+      `"${m.phone || ''}"`,
+      `"${m.plan_name || ''}"`,
+      `"${m.status || ''}"`,
+      `"${m.membership_end_date || ''}"`,
+      `"${m.created_at || ''}"`
+    ])
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `IronGym_Member_Roster_${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    showToast('Exported Member Directory CSV')
+  }
 
-  const activeMembersCount = members.filter((m) => {
-    const isExpired = m.membership_end_date && new Date() > new Date(m.membership_end_date)
-    return m.status === 'active' && !isExpired
-  }).length
+  const filteredMembers = useMemo(() => {
+    return members.filter((m) => {
+      const isExpired = m.membership_end_date && new Date() > new Date(m.membership_end_date)
+      const now = new Date()
+      const in7Days = new Date()
+      in7Days.setDate(now.getDate() + 7)
+      const isExpiringSoon = m.membership_end_date && new Date(m.membership_end_date) > now && new Date(m.membership_end_date) <= in7Days
+
+      const query = searchQuery.toLowerCase()
+      const matchesSearch = 
+        (m.full_name && m.full_name.toLowerCase().includes(query)) ||
+        (m.email && m.email.toLowerCase().includes(query)) ||
+        (m.phone && m.phone.toLowerCase().includes(query)) ||
+        (m.id && m.id.toLowerCase().includes(query))
+
+      const matchesPlan = planFilter === 'all' || m.plan_name === planFilter
+
+      if (!matchesSearch || !matchesPlan) return false
+
+      if (statusFilter === 'active') return m.status === 'active' && !isExpired
+      if (statusFilter === 'expired') return m.status !== 'active' || isExpired
+      if (statusFilter === 'expiring_soon') return isExpiringSoon
+      return true
+    })
+  }, [members, searchQuery, statusFilter, planFilter])
+
+  const activeMembersCount = useMemo(() => {
+    return members.filter((m) => {
+      const isExpired = m.membership_end_date && new Date() > new Date(m.membership_end_date)
+      return m.status === 'active' && !isExpired
+    }).length
+  }, [members])
+
+  const expiringSoonCount = useMemo(() => {
+    const now = new Date()
+    const in7Days = new Date()
+    in7Days.setDate(now.getDate() + 7)
+    return members.filter(m => m.membership_end_date && new Date(m.membership_end_date) > now && new Date(m.membership_end_date) <= in7Days).length
+  }, [members])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fadeIn">
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-2xl border border-indigo-400/30 text-xs font-bold animate-bounce flex items-center space-x-2">
-          <CheckCircle className="h-4 w-4 text-emerald-300" />
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-emerald-500/40 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center space-x-2">
+          <CheckCircle className="h-4 w-4 text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-slate-950/90 border border-slate-800/80 hover:border-indigo-500/30 rounded-2xl p-5 flex items-center space-x-4 shadow-xl transition-all duration-300">
-          <div className="bg-indigo-600/10 border border-indigo-500/20 p-3 rounded-2xl text-indigo-400 shadow-inner">
-            <Users className="h-6 w-6" />
+      {/* EXECUTIVE TITANIUM STATS BANNER */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        {/* TOTAL ROSTER */}
+        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-2xl">
+              <Users className="h-6 w-6" />
+            </div>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+              Live Database
+            </span>
           </div>
           <div>
-            <p className="text-2xl font-black text-white tracking-tight">{loading ? '...' : members.length}</p>
-            <p className="text-xs text-slate-400 font-medium">Total Roster</p>
+            <p className="text-3xl font-black text-white font-mono">{loading ? '...' : members.length}</p>
+            <p className="text-xs text-slate-400 font-medium mt-0.5">Total Registered Athletes</p>
           </div>
         </div>
 
-        <div className="bg-slate-950/90 border border-slate-800/80 hover:border-emerald-500/30 rounded-2xl p-5 flex items-center space-x-4 shadow-xl transition-all duration-300">
-          <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl text-emerald-400 shadow-inner">
-            <UserCheck className="h-6 w-6" />
+        {/* ACTIVE PASSES */}
+        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl">
+              <UserCheck className="h-6 w-6" />
+            </div>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+              {members.length > 0 ? `${Math.round((activeMembersCount / members.length) * 100)}% Active` : '0%'}
+            </span>
           </div>
           <div>
-            <p className="text-2xl font-black text-white tracking-tight">{loading ? '...' : activeMembersCount}</p>
-            <p className="text-xs text-slate-400 font-medium">Active Passes</p>
+            <p className="text-3xl font-black text-emerald-400 font-mono">{loading ? '...' : activeMembersCount}</p>
+            <p className="text-xs text-slate-400 font-medium mt-0.5">Active Gate Passes</p>
           </div>
         </div>
 
-        <div className="bg-slate-950/90 border border-slate-800/80 hover:border-sky-500/30 rounded-2xl p-5 flex items-center space-x-4 shadow-xl transition-all duration-300">
-          <div className="bg-sky-500/10 border border-sky-500/20 p-3 rounded-2xl text-sky-400 shadow-inner">
-            <CalendarCheck className="h-6 w-6" />
+        {/* TODAY'S VISITS */}
+        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-2xl">
+              <CalendarCheck className="h-6 w-6" />
+            </div>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/20">
+              Today's Flow
+            </span>
           </div>
           <div>
-            <p className="text-2xl font-black text-white tracking-tight">{loading ? '...' : todayCheckInsCount}</p>
-            <p className="text-xs text-slate-400 font-medium">Today's Visits</p>
+            <p className="text-3xl font-black text-white font-mono">{loading ? '...' : todayCheckInsCount}</p>
+            <p className="text-xs text-slate-400 font-medium mt-0.5">Turnstile Check-Ins</p>
           </div>
         </div>
 
-        <div className="bg-slate-950/90 border border-slate-800/80 hover:border-amber-500/30 rounded-2xl p-5 flex items-center space-x-4 shadow-xl transition-all duration-300">
-          <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl text-amber-400 shadow-inner">
-            <Clock className="h-6 w-6" />
+        {/* PEAK GATE HOUR */}
+        <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-3xl shadow-xl relative overflow-hidden transition-all group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl">
+              <Clock className="h-6 w-6" />
+            </div>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+              Rush Velocity
+            </span>
           </div>
           <div>
-            <p className="text-xl font-black text-white tracking-tight">{loading ? '...' : peakHour}</p>
-            <p className="text-xs text-slate-400 font-medium">Peak Hour Today</p>
+            <p className="text-2xl font-black text-amber-400 font-mono">{loading ? '...' : peakHour}</p>
+            <p className="text-xs text-slate-400 font-medium mt-0.5">Peak Floor Density</p>
           </div>
         </div>
+
       </div>
 
-      <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="bg-indigo-600/20 border border-indigo-500/30 p-2 rounded-lg text-indigo-400">
-              <Activity className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">Member Directory</h2>
-              <p className="text-xs text-slate-400">{filteredMembers.length} Members Listed</p>
-            </div>
+      {/* MEMBER DIRECTORY CONTAINER */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+        
+        {/* HEADER CONTROLS */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight flex items-center space-x-2.5">
+              <Activity className="h-6 w-6 text-indigo-400" />
+              <span>Athlete Directory & Access Control</span>
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Showing {filteredMembers.length} of {members.length} athlete passes in database.
+            </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
-            <div className="relative">
-              <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-500" />
+          <div className="flex flex-wrap items-center gap-3">
+            {/* SEARCH INPUT */}
+            <div className="relative flex-1 sm:flex-none">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
               <input
                 type="text"
-                placeholder="Search name/email..."
+                placeholder="Search athlete, email, phone..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition w-full sm:w-60"
+                className="bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition w-full sm:w-64"
               />
             </div>
 
-            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+            {/* STATUS FILTER PILLS */}
+            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
               <button
+                type="button"
                 onClick={() => setStatusFilter('all')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
-                  statusFilter === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  statusFilter === 'all' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                All
+                All ({members.length})
               </button>
               <button
+                type="button"
                 onClick={() => setStatusFilter('active')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
-                  statusFilter === 'active' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  statusFilter === 'active' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Active
+                Active ({activeMembersCount})
               </button>
               <button
+                type="button"
                 onClick={() => setStatusFilter('expired')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
-                  statusFilter === 'expired' ? 'bg-rose-600 text-white' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  statusFilter === 'expired' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Expired
               </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('expiring_soon')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 ${
+                  statusFilter === 'expiring_soon' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>Expiring</span>
+                {expiringSoonCount > 0 && (
+                  <span className="text-[9px] bg-slate-900 px-1.5 py-0.2 rounded-full font-mono font-black">{expiringSoonCount}</span>
+                )}
+              </button>
             </div>
+
+            {/* ACTION BUTTONS */}
+            {onOpenAddMemberModal && (
+              <button
+                type="button"
+                onClick={onOpenAddMemberModal}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-lg shadow-indigo-600/30 border border-indigo-400/30 uppercase"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Athlete</span>
+              </button>
+            )}
+
+            {/* EXPORT CSV BUTTON */}
+            <button
+              type="button"
+              onClick={exportMembersCSV}
+              className="bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-md"
+              title="Export Athlete Roster"
+            >
+              <Download className="h-4 w-4" />
+              <span>Export CSV</span>
+            </button>
           </div>
         </div>
 
+        {/* MEMBER TABLE */}
         {loading ? (
-          <div className="space-y-3 animate-pulse">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-slate-900 border border-slate-800/80 rounded-xl w-full" />
+          <div className="space-y-3 animate-pulse py-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-16 bg-slate-950 border border-slate-800/80 rounded-2xl w-full" />
             ))}
           </div>
         ) : filteredMembers.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 text-sm border border-dashed border-slate-800 rounded-xl">
-            No matching members found.
+          <div className="text-center py-16 text-slate-500 text-sm border border-dashed border-slate-800 rounded-3xl font-mono space-y-2">
+            <Users className="h-8 w-8 text-slate-600 mx-auto" />
+            <p className="font-bold text-slate-400">No matching athletes found.</p>
+            <p className="text-xs text-slate-600">Try adjusting your search query or filter tags.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-400">
-              <thead className="bg-slate-900 text-slate-300 uppercase text-xs border-b border-slate-800">
-                <tr>
-                  <th className="p-4">Name</th>
-                  <th className="p-4">Plan</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4">Expires</th>
-                  <th className="p-4 text-right">Actions</th>
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead>
+                <tr className="text-[10px] font-mono uppercase text-slate-500 border-b border-slate-800 pb-3">
+                  <th className="py-3 px-4 font-bold">Athlete Profile</th>
+                  <th className="py-3 px-4 font-bold">Membership Tier</th>
+                  <th className="py-3 px-4 font-bold">Gate Status</th>
+                  <th className="py-3 px-4 font-bold">Pass Expiration</th>
+                  <th className="py-3 px-4 text-right font-bold">Command Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-800/60 font-sans">
                 {filteredMembers.map((member) => {
                   const isExpired = member.membership_end_date && new Date() > new Date(member.membership_end_date)
+                  const daysRemaining = member.membership_end_date
+                    ? Math.ceil((new Date(member.membership_end_date) - new Date()) / (1000 * 60 * 60 * 24))
+                    : 0
+
+                  const initials = member.full_name
+                    ? member.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                    : 'AT'
+
                   return (
-                    <tr key={member.id} className="hover:bg-slate-900/40 transition">
-                      <td className="p-4">
-                        <p className="font-medium text-slate-200">{member.full_name}</p>
-                        <p className="text-xs font-mono text-slate-500">{member.email}</p>
+                    <tr key={member.id} className="hover:bg-slate-950/60 transition group">
+                      {/* PROFILE */}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-10 w-10 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-300 font-mono font-bold flex items-center justify-center text-xs shrink-0 shadow-inner">
+                            {initials}
+                          </div>
+                          <div>
+                            <p className="font-black text-white uppercase text-sm">{member.full_name}</p>
+                            <p className="text-[11px] font-mono text-slate-400">{member.email}</p>
+                            {member.phone && (
+                              <p className="text-[10px] font-mono text-slate-500 mt-0.5">{member.phone}</p>
+                            )}
+                          </div>
+                        </div>
                       </td>
-                      <td className="p-4 text-xs font-semibold text-indigo-400">{member.plan_name || 'Monthly Pass'}</td>
+
+                      {/* PLAN */}
+                      <td className="py-4 px-4">
+                        <span className="font-bold text-xs uppercase px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-indigo-300">
+                          {member.plan_name || 'Monthly Pass'}
+                        </span>
+                      </td>
                       
-                      <td className="p-4">
-                        <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                      {/* GATE STATUS */}
+                      <td className="py-4 px-4">
+                        <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase font-mono ${
                           member.status === 'active' && !isExpired
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                             : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                         }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${member.status === 'active' && !isExpired ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`}></span>
-                          <span>{isExpired ? 'Expired' : member.status}</span>
+                          <span className={`h-1.5 w-1.5 rounded-full ${member.status === 'active' && !isExpired ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+                          <span>{isExpired ? 'Expired' : 'Active'}</span>
                         </span>
                       </td>
 
-                      <td className="p-4 text-xs font-mono text-slate-400">
-                        {formatReadableDate(member.membership_end_date)}
+                      {/* EXPIRATION */}
+                      <td className="py-4 px-4">
+                        <div>
+                          <p className="font-mono text-slate-300 text-xs">
+                            {formatReadableDate(member.membership_end_date)}
+                          </p>
+                          <span className={`text-[10px] font-mono font-bold ${
+                            daysRemaining <= 0
+                              ? 'text-rose-400'
+                              : daysRemaining <= 7
+                              ? 'text-amber-400'
+                              : 'text-slate-500'
+                          }`}>
+                            {daysRemaining <= 0 ? 'Expired' : `${daysRemaining} days remaining`}
+                          </span>
+                        </div>
                       </td>
-                      <td className="p-4 text-right space-x-2">
+
+                      {/* ACTIONS */}
+                      <td className="py-4 px-4 text-right space-x-2">
                         <button
+                          type="button"
                           onClick={() => setEditingMember(member)}
-                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-200 hover:text-white text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1"
+                          className="px-3.5 py-2 bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-200 hover:text-white text-xs font-bold rounded-xl transition inline-flex items-center space-x-1.5 shadow-md cursor-pointer"
                         >
-                          <RefreshCw className="h-3 w-3 mr-1" />
-                          <span>Renew / Edit</span>
+                          <RefreshCw className="h-3 w-3" />
+                          <span>Renew / Extend</span>
                         </button>
                         
                         <button
+                          type="button"
                           onClick={() => handleDeleteMember(member)}
-                          className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-600 border border-rose-500/20 text-rose-400 hover:text-white text-xs font-semibold rounded-lg transition inline-flex items-center"
-                          title="Delete Member"
+                          className="p-2 bg-slate-950 hover:bg-rose-600 border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-white rounded-xl transition inline-flex items-center cursor-pointer shadow-md"
+                          title="Delete Athlete Record"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -328,82 +500,99 @@ export default function MemberList({ refreshTrigger }) {
         )}
       </div>
 
+      {/* RENEW MEMBERSHIP MODAL */}
       {editingMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl text-slate-100 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-slate-100 relative space-y-6">
             <button
               onClick={() => setEditingMember(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white transition"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white transition text-xs font-mono bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700"
             >
-              <X className="h-5 w-5" />
+              ESC
             </button>
 
-            <h3 className="text-lg font-bold text-white mb-1">Renew Membership</h3>
-            <p className="text-xs text-slate-400 mb-4">Updating pass for <strong className="text-white">{editingMember.full_name}</strong></p>
+            <div>
+              <div className="inline-flex items-center space-x-1.5 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1 rounded-full text-indigo-400 text-[10px] font-mono font-bold uppercase mb-2">
+                <CreditCard className="h-3 w-3" />
+                <span>Subscription Renewal Terminal</span>
+              </div>
+              <h3 className="text-xl font-black text-white uppercase tracking-tight">Renew Membership Pass</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Updating gate pass for <strong className="text-white">{editingMember.full_name}</strong>
+              </p>
+            </div>
 
             <form onSubmit={handleRenewSubscription} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Select Renewal Plan</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Select Tier Plan</label>
                 <select
                   value={renewPlan}
                   onChange={(e) => {
                     setRenewPlan(e.target.value)
-                    if (e.target.value === 'Monthly Pass') { setRenewAmount('50'); setRenewDays(30) }
+                    if (e.target.value === 'Day Pass') { setRenewAmount('10'); setRenewDays(1) }
+                    else if (e.target.value === 'Monthly Pass') { setRenewAmount('50'); setRenewDays(30) }
                     else if (e.target.value === '3-Month VIP') { setRenewAmount('130'); setRenewDays(90) }
                     else if (e.target.value === 'Annual Pass') { setRenewAmount('450'); setRenewDays(365) }
                   }}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
                 >
+                  <option value="Day Pass">24-Hour Day Pass ($10 / 1 Day)</option>
                   <option value="Monthly Pass">Monthly Pass ($50 / 30 Days)</option>
-                  <option value="3-Month VIP">3-Month VIP ($130 / 90 Days)</option>
-                  <option value="Annual Pass">Annual Pass ($450 / 365 Days)</option>
+                  <option value="3-Month VIP">3-Month VIP Pass ($130 / 90 Days)</option>
+                  <option value="Annual Pass">Annual Titan Pass ($450 / 365 Days)</option>
                 </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Renewal Amount ($)</label>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Payment Amount ($)</label>
                   <input
                     type="number"
                     required
                     value={renewAmount}
                     onChange={(e) => setRenewAmount(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-emerald-400 font-mono font-bold focus:outline-none focus:border-indigo-500 transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Days Added</label>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Days Extended</label>
                   <input
                     type="number"
                     required
                     value={renewDays}
                     onChange={(e) => setRenewDays(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 font-mono font-bold focus:outline-none focus:border-indigo-500 transition"
                   />
                 </div>
+              </div>
+
+              <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-[11px] font-mono text-slate-400 space-y-1">
+                <p>Current Status: <strong className="text-white">{editingMember.status}</strong></p>
+                <p>Current Expiry: <strong className="text-white">{formatReadableDate(editingMember.membership_end_date)}</strong></p>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingMember(null)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition"
+                  className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition flex items-center space-x-1"
+                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition flex items-center space-x-1.5 shadow-lg shadow-emerald-600/30 cursor-pointer disabled:opacity-50"
                 >
-                  <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                  <span>{isProcessing ? 'Updating...' : 'Confirm Renewal & Payment'}</span>
+                  <CheckCircle className="h-4 w-4" />
+                  <span>{isProcessing ? 'Processing...' : 'Confirm Renewal & Payment'}</span>
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
     </div>
   )
 }

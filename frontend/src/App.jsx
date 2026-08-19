@@ -234,7 +234,10 @@ export default function App() {
           {role === 'admin' && (
             <div className="w-full flex-1">
               {(activeTab === 'members' || !activeTab) && (
-                <MemberList refreshTrigger={refreshTrigger} />
+                <MemberList 
+                  refreshTrigger={refreshTrigger} 
+                  onOpenAddMemberModal={() => setIsModalOpen(true)} 
+                />
               )}
               {activeTab === 'scanner' && (
                 <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { supabaseAdminAuth } from '../utils/supabaseAdmin'
-import { UserPlus, CreditCard, AlertCircle, Eye, EyeOff, Phone } from 'lucide-react'
+import { UserPlus, CreditCard, AlertCircle, Eye, EyeOff, Phone, Mail, User, Lock, Calendar, ShieldCheck, Check } from 'lucide-react'
 
 export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [fullName, setFullName] = useState('')
@@ -117,7 +117,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
       // 5. Safe Non-blocking Automated WhatsApp Direct Message Dispatch
       try {
         const rawUrl = import.meta.env.VITE_WHATSAPP_BOT_URL || 'http://localhost:3001'
-        const botUrl = rawUrl.replace(/\/+$/, '') // Prevents double slashes like //send-pass
+        const botUrl = rawUrl.replace(/\/+$/, '')
         const botSecret = import.meta.env.VITE_WHATSAPP_BOT_SECRET || 'my_super_secret_gym_key_124578@'
 
         await fetch(`${botUrl}/send-pass`, {
@@ -149,75 +149,86 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
 
   if (!isOpen) return null
 
+  const calculatedExpiry = new Date()
+  calculatedExpiry.setDate(calculatedExpiry.getDate() + parseInt(durationDays || 30, 10))
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-slate-100 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-2xl p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-slate-100 relative space-y-6">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white transition bg-slate-800 px-2 py-1 rounded-lg text-xs font-mono"
+          className="absolute top-5 right-5 text-slate-400 hover:text-white transition bg-slate-800 px-2.5 py-1 rounded-lg text-xs font-mono border border-slate-700 cursor-pointer"
         >
           ESC
         </button>
 
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="bg-indigo-600/20 border border-indigo-500/30 p-2.5 rounded-2xl text-indigo-400">
+        <div className="flex items-center space-x-3.5 border-b border-slate-800 pb-4">
+          <div className="bg-indigo-600/20 border border-indigo-500/30 p-3 rounded-2xl text-indigo-400">
             <UserPlus className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-white">Register Member</h2>
-            <p className="text-xs text-slate-400">Create access credentials & initial payment</p>
+            <h2 className="text-xl font-black text-white uppercase tracking-tight">Register Athlete Pass</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Generate digital turnstile credentials & log initial payment.</p>
           </div>
         </div>
 
         {errorMsg && (
-          <div className="mb-4 p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl flex items-center space-x-2">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <div className="p-4 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs rounded-2xl flex items-center space-x-2.5">
+            <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Full Name</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Michael Nagi"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Email Address</label>
-            <input
-              type="email"
-              required
-              placeholder="e.g. michael@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Phone Number (WhatsApp)</label>
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Athlete Full Name</label>
             <div className="relative">
               <input
-                type="tel"
+                type="text"
                 required
-                placeholder="e.g. +201234567890"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                placeholder="e.g. Marcus Vance"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
               />
-              <Phone className="absolute right-3.5 top-3 h-4 w-4 text-slate-500" />
+              <User className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Email Address</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  placeholder="marcus@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                />
+                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Phone (WhatsApp Pass)</label>
+              <div className="relative">
+                <input
+                  type="tel"
+                  required
+                  placeholder="+1234567890"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                />
+                <Phone className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500" />
+              </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Account Password</label>
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Account Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -226,53 +237,72 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
                 placeholder="Minimum 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-10 py-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
               />
+              <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500" />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-3 text-slate-500 hover:text-slate-300 transition"
+                className="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-300 transition cursor-pointer"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
 
+          {/* PLAN SELECTOR PILLS */}
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Membership Plan</label>
-            <select
-              value={planName}
-              onChange={(e) => handlePlanChange(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
-            >
-              <option value="Day Pass">Day Pass ($10 / 1 Day)</option>
-              <option value="Monthly Pass">Monthly Pass ($50 / 30 Days)</option>
-              <option value="3-Month VIP">3-Month VIP ($130 / 90 Days)</option>
-              <option value="Annual Pass">Annual Pass ($450 / 365 Days)</option>
-            </select>
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Membership Tier</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { name: 'Day Pass', desc: '1 Day' },
+                { name: 'Monthly Pass', desc: '30 Days' },
+                { name: '3-Month VIP', desc: '90 Days' },
+                { name: 'Annual Pass', desc: '365 Days' }
+              ].map(p => (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => handlePlanChange(p.name)}
+                  className={`p-2.5 rounded-xl text-left border transition cursor-pointer ${
+                    planName === p.name 
+                      ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg' 
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <p className="font-bold text-[11px] uppercase truncate">{p.name}</p>
+                  <p className="text-[10px] font-mono text-slate-500">{p.desc}</p>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Amount ($)</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Payment Amount ($)</label>
               <input
                 type="number"
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-emerald-400 font-mono font-bold focus:outline-none focus:border-indigo-500 transition"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">Duration (Days)</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Duration (Days)</label>
               <input
                 type="number"
                 required
                 value={durationDays}
                 onChange={(e) => setDurationDays(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 transition"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 font-mono font-bold focus:outline-none focus:border-indigo-500 transition"
               />
             </div>
+          </div>
+
+          <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-[11px] font-mono text-slate-400 flex items-center justify-between">
+            <span>Pass Expiration:</span>
+            <span className="text-amber-400 font-bold">{calculatedExpiry.toLocaleDateString()}</span>
           </div>
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-slate-800">
@@ -280,17 +310,17 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white transition"
+              className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition disabled:opacity-50 flex items-center space-x-1 shadow-lg shadow-indigo-600/30"
+              className="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition disabled:opacity-50 flex items-center space-x-2 shadow-xl shadow-indigo-600/30 cursor-pointer"
             >
-              <CreditCard className="h-4 w-4 mr-1" />
-              <span>{loading ? 'Creating Pass...' : 'Register & Log Payment'}</span>
+              <CreditCard className="h-4 w-4" />
+              <span>{loading ? 'Creating Pass & Credentials...' : 'Register & Authorize Pass'}</span>
             </button>
           </div>
         </form>
