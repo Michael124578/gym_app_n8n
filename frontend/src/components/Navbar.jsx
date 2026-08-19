@@ -1,8 +1,30 @@
 import React, { useState, useEffect } from 'react'
-import { Menu, LogOut, ShieldCheck, Wifi, Dumbbell, Clock, Activity } from 'lucide-react'
+import { Menu, LogOut, ShieldCheck, Wifi, Dumbbell, Clock, Crown, Zap, Shield, Flame, MapPin } from 'lucide-react'
+
+const LOGO_ICONS = {
+  dumbbell: Dumbbell,
+  crown: Crown,
+  zap: Zap,
+  shield: Shield,
+  flame: Flame
+}
 
 export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, onToggleSidebar }) {
   const [timeString, setTimeString] = useState('')
+  
+  const [branding, setBranding] = useState(() => {
+    const saved = localStorage.getItem('iron_gym_branding')
+    if (saved) {
+      try { return JSON.parse(saved) } catch (e) {}
+    }
+    return {
+      name: title || 'IRON GYM',
+      tagline: 'STRENGTH & CONDITIONING',
+      activeBranch: 'Cairo Flagship Arena',
+      accent: 'indigo',
+      iconId: 'dumbbell'
+    }
+  })
 
   useEffect(() => {
     const updateTime = () => {
@@ -11,7 +33,17 @@ export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, o
     }
     updateTime()
     const timer = setInterval(updateTime, 1000)
-    return () => clearInterval(timer)
+
+    const handleBrandingUpdate = (e) => {
+      if (e.detail) setBranding(e.detail)
+    }
+
+    window.addEventListener('gym_branding_updated', handleBrandingUpdate)
+
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('gym_branding_updated', handleBrandingUpdate)
+    }
   }, [])
 
   const roleLabel = role === 'admin' ? 'Master Admin' : role === 'trainer' ? 'Certified Coach' : 'Club Athlete'
@@ -20,6 +52,8 @@ export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, o
     : role === 'trainer' 
     ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' 
     : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+
+  const LogoIcon = LOGO_ICONS[branding.iconId] || Dumbbell
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-800/90 bg-slate-950/85 backdrop-blur-2xl px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shadow-2xl transition-all">
@@ -38,14 +72,15 @@ export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, o
 
         <div className="flex items-center space-x-3">
           <div className="bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-600/30 border border-indigo-400/25">
-            <Dumbbell className="h-5 w-5 text-white" />
+            <LogoIcon className="h-5 w-5 text-white" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">{title}</h1>
+              <h1 className="text-base sm:text-lg font-black tracking-tight text-white uppercase">{branding.name}</h1>
               <span className="hidden sm:inline-block h-1.5 w-1.5 rounded-full bg-indigo-500" />
-              <span className="hidden sm:inline-block text-[10px] font-mono text-slate-400 font-bold uppercase tracking-widest">
-                STRENGTH & CONDITIONING
+              <span className="hidden sm:inline-flex items-center space-x-1 text-[10px] font-mono text-slate-400 font-bold uppercase tracking-widest">
+                <MapPin className="h-2.5 w-2.5 text-indigo-400" />
+                <span>{branding.activeBranch || branding.tagline}</span>
               </span>
             </div>
             {subtitle && (

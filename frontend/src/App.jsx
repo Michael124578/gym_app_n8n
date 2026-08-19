@@ -31,6 +31,7 @@ const MuscleRecoveryInsights = lazy(() => import('./components/MuscleRecoveryIns
 const PrintableWorkoutSheet = lazy(() => import('./components/PrintableWorkoutSheet'))
 const TrainerDashboard = lazy(() => import('./pages/TrainerDashboard'))
 const MemberPortal = lazy(() => import('./pages/MemberPortal'))
+const GymBrandingManager = lazy(() => import('./components/GymBrandingManager'))
 const AddMemberModal = lazy(() => import('./components/AddMemberModal'))
 
 // Sleek Titanium Loading Fallback (Zero Layout Shift)
@@ -425,6 +426,9 @@ export default function App() {
                 )}
                 {currentActiveTab === 'community' && (
                   <GymCommunityFeed session={session} userRole={role} />
+                )}
+                {currentActiveTab === 'branding' && (
+                  <GymBrandingManager />
                 )}
                 {currentActiveTab === 'exercises' && (
                   <ExerciseLibrary />

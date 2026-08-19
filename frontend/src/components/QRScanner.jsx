@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   CheckCircle, XCircle, QrCode, Search, KeyRound, 
   LogOut as ExitIcon, LogIn as EntryIcon, ShieldCheck, 
-  Radio, Clock, AlertTriangle, ArrowRight, UserCheck
+  Radio, Clock, AlertTriangle, ArrowRight, UserCheck,
+  Volume2, VolumeX, Send, Wifi, Settings, Sliders
 } from 'lucide-react'
 
 export default function QRScanner({ onScanComplete }) {
@@ -15,41 +16,192 @@ export default function QRScanner({ onScanComplete }) {
   const [searchResults, setSearchResults] = useState([])
   const [flashEffect, setFlashEffect] = useState(null)
   const [gateMode, setGateMode] = useState('entry') // 'entry' | 'exit'
+  
+  // SOUND PROFILES CONFIG
+  const [soundProfile, setSoundProfile] = useState(() => {
+    return localStorage.getItem('iron_gym_sound_profile') || 'titanium_chime'
+  })
+
+  // HARDWARE / N8N WEBHOOK CONFIG
+  const [webhookUrl, setWebhookUrl] = useState(() => {
+    return localStorage.getItem('iron_gym_gate_webhook_url') || ''
+  })
+  const [webhookSecret, setWebhookSecret] = useState(() => {
+    return localStorage.getItem('iron_gym_gate_webhook_secret') || ''
+  })
+  const [isWebhookEnabled, setIsWebhookEnabled] = useState(() => {
+    return localStorage.getItem('iron_gym_gate_webhook_enabled') === 'true'
+  })
+  const [isTestingWebhook, setIsTestingWebhook] = useState(false)
+  const [webhookTestStatus, setWebhookTestStatus] = useState(null)
+  const [showSettings, setShowSettings] = useState(false)
+
   const scannerRef = useRef(null)
 
   // Unique element ID per instance to avoid DOM collisions
   const scannerElementId = useRef(`reader-${Math.random().toString(36).substring(2, 9)}`).current
+
+  const handleSoundProfileChange = (profile) => {
+    setSoundProfile(profile)
+    localStorage.setItem('iron_gym_sound_profile', profile)
+  }
+
+  const handleSaveWebhookConfig = (url, secret, enabled) => {
+    setWebhookUrl(url)
+    setWebhookSecret(secret)
+    setIsWebhookEnabled(enabled)
+    localStorage.setItem('iron_gym_gate_webhook_url', url)
+    localStorage.setItem('iron_gym_gate_webhook_secret', secret)
+    localStorage.setItem('iron_gym_gate_webhook_enabled', enabled ? 'true' : 'false')
+  }
 
   const triggerTerminalFlash = (type) => {
     setFlashEffect(type)
     setTimeout(() => setFlashEffect(null), 1200)
   }
 
-  const playAudioFeedback = (isSuccess) => {
+  // Web Audio Synthesizer Profiles
+  const playAudioFeedback = (isSuccess, forcedProfile = null) => {
+    const profile = forcedProfile || soundProfile
+    if (profile === 'silent') return
+
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext
       if (!AudioCtx) return
       const ctx = new AudioCtx()
       if (ctx.state === 'suspended') ctx.resume()
 
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
+      const now = ctx.currentTime
 
-      osc.type = isSuccess ? 'sine' : 'sawtooth'
-      osc.frequency.setValueAtTime(isSuccess ? 880 : 220, ctx.currentTime)
-      if (isSuccess) {
-        osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.1) // High chime
+      if (profile === 'titanium_chime') {
+        // Tri-tone major harmonic chime
+        if (isSuccess) {
+          const notes = [523.25, 659.25, 783.99] // C5, E5, G5
+          notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator()
+            const gain = ctx.createGain()
+            osc.type = 'sine'
+            osc.frequency.setValueAtTime(freq, now + idx * 0.08)
+            gain.gain.setValueAtTime(0.18, now + idx * 0.08)
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.45)
+            osc.connect(gain)
+            gain.connect(ctx.destination)
+            osc.start(now + idx * 0.08)
+            osc.stop(now + idx * 0.08 + 0.45)
+          })
+        } else {
+          // Low error buzz
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.type = 'sawtooth'
+          osc.frequency.setValueAtTime(220, now)
+          gain.gain.setValueAtTime(0.2, now)
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35)
+          osc.connect(gain)
+          gain.connect(ctx.destination)
+          osc.start(now)
+          osc.stop(now + 0.35)
+        }
+      } else if (profile === 'cyber_pulse') {
+        // High cyber blip
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = isSuccess ? 'sine' : 'sawtooth'
+        osc.frequency.setValueAtTime(isSuccess ? 880 : 220, now)
+        if (isSuccess) osc.frequency.setValueAtTime(1174.66, now + 0.08)
+        gain.gain.setValueAtTime(0.22, now)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(now)
+        osc.stop(now + 0.3)
+      } else if (profile === 'sub_bass') {
+        // Deep acoustic kick / sub drop
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(isSuccess ? 140 : 80, now)
+        osc.frequency.exponentialRampToValueAtTime(isSuccess ? 55 : 35, now + 0.25)
+        gain.gain.setValueAtTime(0.35, now)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(now)
+        osc.stop(now + 0.3)
+      } else if (profile === 'laser_ping') {
+        // Laser down-sweep ping
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(isSuccess ? 1760 : 330, now)
+        osc.frequency.exponentialRampToValueAtTime(isSuccess ? 440 : 110, now + 0.18)
+        gain.gain.setValueAtTime(0.25, now)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(now)
+        osc.stop(now + 0.22)
       }
-      
-      gain.gain.setValueAtTime(0.2, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
-
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start()
-      osc.stop(ctx.currentTime + 0.3)
     } catch (e) {
-      console.warn('Audio feedback blocked')
+      console.warn('Audio feedback blocked', e)
+    }
+  }
+
+  // Dispatch Turnstile Relay Webhook
+  const dispatchTurnstileWebhook = async (payload) => {
+    if (!isWebhookEnabled || !webhookUrl.trim()) return
+
+    try {
+      await fetch(webhookUrl.trim(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(webhookSecret ? { 'X-Gate-Secret': webhookSecret.trim() } : {})
+        },
+        body: JSON.stringify({
+          source: 'IRON_GYM_TURNSTILE_TERMINAL',
+          timestamp: new Date().toISOString(),
+          ...payload
+        })
+      })
+    } catch (err) {
+      console.warn('Webhook dispatch failed (silently caught):', err)
+    }
+  }
+
+  const handleTestWebhook = async () => {
+    if (!webhookUrl.trim()) {
+      setWebhookTestStatus({ success: false, message: 'Please enter a webhook URL first.' })
+      return
+    }
+
+    setIsTestingWebhook(true)
+    setWebhookTestStatus(null)
+
+    try {
+      const res = await fetch(webhookUrl.trim(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(webhookSecret ? { 'X-Gate-Secret': webhookSecret.trim() } : {})
+        },
+        body: JSON.stringify({
+          source: 'IRON_GYM_TEST_PING',
+          event: 'GATE_PING_TEST',
+          terminal_id: 'TERM-01',
+          timestamp: new Date().toISOString()
+        })
+      })
+
+      if (res.ok) {
+        setWebhookTestStatus({ success: true, message: `Connected! HTTP ${res.status} OK` })
+      } else {
+        setWebhookTestStatus({ success: false, message: `HTTP Error: ${res.status} ${res.statusText}` })
+      }
+    } catch (err) {
+      setWebhookTestStatus({ success: false, message: `Connection Failed: ${err.message}` })
+    } finally {
+      setIsTestingWebhook(false)
     }
   }
 
@@ -65,10 +217,15 @@ export default function QRScanner({ onScanComplete }) {
         const currentEpoch = Math.floor(Date.now() / 1000)
         const currentTimeStep = Math.floor(currentEpoch / 30)
 
-        // Expand tolerance to +/- 1 time step (60s window) to handle client device clock drift
+        // Tolerance window (+/- 1 time step / 60s)
         if (Math.abs(currentTimeStep - scannedTimeStep) > 1) {
           playAudioFeedback(false)
           triggerTerminalFlash('error')
+          dispatchTurnstileWebhook({
+            event: 'ACCESS_DENIED',
+            reason: 'EXPIRED_TOTP_CODE',
+            raw_token: scannedValue
+          })
           setScanResult({ success: false, message: 'Expired dynamic QR pass code. Please scan active screen.' })
           setLoading(false)
           return
@@ -97,49 +254,78 @@ export default function QRScanner({ onScanComplete }) {
 
         playAudioFeedback(true)
         triggerTerminalFlash('success')
+        dispatchTurnstileWebhook({
+          event: 'GATE_ENTRY_GRANTED',
+          type: 'GUEST_PASS',
+          guest_name: guestPass.guest_name,
+          host_member_id: guestPass.host_member_id
+        })
         setScanResult({
           success: true,
           message: `Guest Access Granted! Welcome ${guestPass.guest_name} (Host: ${guestPass.members?.full_name || 'Member'})`
         })
+        if (onScanComplete) onScanComplete()
       } else {
         playAudioFeedback(false)
         triggerTerminalFlash('error')
+        dispatchTurnstileWebhook({
+          event: 'ACCESS_DENIED',
+          type: 'GUEST_PASS',
+          reason: guestPass.is_used ? 'ALREADY_USED' : 'EXPIRED'
+        })
         setScanResult({
           success: false,
-          message: 'Guest Pass Expired or Already Used.'
+          message: guestPass.is_used ? 'This guest pass has already been redeemed.' : 'Guest pass expired.'
         })
       }
       setLoading(false)
-      if (onScanComplete) onScanComplete()
       return
     }
 
-    // 2. Member Pass Resolution
-    let { data: member } = await supabase
-      .from('members')
-      .select('*')
-      .or(`id.eq.${scannedValue},qr_code_token.eq.${scannedValue}`)
-      .maybeSingle()
-
-    if (!member && scannedValue.startsWith('PASS-')) {
-      const { data: prefixMatches } = await supabase.from('members').select('*')
-      member = prefixMatches?.find(m => m.id.startsWith(memberQueryId)) || null
+    // 2. Check Standard Member
+    let query = supabase.from('members').select('*')
+    if (scannedValue.startsWith('PASS-')) {
+      query = query.ilike('id', `${memberQueryId}%`)
+    } else {
+      query = query.or(`id.eq.${scannedValue},qr_code_token.eq.${scannedValue}`)
     }
 
-    if (!member) {
+    const { data: member, error } = await query.maybeSingle()
+
+    if (error || !member) {
       playAudioFeedback(false)
       triggerTerminalFlash('error')
-      setScanResult({ success: false, message: 'Invalid Pass: Member record not found in database.' })
+      dispatchTurnstileWebhook({
+        event: 'ACCESS_DENIED',
+        reason: 'MEMBER_NOT_FOUND',
+        raw_token: scannedValue
+      })
+      setScanResult({
+        success: false,
+        message: 'Pass not recognized in Iron Gym registry.'
+      })
       setLoading(false)
       return
     }
 
     const isExpired = member.membership_end_date && new Date() > new Date(member.membership_end_date)
-    const isInactive = member.status !== 'active' || isExpired
+    const isStatusActive = member.status === 'active'
 
-    if (isInactive && !isManual) {
+    if (!isStatusActive || isExpired) {
       playAudioFeedback(false)
       triggerTerminalFlash('error')
+      await supabase.from('check_ins').insert([{
+        member_id: member.id,
+        access_granted: false,
+        notes: isExpired ? 'Expired Membership' : `Status: ${member.status}`
+      }])
+      dispatchTurnstileWebhook({
+        event: 'ACCESS_DENIED',
+        member_id: member.id,
+        member_name: member.full_name,
+        plan_name: member.plan_name,
+        reason: isExpired ? 'MEMBERSHIP_EXPIRED' : 'INACTIVE_STATUS'
+      })
       setScanResult({
         success: false,
         member,
@@ -149,8 +335,9 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
+    // Handle Gate Exit Mode
     if (gateMode === 'exit') {
-      const { data: lastVisit } = await supabase
+      const { data: activeCheckIn } = await supabase
         .from('check_ins')
         .select('id')
         .eq('member_id', member.id)
@@ -159,39 +346,51 @@ export default function QRScanner({ onScanComplete }) {
         .limit(1)
         .maybeSingle()
 
-      if (lastVisit) {
+      if (activeCheckIn) {
         await supabase
           .from('check_ins')
           .update({ checked_out_at: new Date().toISOString() })
-          .eq('id', lastVisit.id)
+          .eq('id', activeCheckIn.id)
       }
 
       playAudioFeedback(true)
       triggerTerminalFlash('success')
+      dispatchTurnstileWebhook({
+        event: 'GATE_EXIT_GRANTED',
+        member_id: member.id,
+        member_name: member.full_name,
+        plan_name: member.plan_name
+      })
       setScanResult({
         success: true,
         member,
         message: `Goodbye, ${member.full_name}! Check-out verified.`
       })
-    } else {
-      await supabase.from('check_ins').insert([{ 
-        member_id: member.id, 
-        status: 'success',
-        access_granted: true,
-        notes: isManual ? 'Manual Staff Override' : 'Dynamic QR Scan Granted',
-        is_manual_override: isManual,
-        authorized_by: isManual ? 'Staff Operator' : 'QR Terminal'
-      }])
-
-      playAudioFeedback(true)
-      triggerTerminalFlash('success')
-      setScanResult({
-        success: true,
-        member,
-        message: isManual ? `Manual Override Granted for ${member.full_name}` : `Turnstile Unlocked! Welcome, ${member.full_name}.`
-      })
+      if (onScanComplete) onScanComplete()
+      setLoading(false)
+      return
     }
 
+    // Gate Entry Mode
+    await supabase.from('check_ins').insert([{
+      member_id: member.id,
+      access_granted: true,
+      notes: isManual ? 'Manual Staff Override' : 'Optical Turnstile Scan'
+    }])
+
+    playAudioFeedback(true)
+    triggerTerminalFlash('success')
+    dispatchTurnstileWebhook({
+      event: 'GATE_ENTRY_GRANTED',
+      member_id: member.id,
+      member_name: member.full_name,
+      plan_name: member.plan_name
+    })
+    setScanResult({
+      success: true,
+      member,
+      message: isManual ? `Manual Override Granted for ${member.full_name}` : `Turnstile Unlocked! Welcome, ${member.full_name}.`
+    })
     if (onScanComplete) onScanComplete()
     setLoading(false)
   }
@@ -199,34 +398,55 @@ export default function QRScanner({ onScanComplete }) {
   const startScanner = useCallback(() => {
     if (scannerRef.current) return
 
-    const scanner = new Html5QrcodeScanner(scannerElementId, {
-      qrbox: { width: 260, height: 260 },
-      fps: 15,
-    })
+    try {
+      const scanner = new Html5QrcodeScanner(
+        scannerElementId,
+        {
+          fps: 15,
+          qrbox: { width: 260, height: 260 },
+          aspectRatio: 1.0,
+          showTorchButtonIfSupported: true
+        },
+        false
+      )
 
-    scannerRef.current = scanner
+      scanner.render(
+        (decodedText) => {
+          scanner.pause(true)
+          processCheckIn(decodedText)
+        },
+        () => {}
+      )
 
-    scanner.render(
-      async (scannedValue) => {
-        if (scannerRef.current) {
-          scannerRef.current.clear().catch(() => {})
-          scannerRef.current = null
-        }
-        await processCheckIn(scannedValue)
-      },
-      () => {}
-    )
-  }, [gateMode, scannerElementId])
+      scannerRef.current = scanner
+    } catch (e) {
+      console.warn('Scanner init failed', e)
+    }
+  }, [scannerElementId])
 
   useEffect(() => {
     startScanner()
+
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.clear().catch(() => {})
+        try {
+          scannerRef.current.clear()
+        } catch (e) {}
         scannerRef.current = null
       }
     }
   }, [startScanner])
+
+  const handleScanNext = () => {
+    setScanResult(null)
+    setSearchQuery('')
+    setSearchResults([])
+    if (scannerRef.current) {
+      try {
+        scannerRef.current.resume()
+      } catch (e) {}
+    }
+  }
 
   const handleManualSearch = async (query) => {
     setSearchQuery(query)
@@ -244,15 +464,8 @@ export default function QRScanner({ onScanComplete }) {
     if (data) setSearchResults(data)
   }
 
-  const handleScanNext = () => {
-    setScanResult(null)
-    setSearchQuery('')
-    setSearchResults([])
-    startScanner()
-  }
-
   return (
-    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-3xl mx-auto space-y-6 animate-fadeIn">
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-4xl mx-auto space-y-6">
       
       {flashEffect === 'success' && (
         <div className="fixed inset-0 z-50 pointer-events-none bg-emerald-500/20 border-[12px] border-emerald-500 animate-pulse transition duration-300" />
@@ -281,27 +494,161 @@ export default function QRScanner({ onScanComplete }) {
             </div>
           </div>
 
-          <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+          <div className="flex items-center space-x-2">
             <button
-              onClick={() => setGateMode('entry')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                gateMode === 'entry' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'
+              type="button"
+              onClick={() => setShowSettings(!showSettings)}
+              className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center space-x-1.5 text-xs font-bold ${
+                showSettings ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800'
               }`}
+              title="Configure Sound & Gate Webhooks"
             >
-              <EntryIcon className="h-3.5 w-3.5" />
-              <span>Gate Entry</span>
+              <Sliders className="h-4 w-4" />
+              <span className="hidden sm:inline">Gate Config</span>
             </button>
-            <button
-              onClick={() => setGateMode('exit')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                gateMode === 'exit' ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <ExitIcon className="h-3.5 w-3.5" />
-              <span>Gate Exit</span>
-            </button>
+
+            <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setGateMode('entry')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                  gateMode === 'entry' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <EntryIcon className="h-3.5 w-3.5" />
+                <span>Entry</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGateMode('exit')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                  gateMode === 'exit' ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <ExitIcon className="h-3.5 w-3.5" />
+                <span>Exit</span>
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* EXPANDABLE GATE HARDWARE & SOUND SETTINGS */}
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mb-6"
+            >
+              <div className="p-5 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-5">
+                
+                {/* SOUND PROFILE ROW */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
+                      <Volume2 className="h-3.5 w-3.5 text-indigo-400" />
+                      <span>Audio Feedback Profile</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => playAudioFeedback(true)}
+                      className="text-[10px] font-mono text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                    >
+                      ▶ Test Current Profile
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {[
+                      { id: 'titanium_chime', label: 'Titanium Chime', desc: 'Tri-Tone Chord' },
+                      { id: 'cyber_pulse', label: 'Cyber Pulse', desc: 'Futuristic Blip' },
+                      { id: 'sub_bass', label: 'Sub-Bass Thud', desc: 'Acoustic Kick' },
+                      { id: 'laser_ping', label: 'Laser Ping', desc: 'Fast Chirp' },
+                      { id: 'silent', label: 'Silent Mode', desc: 'Visual Only' },
+                    ].map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          handleSoundProfileChange(p.id)
+                          playAudioFeedback(true, p.id)
+                        }}
+                        className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                          soundProfile === p.id 
+                            ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md' 
+                            : 'bg-slate-900 border-slate-800/80 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <p className="text-xs font-bold uppercase">{p.label}</p>
+                        <p className="text-[10px] font-mono text-slate-500 mt-0.5">{p.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* HARDWARE / N8N WEBHOOK ROW */}
+                <div className="border-t border-slate-800/80 pt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center space-x-1.5">
+                        <Wifi className="h-3.5 w-3.5 text-emerald-400" />
+                        <span>Turnstile Relay Webhook (n8n / IoT Controller)</span>
+                      </h4>
+                      <p className="text-[10px] text-slate-400">Trigger physical gate relays and WhatsApp notifications upon check-in.</p>
+                    </div>
+                    
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isWebhookEnabled}
+                        onChange={(e) => handleSaveWebhookConfig(webhookUrl, webhookSecret, e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <div className="sm:col-span-8">
+                      <input
+                        type="url"
+                        placeholder="https://n8n.yourdomain.com/webhook/gate-turnstile"
+                        value={webhookUrl}
+                        onChange={(e) => handleSaveWebhookConfig(e.target.value, webhookSecret, isWebhookEnabled)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="sm:col-span-4 flex space-x-2">
+                      <input
+                        type="text"
+                        placeholder="X-Gate-Secret"
+                        value={webhookSecret}
+                        onChange={(e) => handleSaveWebhookConfig(webhookUrl, e.target.value, isWebhookEnabled)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleTestWebhook}
+                        disabled={isTestingWebhook}
+                        className="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-300 hover:text-white rounded-xl text-xs font-bold transition shrink-0 cursor-pointer disabled:opacity-50"
+                      >
+                        {isTestingWebhook ? 'Pinging...' : 'Test Ping'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {webhookTestStatus && (
+                    <p className={`text-[10px] font-mono font-bold ${webhookTestStatus.success ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {webhookTestStatus.message}
+                    </p>
+                  )}
+                </div>
+
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ACTIVE CAMERA / SCAN RESULT */}
         {!scanResult && (
@@ -360,6 +707,7 @@ export default function QRScanner({ onScanComplete }) {
 
               <div className="pt-2">
                 <button
+                  type="button"
                   onClick={handleScanNext}
                   className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition shadow-xl shadow-indigo-600/30 cursor-pointer"
                 >
@@ -399,6 +747,7 @@ export default function QRScanner({ onScanComplete }) {
                   <p className="text-[10px] font-mono text-slate-400">{m.email} • {m.plan_name || 'Pass'}</p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => processCheckIn(m.id, true)}
                   className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-bold uppercase rounded-xl transition cursor-pointer"
                 >

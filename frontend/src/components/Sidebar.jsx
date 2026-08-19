@@ -4,7 +4,7 @@ import {
   X, User, Wrench, Dumbbell, Award, Calendar, ShoppingBag, 
   Megaphone, KeyRound, Calculator, Target, Activity,
   Scale, Radio, Droplet, Headphones, Flame, Heart, MessageSquare, 
-  Receipt, Layers, FileText, ChevronRight, Zap
+  Receipt, Layers, FileText, ChevronRight, Zap, Building2
 } from 'lucide-react'
 
 export default function Sidebar({ 
@@ -35,6 +35,7 @@ export default function Sidebar({
         { id: 'lockers', label: 'Locker Allocations', icon: KeyRound },
         { id: 'maintenance', label: 'Equipment Health', icon: Wrench },
         { id: 'trainers', label: 'Coaching Roster', icon: Dumbbell },
+        { id: 'branding', label: 'Facility Branding', icon: Building2, badge: 'BRAND' },
       ]
     },
     {

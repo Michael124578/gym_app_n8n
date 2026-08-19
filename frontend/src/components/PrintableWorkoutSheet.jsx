@@ -6,6 +6,7 @@ import {
   Layers, User, Calendar, Clock, Award
 } from 'lucide-react'
 import { toPng } from 'html-to-image'
+import { jsPDF } from 'jspdf'
 import { QRCodeSVG } from 'qrcode.react'
 
 const PRESET_ROUTINES = [
@@ -56,6 +57,20 @@ export default function PrintableWorkoutSheet({ session }) {
   const [workoutDate, setWorkoutDate] = useState(new Date().toISOString().split('T')[0])
   const [customExercises, setCustomExercises] = useState(PRESET_ROUTINES[0].exercises)
   const [isExporting, setIsExporting] = useState(false)
+  const [exportFormat, setExportFormat] = useState(null)
+
+  // Retrieve custom gym branding if configured
+  const savedBranding = (() => {
+    try {
+      const b = localStorage.getItem('iron_gym_branding')
+      return b ? JSON.parse(b) : null
+    } catch (e) {
+      return null
+    }
+  })()
+
+  const gymName = savedBranding?.name || 'IRON GYM'
+  const gymBranch = savedBranding?.branch || 'Olympic Training Center'
 
   const printRef = useRef(null)
 
@@ -78,16 +93,43 @@ export default function PrintableWorkoutSheet({ session }) {
   const handleDownloadSheet = async () => {
     if (!printRef.current) return
     setIsExporting(true)
+    setExportFormat('png')
     try {
       const dataUrl = await toPng(printRef.current, { cacheBust: true, pixelRatio: 2 })
       const link = document.createElement('a')
-      link.download = `${selectedPreset.title.replace(/\s+/g, '_')}_LogSheet.png`
+      link.download = `${selectedPreset.title.split('—')[0].trim().replace(/\s+/g, '_')}_WorkoutCard.png`
       link.href = dataUrl
       link.click()
     } catch (err) {
       console.error('Export error', err)
     } finally {
       setIsExporting(false)
+      setExportFormat(null)
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    if (!printRef.current) return
+    setIsExporting(true)
+    setExportFormat('pdf')
+    try {
+      const dataUrl = await toPng(printRef.current, { cacheBust: true, pixelRatio: 2 })
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      })
+      const imgProps = pdf.getImageProperties(dataUrl)
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
+
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.save(`${selectedPreset.title.split('—')[0].trim().replace(/\s+/g, '_')}_A4_Sheet.pdf`)
+    } catch (err) {
+      console.error('PDF export error', err)
+    } finally {
+      setIsExporting(false)
+      setExportFormat(null)
     }
   }
 
@@ -112,24 +154,34 @@ export default function PrintableWorkoutSheet({ session }) {
           </div>
 
           {/* ACTIONS */}
-          <div className="flex items-center space-x-3 self-start md:self-auto">
+          <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
             <button
               type="button"
               onClick={() => window.print()}
-              className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold px-4 py-3 rounded-2xl transition flex items-center space-x-2 shadow-xl"
+              className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold px-4 py-3 rounded-2xl transition flex items-center space-x-2 shadow-xl cursor-pointer"
             >
               <Printer className="h-4 w-4" />
-              <span>Print Sheet</span>
+              <span>Print</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadPDF}
+              disabled={isExporting}
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl shadow-xl shadow-emerald-600/30 transition flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+            >
+              <FileText className="h-4 w-4" />
+              <span>{isExporting && exportFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF'}</span>
             </button>
 
             <button
               type="button"
               onClick={handleDownloadSheet}
               disabled={isExporting}
-              className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-2xl shadow-xl shadow-indigo-600/30 transition flex items-center space-x-2"
+              className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl shadow-xl shadow-indigo-600/30 transition flex items-center space-x-2 cursor-pointer disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
-              <span>{isExporting ? 'Exporting...' : 'Download PNG Card'}</span>
+              <span>{isExporting && exportFormat === 'png' ? 'Exporting...' : 'PNG Image'}</span>
             </button>
           </div>
         </div>
@@ -193,10 +245,10 @@ export default function PrintableWorkoutSheet({ session }) {
                 </div>
                 <div>
                   <h2 className="text-2xl font-black uppercase text-white tracking-tight leading-none">
-                    IRON <span className="text-indigo-500">GYM</span>
+                    {gymName}
                   </h2>
                   <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest block mt-0.5">
-                    Official Athlete Workout Log Sheet
+                    {gymBranch} • Athlete Workout Prescription
                   </span>
                 </div>
               </div>
