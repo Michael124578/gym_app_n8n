@@ -1,535 +1,560 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Dumbbell, Target, Calendar, CheckCircle2, 
-  Flame, ArrowRight, RotateCcw, ShieldCheck, Zap, 
-  Printer, Play, Layers, User, Award, Activity, 
-  TrendingUp, BarChart2, CheckSquare, Sliders, 
-  ChevronRight, RefreshCw, Clock, Sparkles, Plus, 
-  Eye, Check, Save, Share2, Compass, Cpu, FileText,
-  Crosshair, Gauge, CornerDownRight, Box, Terminal
+import {
+  Dumbbell, Target, Calendar, CheckCircle2,
+  Flame, ArrowRight, RotateCcw, ShieldCheck, Zap,
+  Printer, Play, Layers, User, Award, Activity,
+  TrendingUp, BarChart2, CheckSquare
 } from 'lucide-react'
 
-// PROGRAM SCHEMAS
-const PROGRAM_GOALS = [
+const GOALS = [
   {
     id: 'hypertrophy',
-    name: 'HYPERTROPHY & DENSITY',
-    code: 'STIM-01',
-    subtitle: 'Mechanical Tension & Sarcoplasmic Volume',
-    repRange: '8 - 12 REPS',
-    rpeRange: 'RPE 7.5 - 9.0',
-    rest: '90s - 120s',
-    focus: 'Maximal cross-sectional myofibrillar recruitment with strict 3-second eccentric tempo.',
-    accentColor: 'border-amber-400 text-amber-400 bg-amber-400/10',
-    dotColor: 'bg-amber-400'
+    label: 'Hypertrophy & Muscle Density',
+    badge: 'Mass & Sarcoplasmic Volume',
+    desc: 'Engineered for maximal myofibrillar hypertrophy with moderate 8-12 rep ranges, high mechanical tension, and strict 3-second eccentric control.',
+    icon: Flame,
+    color: 'from-amber-500/20 to-rose-500/20 border-amber-500/40 text-amber-400'
   },
   {
     id: 'strength',
-    name: 'MAX STRENGTH & POWER',
-    code: 'STIM-02',
-    subtitle: 'High-Threshold Motor Unit Recruitment',
-    repRange: '3 - 6 REPS',
-    rpeRange: 'RPE 8.0 - 9.5',
-    rest: '3 - 5 MINS',
-    focus: 'Neuromuscular CNS adaptation, rate of force development, and heavy barbell mastery.',
-    accentColor: 'border-cyan-400 text-cyan-400 bg-cyan-400/10',
-    dotColor: 'bg-cyan-400'
+    label: 'Maximum Strength & CNS Power',
+    badge: 'Heavy Barbell Compound Focus',
+    desc: 'Prioritizes high neuromuscular recruitment through low-rep (1-5 reps) heavy compound lifts with 3-5 minute rest periods for maximal power output.',
+    icon: Award,
+    color: 'from-indigo-500/20 to-blue-500/20 border-indigo-500/40 text-indigo-400'
   },
   {
-    id: 'recomp',
-    name: 'METABOLIC CONDITIONING',
-    code: 'STIM-03',
-    subtitle: 'High-Density Work Capacity & Caloric Burn',
-    repRange: '10 - 15 REPS',
-    rpeRange: 'RPE 8.0 - 9.0',
-    rest: '45s - 75s',
-    focus: 'Elevated work capacity, antagonist superset density, and lean mass preservation.',
-    accentColor: 'border-emerald-400 text-emerald-400 bg-emerald-400/10',
-    dotColor: 'bg-emerald-400'
+    id: 'fat_loss',
+    label: 'Athletic Conditioning & Recomp',
+    badge: 'High-Density Metabolic Stress',
+    desc: 'High-density supersets, reduced rest intervals, and athletic compound intervals designed to maintain lean muscle while optimizing metabolic conditioning.',
+    icon: Zap,
+    color: 'from-cyan-500/20 to-teal-500/20 border-cyan-500/40 text-cyan-400'
   },
   {
-    id: 'functional',
-    name: 'UNILATERAL & ATHLETIC',
-    code: 'STIM-04',
-    subtitle: 'Multi-Planar Torque & Joint Integrity',
-    repRange: '6 - 10 REPS',
-    rpeRange: 'RPE 7.0 - 8.5',
-    rest: '60s - 90s',
-    focus: 'Rotational agility, explosive plyometrics, and bulletproof joint resilience.',
-    accentColor: 'border-rose-400 text-rose-400 bg-rose-400/10',
-    dotColor: 'bg-rose-400'
-  }
+    id: 'athletic',
+    label: 'Functional Agility & Explosive Power',
+    badge: 'Multi-Planar Athletic Performance',
+    desc: 'Unilateral strength, rotational power, and plyometric potentiation drills to develop high-level athletic performance and joint resilience.',
+    icon: Target,
+    color: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/40 text-emerald-400'
+  },
 ]
 
-const SPLIT_PRESETS = [
-  { id: '3_day', days: 3, label: '3-DAY FULL BODY', code: 'SPLIT-3D', sub: 'Mon / Wed / Fri Total Compound Loading' },
-  { id: '4_day', days: 4, label: '4-DAY UPPER / LOWER', code: 'SPLIT-4D', sub: 'Power & Hypertrophy Wave Split' },
-  { id: '5_day', days: 5, label: '5-DAY PPL HYBRID', code: 'SPLIT-5D', sub: 'Push / Pull / Legs + Upper / Lower' },
-  { id: '6_day', days: 6, label: '6-DAY HIGH VOLUME', code: 'SPLIT-6D', sub: 'Dual Rotation Push / Pull / Legs' }
+const EXPERIENCE_LEVELS = [
+  {
+    id: 'beginner',
+    label: 'Novice / Foundational (0 - 1 Year)',
+    badge: 'Linear Progression Protocol',
+    desc: 'Emphasizes motor unit recruitment, mastering barbell trajectories, and consistent session-to-session linear weight progression.'
+  },
+  {
+    id: 'intermediate',
+    label: 'Intermediate Lifter (1 - 3 Years)',
+    badge: 'Undulating Wave Periodization',
+    desc: 'Integrates volume wave cycling, double progression models, and targeted muscle group specializations.'
+  },
+  {
+    id: 'advanced',
+    label: 'Advanced Titan (3+ Years)',
+    badge: 'High-Threshold Overload',
+    desc: 'High-volume periodization with advanced intensity multipliers (drop sets, rest-pause sets, and post-activation potentiation).'
+  },
 ]
 
-const EQUIPMENT_FACILITIES = [
-  { id: 'full', label: 'Commercial Gym Hardware', tag: 'BARBELLS • MACHINES • CABLES' },
-  { id: 'dumbbells', label: 'Dumbbells & Bench Suite', tag: 'ADJUSTABLE DB • BENCH • BANDS' },
-  { id: 'calisthenics', label: 'Calisthenics & Rig Setup', tag: 'PULL-UP BARS • RINGS • DIPS' }
+const FREQUENCIES = [
+  {
+    id: '3_days',
+    days: 3,
+    label: '3 Days / Week',
+    split: 'Full Body Compound Rotation (A / B / C)',
+    desc: 'Optimal 48-hour recovery between high-intensity multi-joint training sessions.'
+  },
+  {
+    id: '4_days',
+    days: 4,
+    label: '4 Days / Week',
+    split: 'Upper / Lower Power & Hypertrophy Split',
+    desc: 'The gold standard periodization framework balancing volume frequency and joint recovery.'
+  },
+  {
+    id: '5_days',
+    days: 5,
+    label: '5 Days / Week',
+    split: 'Push / Pull / Legs + Upper / Lower Hybrid',
+    desc: 'High-frequency hypertrophic loading for dedicated bodybuilding athletes.'
+  },
+  {
+    id: '6_days',
+    days: 6,
+    label: '6 Days / Week',
+    split: 'Push / Pull / Legs (x2 High Volume Split)',
+    desc: 'Maximum weekly stimulus with 1 dedicated CNS systemic recovery day.'
+  },
 ]
 
-const MASTER_EXERCISE_POOL = {
-  push: [
-    { name: 'Barbell Flat Bench Press', target: 'Pectorals', pattern: 'Horizontal Press', sets: 4, reps: '6-8', rpe: 8.5, rest: '2-3m', cue: 'Retract scaps, 3s eccentric, explosive bar drive' },
-    { name: 'Incline Dumbbell Press (30°)', target: 'Upper Chest', pattern: 'Incline Press', sets: 3, reps: '8-10', rpe: 8.5, rest: '90s', cue: '45° elbow flare, deep clavicular stretch at bottom' },
-    { name: 'Standing Overhead Barbell Press', target: 'Deltoids', pattern: 'Vertical Press', sets: 3, reps: '6-8', rpe: 8.0, rest: '2m', cue: 'Brace glutes and core, lock out directly overhead' },
-    { name: 'Cable Standing Lateral Raises', target: 'Side Delts', pattern: 'Isolation', sets: 4, reps: '12-15', rpe: 9.0, rest: '60s', cue: 'Lead with elbows in scapular plane, 1s peak hold' },
-    { name: 'Overhead Cable Tricep Extension', target: 'Triceps', pattern: 'Isolation', sets: 3, reps: '10-12', rpe: 9.0, rest: '60s', cue: 'Full elbow flexion behind neck, flare out at lockout' }
-  ],
-  pull: [
-    { name: 'Conventional Barbell Deadlift', target: 'Posterior Chain', pattern: 'Hip Hinge', sets: 3, reps: '5', rpe: 8.5, rest: '3m', cue: 'Pull slack out of bar, drive the platform away' },
-    { name: 'Chest-Supported T-Bar Row', target: 'Mid-Back', pattern: 'Horizontal Pull', sets: 4, reps: '8-10', rpe: 8.5, rest: '90s', cue: 'Drive elbows backward, pinch rhomboids for 1s' },
-    { name: 'Wide-Grip Lat Pulldown', target: 'Latissimus', pattern: 'Vertical Pull', sets: 3, reps: '10-12', rpe: 8.5, rest: '90s', cue: 'Drive elbows down into rear pockets' },
-    { name: 'Incline Dumbbell Bicep Curl', target: 'Biceps Long-Head', pattern: 'Isolation', sets: 3, reps: '10-12', rpe: 9.0, rest: '60s', cue: 'Supinate wrists at top, control the full negative' },
-    { name: 'Face Pulls with External Rotation', target: 'Rear Delts', pattern: 'Isolation', sets: 4, reps: '15', rpe: 8.5, rest: '60s', cue: 'Pull rope toward nose, rotate thumbs backward' }
-  ],
-  legs: [
-    { name: 'Barbell Back Squat (High Bar)', target: 'Quads & Glutes', pattern: 'Squat Compound', sets: 4, reps: '6-8', rpe: 8.5, rest: '3m', cue: 'Chest tall, break hips and knees simultaneously' },
-    { name: 'Romanian Deadlift (RDL)', target: 'Hamstrings', pattern: 'Hip Hinge', sets: 4, reps: '8-10', rpe: 8.0, rest: '2m', cue: 'Push pelvis backward until deep hamstring tension' },
-    { name: 'Angled Leg Press (45°)', target: 'Quadriceps', pattern: 'Machine Compound', sets: 3, reps: '10-12', rpe: 8.5, rest: '90s', cue: 'Strict 3-second descent, no bouncing out of the hole' },
-    { name: 'Seated Hamstring Leg Curl', target: 'Hamstrings', pattern: 'Isolation', sets: 3, reps: '12-15', rpe: 9.0, rest: '60s', cue: 'Slow negative, keep hips pinned hard into seat' },
-    { name: 'Standing Calf Raise on Step', target: 'Calves & Soleus', pattern: 'Isolation', sets: 4, reps: '15', rpe: 9.5, rest: '60s', cue: '2-second dead pause at bottom stretch, explode up' }
-  ]
-}
+const EQUIPMENT_OPTIONS = [
+  {
+    id: 'commercial',
+    label: 'Full Commercial Gym Facility',
+    desc: 'Olympic barbells, heavy dumbbells, plate-loaded machines, cables, and power cages.'
+  },
+  {
+    id: 'dumbbells_only',
+    label: 'Dumbbells & Adjustable Bench Only',
+    desc: 'Heavy dumbbell pairs, incline/flat bench, and resistance bands.'
+  },
+  {
+    id: 'calisthenics',
+    label: 'Bodyweight & Calisthenics Rig',
+    desc: 'Pull-up bars, parallel dip bars, gymnastic rings, and weighted vests.'
+  },
+]
 
 export default function AiRoutineGenerator({ onLaunchRoutineInTracker }) {
-  // CONFIGURATION STATE
+  // WIZARD STATE
+  const [currentStep, setCurrentStep] = useState(1)
   const [selectedGoal, setSelectedGoal] = useState('hypertrophy')
-  const [selectedSplit, setSelectedSplit] = useState('4_day')
-  const [selectedEquip, setSelectedEquip] = useState('full')
-  const [activeDayIndex, setActiveDayIndex] = useState(0)
-  const [savedNotification, setSavedNotification] = useState(false)
+  const [selectedExperience, setSelectedExperience] = useState('intermediate')
+  const [selectedFrequency, setSelectedFrequency] = useState('4_days')
+  const [selectedEquipment, setSelectedEquipment] = useState('commercial')
 
-  // DERIVE WORKOUT DAYS DYNAMICALLY
-  const currentGoalData = useMemo(() => 
-    PROGRAM_GOALS.find(g => g.id === selectedGoal) || PROGRAM_GOALS[0]
-  , [selectedGoal])
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatedRoutine, setGeneratedRoutine] = useState(null)
 
-  const scheduleDays = useMemo(() => {
-    if (selectedSplit === '4_day') {
-      return [
+  const handleBuildProgram = () => {
+    setIsGenerating(true)
+    setTimeout(() => {
+      const routine = generateProgram(selectedGoal, selectedExperience, selectedFrequency, selectedEquipment)
+      setGeneratedRoutine(routine)
+      setIsGenerating(false)
+      setCurrentStep(5) // Results view
+    }, 600)
+  }
+
+  const generateProgram = (goal, exp, freq, equip) => {
+    let days = []
+
+    if (freq === '4_days') {
+      days = [
         {
-          id: 'd1',
-          code: 'BLOCK-01',
-          name: 'Upper Body Power & Horizontal Drive',
-          focus: 'Pectorals, Lats, Anterior Deltoids & Triceps',
-          type: 'UPPER HEAVY',
-          exercises: MASTER_EXERCISE_POOL.push
-        },
-        {
-          id: 'd2',
-          code: 'BLOCK-02',
-          name: 'Lower Body Strength & Quad Bias',
-          focus: 'Quadriceps, Hamstrings, Glutes & Calves',
-          type: 'LOWER HEAVY',
-          exercises: MASTER_EXERCISE_POOL.legs
-        },
-        {
-          id: 'd3',
-          code: 'BLOCK-03',
-          name: 'Upper Body Hypertrophy & Density',
-          focus: 'Incline Chest, Upper Back Width & Arms',
-          type: 'UPPER VOLUME',
-          exercises: MASTER_EXERCISE_POOL.pull
-        },
-        {
-          id: 'd4',
-          code: 'BLOCK-04',
-          name: 'Posterior Chain & Unilateral Overload',
-          focus: 'Deadlift Velocity, Hip Thrusts & Adductors',
-          type: 'POSTERIOR VOLUME',
+          day: 'Day 1',
+          name: 'Upper Body Power & Horizontal Press/Pull',
+          focus: 'Pectorals, Latissimus Dorsi, Deltoids & Triceps',
           exercises: [
-            ...MASTER_EXERCISE_POOL.legs.slice(1),
-            { name: 'Barbell Hip Thrust', target: 'Glute Max', pattern: 'Hinge', sets: 3, reps: '10-12', rpe: 9.0, rest: '90s', cue: 'Lock out hips with 2s hold at peak contraction' }
+            { name: 'Barbell Flat Bench Press', sets: '4 Sets', reps: '6-8 Reps', rpe: 'RPE 8.5', rest: '2-3 mins', tip: 'Retract scapulae, 3s eccentric, explosive press' },
+            { name: 'Bent-Over Barbell Row (Pendlay)', sets: '4 Sets', reps: '6-8 Reps', rpe: 'RPE 8.5', rest: '2 mins', tip: 'Drive elbows back toward hips, parallel torso' },
+            { name: 'Standing Overhead Barbell Press (OHP)', sets: '3 Sets', reps: '8-10 Reps', rpe: 'RPE 8', rest: '2 mins', tip: 'Glutes and core braced tight at lockout' },
+            { name: 'Wide-Grip Lat Pulldown', sets: '3 Sets', reps: '10-12 Reps', rpe: 'RPE 8.5', rest: '90s', tip: 'Drive elbows into back pockets, squeeze lats' },
+            { name: 'Incline Dumbbell Bicep Curl', sets: '3 Sets', reps: '10-12 Reps', rpe: 'RPE 9', rest: '60s', tip: 'Supinate wrists at peak contraction' },
+            { name: 'Cable Tricep Rope Pushdown', sets: '3 Sets', reps: '12-15 Reps', rpe: 'RPE 9', rest: '60s', tip: 'Flare ropes outward at full lockout' }
+          ]
+        },
+        {
+          day: 'Day 2',
+          name: 'Lower Body Strength & Posterior Hinge',
+          focus: 'Quadriceps, Hamstrings, Glutes & Spinal Erectors',
+          exercises: [
+            { name: 'Barbell Back Squat (High Bar)', sets: '4 Sets', reps: '6-8 Reps', rpe: 'RPE 8.5', rest: '3 mins', tip: 'Break hips and knees together, hit parallel depth' },
+            { name: 'Romanian Deadlift (RDL)', sets: '4 Sets', reps: '8-10 Reps', rpe: 'RPE 8', rest: '2 mins', tip: 'Hinge hips backward until deep hamstring stretch' },
+            { name: 'Angled Leg Press (45°)', sets: '3 Sets', reps: '10-12 Reps', rpe: 'RPE 8.5', rest: '90s', tip: 'Control descent, do not bounce out of bottom' },
+            { name: 'Barbell Hip Thrust', sets: '3 Sets', reps: '10-12 Reps', rpe: 'RPE 9', rest: '90s', tip: '2s pause at top contraction with locked pelvis' },
+            { name: 'Standing Calf Raises on Step', sets: '4 Sets', reps: '15 Reps', rpe: 'RPE 9.5', rest: '60s', tip: 'Full 2s pause in deep bottom stretch' }
+          ]
+        },
+        {
+          day: 'Day 3',
+          name: 'Upper Body Hypertrophy & Incline/Width',
+          focus: 'Clavicular Pecs, Lateral Deltoids & Upper Back',
+          exercises: [
+            { name: 'Incline Dumbbell Press (30°)', sets: '4 Sets', reps: '8-10 Reps', rpe: 'RPE 8.5', rest: '2 mins', tip: 'Deep clavicular stretch, tuck elbows 45 degrees' },
+            { name: 'Seated Cable Row (Neutral Grip)', sets: '4 Sets', reps: '10-12 Reps', rpe: 'RPE 8.5', rest: '90s', tip: 'Drive elbows back with proud upright chest' },
+            { name: 'Cable Standing Lateral Raises', sets: '4 Sets', reps: '12-15 Reps', rpe: 'RPE 9', rest: '60s', tip: 'Lead with elbows in scapular plane' },
+            { name: 'High-to-Low Cable Flyes', sets: '3 Sets', reps: '12-15 Reps', rpe: 'RPE 9', rest: '60s', tip: 'Continuous tension on inner pectorals' },
+            { name: 'Hanging Leg Raises', sets: '3 Sets', reps: '12-15 Reps', rpe: 'RPE 8.5', rest: '60s', tip: 'Curl pelvis up toward ribs without swinging' }
+          ]
+        },
+        {
+          day: 'Day 4',
+          name: 'Lower Body Hypertrophy & Unilateral Volume',
+          focus: 'Quad Sweep, Hamstrings, Adductors & Core',
+          exercises: [
+            { name: 'Barbell Front Squat / Hack Squat', sets: '4 Sets', reps: '8-10 Reps', rpe: 'RPE 8.5', rest: '2 mins', tip: 'Upright torso posture with quad emphasis' },
+            { name: 'Lying Hamstring Leg Curl', sets: '4 Sets', reps: '10-12 Reps', rpe: 'RPE 9', rest: '90s', tip: 'Control 3-second negative descent' },
+            { name: 'Bulgarian Split Squats (Dumbbells)', sets: '3 Sets', reps: '10 Reps/leg', rpe: 'RPE 9', rest: '90s', tip: 'Drive through front heel, deep hip drop' },
+            { name: 'Cable Woodchoppers', sets: '3 Sets', reps: '12 Reps/side', rpe: 'RPE 8', rest: '60s', tip: 'Initiate explosive rotation from hips and obliques' }
           ]
         }
       ]
-    } else if (selectedSplit === '3_day') {
-      return [
+    } else {
+      days = [
         {
-          id: 'd1',
-          code: 'BLOCK-01',
-          name: 'Full Body Compound Blitz (A)',
-          focus: 'Squat, Bench Press, Rows & Core',
-          type: 'FULL BODY A',
-          exercises: [MASTER_EXERCISE_POOL.legs[0], MASTER_EXERCISE_POOL.push[0], MASTER_EXERCISE_POOL.pull[1], MASTER_EXERCISE_POOL.push[3]]
+          day: 'Day 1',
+          name: 'Push (Chest, Shoulders & Triceps)',
+          focus: 'Horizontal & Vertical Pressing Compounds',
+          exercises: [
+            { name: 'Barbell Flat Bench Press', sets: '4 Sets', reps: '8 Reps', rpe: 'RPE 8.5', rest: '2 mins', tip: 'Explosive drive off chest on concentric' },
+            { name: 'Incline Dumbbell Press', sets: '3 Sets', reps: '10 Reps', rpe: 'RPE 8.5', rest: '90s', tip: 'Deep chest stretch at bottom' },
+            { name: 'Overhead Barbell Press', sets: '3 Sets', reps: '8-10 Reps', rpe: 'RPE 8', rest: '2 mins', tip: 'Glutes and quads locked tight' },
+            { name: 'Cable Lateral Raise', sets: '4 Sets', reps: '15 Reps', rpe: 'RPE 9', rest: '60s', tip: 'Strict tempo with zero momentum' },
+            { name: 'Cable Tricep Pushdown', sets: '3 Sets', reps: '12 Reps', rpe: 'RPE 9', rest: '60s', tip: 'Full elbow lockout squeeze' }
+          ]
         },
         {
-          id: 'd2',
-          code: 'BLOCK-02',
-          name: 'Full Body Posterior & Overhead (B)',
-          focus: 'Deadlift, Overhead Press, Pull-ups & Hamstrings',
-          type: 'FULL BODY B',
-          exercises: [MASTER_EXERCISE_POOL.pull[0], MASTER_EXERCISE_POOL.push[2], MASTER_EXERCISE_POOL.pull[2], MASTER_EXERCISE_POOL.legs[1]]
+          day: 'Day 2',
+          name: 'Pull (Back, Rear Delts & Biceps)',
+          focus: 'Vertical & Horizontal Pulling Velocity',
+          exercises: [
+            { name: 'Conventional Barbell Deadlift', sets: '3 Sets', reps: '5 Reps', rpe: 'RPE 8.5', rest: '3 mins', tip: 'Pull slack out of bar, drive floor away' },
+            { name: 'Wide-Grip Lat Pulldown', sets: '4 Sets', reps: '10 Reps', rpe: 'RPE 8.5', rest: '90s', tip: 'Full overhead lat stretch' },
+            { name: 'Bent-Over Barbell Row', sets: '4 Sets', reps: '8 Reps', rpe: 'RPE 8.5', rest: '90s', tip: 'Keep lumbar spine completely neutral' },
+            { name: 'Incline Dumbbell Bicep Curl', sets: '3 Sets', reps: '10-12 Reps', rpe: 'RPE 9', rest: '60s', tip: 'Long-head bicep stretch' },
+            { name: 'Face Pulls with External Rotation', sets: '3 Sets', reps: '15 Reps', rpe: 'RPE 8.5', rest: '60s', tip: 'Shoulder capsule health' }
+          ]
         },
         {
-          id: 'd3',
-          code: 'BLOCK-03',
-          name: 'Full Body Hypertrophy Volume (C)',
-          focus: 'Incline Press, Leg Press, Rows & Arms',
-          type: 'FULL BODY C',
-          exercises: [MASTER_EXERCISE_POOL.legs[2], MASTER_EXERCISE_POOL.push[1], MASTER_EXERCISE_POOL.pull[1], MASTER_EXERCISE_POOL.push[4]]
+          day: 'Day 3',
+          name: 'Legs & Core Power',
+          focus: 'Quads, Hamstrings, Glutes & Abs',
+          exercises: [
+            { name: 'Barbell Back Squat', sets: '4 Sets', reps: '8 Reps', rpe: 'RPE 8.5', rest: '3 mins', tip: 'Track knees over second toe' },
+            { name: 'Romanian Deadlift (RDL)', sets: '4 Sets', reps: '10 Reps', rpe: 'RPE 8', rest: '2 mins', tip: 'Hinge hips backward' },
+            { name: '45-Degree Leg Press', sets: '3 Sets', reps: '12 Reps', rpe: 'RPE 8.5', rest: '90s', tip: 'Controlled 3s descent' },
+            { name: 'Hanging Leg Raises', sets: '3 Sets', reps: '15 Reps', rpe: 'RPE 8.5', rest: '60s', tip: 'Avoid swinging legs' }
+          ]
         }
       ]
-    } else {
-      // 5 or 6 day split (PPL)
-      return [
-        { id: 'd1', code: 'BLOCK-01', name: 'Push Power (Chest & Shoulders)', focus: 'Bench, OHP & Triceps', type: 'PUSH 01', exercises: MASTER_EXERCISE_POOL.push },
-        { id: 'd2', code: 'BLOCK-02', name: 'Pull Power (Deadlifts & Lats)', focus: 'Deadlifts, Rows & Biceps', type: 'PULL 01', exercises: MASTER_EXERCISE_POOL.pull },
-        { id: 'd3', code: 'BLOCK-03', name: 'Legs Hypertrophy (Squats & Quads)', focus: 'Squats, RDLs & Calves', type: 'LEGS 01', exercises: MASTER_EXERCISE_POOL.legs },
-        { id: 'd4', code: 'BLOCK-04', name: 'Push Volume (Incline & Deltoids)', focus: 'Incline DB, Flyes & Lateral Raises', type: 'PUSH 02', exercises: MASTER_EXERCISE_POOL.push },
-        { id: 'd5', code: 'BLOCK-05', name: 'Pull Volume (Back Thickness & Arms)', focus: 'Pulldowns, T-Bar & Arm Superset', type: 'PULL 02', exercises: MASTER_EXERCISE_POOL.pull }
-      ]
     }
-  }, [selectedSplit])
 
-  const activeDay = scheduleDays[activeDayIndex] || scheduleDays[0]
-
-  const totalWeeklySets = useMemo(() => {
-    return scheduleDays.reduce((acc, day) => {
-      return acc + day.exercises.reduce((sAcc, ex) => sAcc + ex.sets, 0)
-    }, 0)
-  }, [scheduleDays])
-
-  const handleSaveProgram = () => {
-    setSavedNotification(true)
-    setTimeout(() => setSavedNotification(false), 3000)
+    return {
+      title: `${GOALS.find(g => g.id === goal)?.label}`,
+      splitName: FREQUENCIES.find(f => f.id === freq)?.split,
+      daysCount: FREQUENCIES.find(f => f.id === freq)?.days,
+      experience: EXPERIENCE_LEVELS.find(e => e.id === exp)?.label,
+      equipment: EQUIPMENT_OPTIONS.find(eq => eq.id === equip)?.label,
+      days
+    }
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn font-sans text-zinc-100 selection:bg-amber-400 selection:text-zinc-950">
-      
-      {/* TACTICAL TELEMETRY BANNER */}
-      <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-6 sm:p-7 relative overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-amber-400/5 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2">
-            <div className="flex items-center space-x-3">
-              <span className="flex items-center space-x-1.5 bg-zinc-900 border border-zinc-700/70 px-3 py-1 rounded-md text-[11px] font-mono text-amber-400 font-bold uppercase tracking-widest">
-                <Terminal className="h-3.5 w-3.5 text-amber-400" />
-                <span>ARCHITECT OS // V3.8</span>
-              </span>
-              <span className="text-[11px] font-mono text-zinc-400">
-                STATUS: <span className="text-emerald-400 font-bold">ONLINE</span>
-              </span>
-            </div>
+    <div className="space-y-8 animate-fadeIn">
+      {/* PROFESSIONAL ATHLETIC BANNER */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
 
-            <h1 className="text-2xl sm:text-3xl font-black uppercase text-zinc-100 tracking-tight flex items-center space-x-3">
-              <span>Program Architect Studio</span>
-            </h1>
-            <p className="text-zinc-400 text-xs sm:text-sm max-w-2xl font-normal leading-relaxed">
-              Synthesize periodized, high-threshold strength and hypertrophy programs. Configure stimulus objectives, volume allocations, and facility hardware below.
-            </p>
+        <div className="relative z-10 max-w-3xl">
+          <div className="inline-flex items-center space-x-2 bg-slate-900 border border-slate-700/80 px-3.5 py-1.5 rounded-full text-slate-300 text-xs font-mono font-bold uppercase tracking-wider mb-4">
+            <Layers className="h-4 w-4 text-indigo-400" />
+            <span>Strength & Conditioning Periodization Suite</span>
           </div>
-
-          {/* ACTION BUTTONS (HIGH CONTRAST TACTICAL STYLING) */}
-          <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-300 text-xs font-mono font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-md hover:border-zinc-500"
-            >
-              <Printer className="h-4 w-4 text-zinc-400" />
-              <span>Print Spec</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSaveProgram}
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 text-xs font-mono font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-md hover:border-amber-400/60"
-            >
-              <Save className="h-4 w-4 text-amber-400" />
-              <span>Save Spec</span>
-            </button>
-
-            {onLaunchRoutineInTracker && (
-              <button
-                type="button"
-                onClick={onLaunchRoutineInTracker}
-                className="bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-zinc-950 font-black text-xs font-mono uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-xl shadow-amber-500/20 transition flex items-center space-x-2 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Play className="h-4 w-4 fill-zinc-950" />
-                <span>Launch in Live Logger</span>
-              </button>
-            )}
-          </div>
+          <h1 className="text-3xl sm:text-4xl font-black uppercase text-white tracking-tight">
+            Iron Program Architect
+          </h1>
+          <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+            Configure target hypertrophic stimuli, training frequencies, and equipment setups to architect an athlete-grade periodized training split with exact set, rep, and RPE prescriptions.
+          </p>
         </div>
       </div>
 
-      {/* TOAST CONFIRMATION */}
-      <AnimatePresence>
-        {savedNotification && (
-          <motion.div
-            initial={{ opacity: 0, y: -15, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -15, scale: 0.95 }}
-            className="fixed top-6 right-6 z-50 bg-amber-400 text-zinc-950 px-5 py-3 rounded-xl shadow-2xl text-xs font-black font-mono flex items-center space-x-2 border border-amber-300"
-          >
-            <CheckCircle2 className="h-4 w-4 text-zinc-950" />
-            <span>SPECIFICATION COMMITTED TO ATHLETE PROFILE!</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* GENERATOR WIZARD CONTAINER */}
+      {currentStep <= 4 && (
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-8">
 
-      {/* TWO-COLUMN COMMAND WORKSPACE */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* LEFT COLUMN: CONTROL DECK (5 COLS) */}
-        <div className="lg:col-span-5 space-y-5">
-          
-          {/* 1. STIMULUS MATRIX */}
-          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 shadow-xl space-y-3.5">
-            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 font-bold flex items-center space-x-1.5">
-                <Target className="h-3.5 w-3.5 text-amber-400" />
-                <span>01 // STIMULUS PROTOCOL</span>
+          {/* STEP PROGRESS BAR */}
+          <div className="flex items-center justify-between border-b border-slate-800 pb-6">
+            <div className="flex items-center space-x-3">
+              <span className="bg-indigo-600 text-white font-mono text-xs font-black h-7 w-7 rounded-xl flex items-center justify-center shadow-md shadow-indigo-600/30">
+                0{currentStep}
               </span>
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded border font-bold ${currentGoalData.accentColor}`}>
-                {currentGoalData.code}
-              </span>
+              <div>
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block font-bold">
+                  ARCHITECT PROTOCOL // PHASE 0{currentStep} OF 04
+                </span>
+                <h3 className="text-base font-black uppercase text-white">
+                  {currentStep === 1 && 'Define Primary Hypertrophy / Strength Goal'}
+                  {currentStep === 2 && 'Athlete Experience & Neuromuscular Baseline'}
+                  {currentStep === 3 && 'Weekly Frequency & Split Architecture'}
+                  {currentStep === 4 && 'Equipment & Facility Availability'}
+                </h3>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              {PROGRAM_GOALS.map((goal) => {
+            <div className="flex items-center space-x-1.5">
+              {[1, 2, 3, 4].map(s => (
+                <div
+                  key={s}
+                  className={`h-2 rounded-full transition-all duration-300 ${s === currentStep ? 'w-8 bg-indigo-500' : s < currentStep ? 'w-4 bg-emerald-500' : 'w-4 bg-slate-800'
+                    }`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* STEP 1: GOALS */}
+          {currentStep === 1 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {GOALS.map((goal) => {
                 const isSelected = selectedGoal === goal.id
+                const Icon = goal.icon
                 return (
                   <div
                     key={goal.id}
                     onClick={() => setSelectedGoal(goal.id)}
-                    className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-zinc-900 border-amber-400 shadow-md shadow-amber-400/10'
-                        : 'bg-zinc-900/40 border-zinc-800/70 hover:border-zinc-700 hover:bg-zinc-900/60'
-                    }`}
+                    className={`p-6 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 ${isSelected
+                        ? 'bg-slate-950 border-indigo-500 shadow-2xl shadow-indigo-600/20'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-2 h-2 rounded-full ${isSelected ? goal.dotColor : 'bg-zinc-600'}`} />
-                        <span className={`text-xs font-black uppercase tracking-tight ${isSelected ? 'text-zinc-100' : 'text-zinc-300'}`}>
-                          {goal.name}
-                        </span>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-3 rounded-2xl border ${goal.color}`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-black uppercase text-white">{goal.label}</h4>
+                          <span className="text-[10px] font-mono text-slate-400 block mt-0.5">{goal.badge}</span>
+                        </div>
                       </div>
-                      <span className="text-[10px] font-mono text-zinc-400 font-bold">{goal.repRange}</span>
+                      <div className={`p-2 rounded-xl ${isSelected ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-900 text-slate-600'}`}>
+                        <CheckCircle2 className="h-4 w-4" />
+                      </div>
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-1 pl-4 leading-relaxed line-clamp-2">
-                      {goal.focus}
+                    <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
+                      {goal.desc}
                     </p>
                   </div>
                 )
               })}
             </div>
-          </div>
+          )}
 
-          {/* 2. SPLIT FREQUENCY DIAL */}
-          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 shadow-xl space-y-3.5">
-            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 font-bold flex items-center space-x-1.5">
-                <Calendar className="h-3.5 w-3.5 text-amber-400" />
-                <span>02 // FREQUENCY ARCHITECTURE</span>
-              </span>
-              <span className="text-[10px] font-mono text-zinc-400 font-bold">
-                {scheduleDays.length} DAYS / WEEK
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {SPLIT_PRESETS.map((split) => {
-                const isSelected = selectedSplit === split.id
+          {/* STEP 2: EXPERIENCE */}
+          {currentStep === 2 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {EXPERIENCE_LEVELS.map((exp) => {
+                const isSelected = selectedExperience === exp.id
                 return (
-                  <button
-                    key={split.id}
-                    type="button"
-                    onClick={() => { setSelectedSplit(split.id); setActiveDayIndex(0) }}
-                    className={`p-3 rounded-xl border text-left transition ${
-                      isSelected
-                        ? 'bg-amber-400 border-amber-400 text-zinc-950 font-black shadow-lg shadow-amber-400/20'
-                        : 'bg-zinc-900/50 border-zinc-800/80 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
-                    }`}
+                  <div
+                    key={exp.id}
+                    onClick={() => setSelectedExperience(exp.id)}
+                    className={`p-6 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 ${isSelected
+                        ? 'bg-slate-950 border-indigo-500 shadow-2xl shadow-indigo-600/20'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
                   >
-                    <span className="text-[10px] font-mono block opacity-80">{split.code}</span>
-                    <span className="text-xs font-bold uppercase block mt-0.5">{split.label}</span>
-                  </button>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-[10px] font-mono uppercase text-indigo-400 font-bold block">{exp.badge}</span>
+                        <h4 className="text-sm font-black uppercase text-white mt-1">{exp.label}</h4>
+                      </div>
+                      <div className={`p-1.5 rounded-xl ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-600'}`}>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 leading-relaxed">{exp.desc}</p>
+                  </div>
                 )
               })}
             </div>
-          </div>
+          )}
 
-          {/* 3. HARDWARE FACILITY SETUP */}
-          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 shadow-xl space-y-3.5">
-            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 font-bold flex items-center space-x-1.5">
-                <Dumbbell className="h-3.5 w-3.5 text-amber-400" />
-                <span>03 // HARDWARE PROFILE</span>
-              </span>
+          {/* STEP 3: FREQUENCY */}
+          {currentStep === 3 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {FREQUENCIES.map((freq) => {
+                const isSelected = selectedFrequency === freq.id
+                return (
+                  <div
+                    key={freq.id}
+                    onClick={() => setSelectedFrequency(freq.id)}
+                    className={`p-6 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 ${isSelected
+                        ? 'bg-slate-950 border-indigo-500 shadow-2xl shadow-indigo-600/20'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-[10px] font-mono uppercase text-indigo-400 font-bold block">{freq.label}</span>
+                        <h4 className="text-base font-black uppercase text-white mt-0.5">{freq.split}</h4>
+                      </div>
+                      <div className={`p-2 rounded-xl ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-600'}`}>
+                        <CheckCircle2 className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 leading-relaxed">{freq.desc}</p>
+                  </div>
+                )
+              })}
             </div>
+          )}
 
-            <div className="space-y-2">
-              {EQUIPMENT_FACILITIES.map((equip) => {
-                const isSelected = selectedEquip === equip.id
+          {/* STEP 4: EQUIPMENT */}
+          {currentStep === 4 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {EQUIPMENT_OPTIONS.map((equip) => {
+                const isSelected = selectedEquipment === equip.id
                 return (
                   <div
                     key={equip.id}
-                    onClick={() => setSelectedEquip(equip.id)}
-                    className={`p-3 rounded-xl border cursor-pointer transition flex items-center justify-between text-xs ${
-                      isSelected
-                        ? 'bg-zinc-900 border-amber-400 text-zinc-100 font-bold'
-                        : 'bg-zinc-900/30 border-zinc-800/70 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
-                    }`}
+                    onClick={() => setSelectedEquipment(equip.id)}
+                    className={`p-6 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 ${isSelected
+                        ? 'bg-slate-950 border-indigo-500 shadow-2xl shadow-indigo-600/20'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
                   >
-                    <div>
-                      <span className="block font-medium">{equip.label}</span>
-                      <span className="text-[10px] font-mono text-zinc-500 block">{equip.tag}</span>
+                    <div className="flex items-start justify-between">
+                      <h4 className="text-sm font-black uppercase text-white">{equip.label}</h4>
+                      <div className={`p-1.5 rounded-xl ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-600'}`}>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      </div>
                     </div>
-                    <div className={`w-3.5 h-3.5 rounded-sm border ${
-                      isSelected ? 'bg-amber-400 border-amber-300' : 'border-zinc-700'
-                    }`} />
+                    <p className="text-xs text-slate-400 leading-relaxed">{equip.desc}</p>
                   </div>
                 )
               })}
             </div>
-          </div>
+          )}
 
-          {/* 4. TOTAL VOLUME METRIC GAUGE */}
-          <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 shadow-xl space-y-2.5">
-            <div className="flex justify-between items-center text-xs font-mono">
-              <span className="text-zinc-400 uppercase font-bold">Total Prescribed Volume:</span>
-              <span className="text-amber-400 font-black">{totalWeeklySets} Working Sets</span>
-            </div>
-            <div className="w-full bg-zinc-950 h-2 rounded-full overflow-hidden border border-zinc-800">
-              <div 
-                style={{ width: `${Math.min(100, (totalWeeklySets / 40) * 100)}%` }}
-                className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full"
-              />
-            </div>
-            <div className="flex justify-between text-[10px] font-mono text-zinc-400 font-medium">
-              <span>MEV (12 Sets)</span>
-              <span>MAV (20-25 Sets)</span>
-              <span>MRV (35+ Sets)</span>
-            </div>
+          {/* NAVIGATION BUTTONS */}
+          <div className="flex items-center justify-between pt-6 border-t border-slate-800">
+            {currentStep > 1 ? (
+              <button
+                type="button"
+                onClick={() => setCurrentStep(prev => prev - 1)}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition"
+              >
+                Back
+              </button>
+            ) : <div />}
+
+            {currentStep < 4 ? (
+              <button
+                type="button"
+                onClick={() => setCurrentStep(prev => prev + 1)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition flex items-center space-x-2 shadow-lg shadow-indigo-600/20"
+              >
+                <span>Continue</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleBuildProgram}
+                disabled={isGenerating}
+                className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider px-8 py-3.5 rounded-2xl shadow-xl shadow-indigo-600/30 transition flex items-center space-x-2"
+              >
+                <Layers className="h-4 w-4" />
+                <span>{isGenerating ? 'Synthesizing Architecture...' : 'Architect Complete Program'}</span>
+              </button>
+            )}
           </div>
 
         </div>
+      )}
 
-        {/* RIGHT COLUMN: ACTIVE SPECIFICATION MATRIX (7 COLS) */}
-        <div className="lg:col-span-7 space-y-5">
-          
-          {/* DAY SELECTION BUTTONS (TACTICAL PILL STRIP) */}
-          <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
-            {scheduleDays.map((day, idx) => {
-              const isActive = activeDayIndex === idx
-              return (
-                <button
-                  key={day.id}
-                  type="button"
-                  onClick={() => setActiveDayIndex(idx)}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-mono font-black uppercase tracking-wider transition whitespace-nowrap flex items-center space-x-2 border shadow-sm ${
-                    isActive
-                      ? 'bg-zinc-100 border-zinc-100 text-zinc-950 shadow-zinc-100/20'
-                      : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-amber-500' : 'bg-zinc-600'}`} />
-                  <span>{day.code}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* ACTIVE DAY BLUEPRINT PANEL */}
-          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 sm:p-7 space-y-5 shadow-2xl">
-            
-            {/* PANEL HEADER */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
+      {/* RESULTS: ARCHITECTED PROGRAM VIEW */}
+      {currentStep === 5 && generatedRoutine && (
+        <div className="space-y-8">
+          {/* HEADER SUMMARY CARD */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-800 pb-6">
               <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-black">
-                    {activeDay.code} // {activeDay.type}
-                  </span>
-                </div>
-                <h2 className="text-lg sm:text-xl font-black uppercase text-zinc-100 mt-0.5">
-                  {activeDay.name}
+                <span className="text-xs font-mono uppercase tracking-widest text-indigo-400 font-bold block">
+                  PERIODIZED TRAINING SCHEDULE
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black uppercase text-white mt-1">
+                  {generatedRoutine.title}
                 </h2>
-                <p className="text-xs text-zinc-400 font-mono mt-0.5">{activeDay.focus}</p>
+                <p className="text-xs text-slate-400 mt-1 font-mono">
+                  {generatedRoutine.splitName} • {generatedRoutine.daysCount} Days/Week • {generatedRoutine.experience}
+                </p>
               </div>
 
-              <div className="flex items-center space-x-2 text-xs font-mono self-start sm:self-auto">
-                <span className="px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded-md text-amber-400 font-bold">
-                  {activeDay.exercises.length} EXERCISES
-                </span>
-                <span className="px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded-md text-zinc-400">
-                  ~60 MINS
-                </span>
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Re-Configure</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold p-2.5 rounded-xl transition"
+                  title="Print Program"
+                >
+                  <Printer className="h-4 w-4" />
+                </button>
+
+                {onLaunchRoutineInTracker && (
+                  <button
+                    type="button"
+                    onClick={onLaunchRoutineInTracker}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5 shadow-lg shadow-indigo-600/30"
+                  >
+                    <Play className="h-3.5 w-3.5 fill-white" />
+                    <span>Launch in Live Tracker</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* MOVEMENT ROWS */}
-            <div className="space-y-3">
-              {activeDay.exercises.map((ex, exIdx) => (
+            {/* DAY-BY-DAY BREAKDOWN */}
+            <div className="space-y-6">
+              {generatedRoutine.days.map((dayItem, idx) => (
                 <div
-                  key={exIdx}
-                  className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-4 space-y-2.5 hover:border-zinc-700 transition"
+                  key={idx}
+                  className="bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
                     <div className="flex items-center space-x-3">
-                      <span className="w-6 h-6 rounded-md bg-zinc-800 text-zinc-300 font-mono font-black text-xs flex items-center justify-center border border-zinc-700">
-                        {exIdx + 1}
+                      <span className="bg-indigo-600/20 text-indigo-400 font-mono text-xs font-bold px-3 py-1 rounded-xl border border-indigo-500/30 uppercase">
+                        {dayItem.day}
                       </span>
-                      <div>
-                        <h4 className="text-sm font-bold uppercase text-zinc-100">{ex.name}</h4>
-                        <span className="text-[10px] font-mono text-zinc-400">{ex.target} • {ex.pattern}</span>
-                      </div>
+                      <h3 className="text-base font-black uppercase text-white">{dayItem.name}</h3>
                     </div>
-
-                    <div className="flex items-center space-x-2 text-xs font-mono">
-                      <span className="bg-zinc-950 px-2.5 py-1 rounded-md border border-zinc-800 text-zinc-200 font-bold">
-                        {ex.sets} Sets × {ex.reps}
-                      </span>
-                      <span className="bg-amber-400/10 text-amber-400 border border-amber-400/30 px-2 py-1 rounded-md font-bold">
-                        @ RPE {ex.rpe}
-                      </span>
-                      <span className="bg-zinc-950 px-2 py-1 rounded-md border border-zinc-800 text-zinc-400">
-                        ⏱️ {ex.rest}
-                      </span>
-                    </div>
+                    <span className="text-[11px] font-mono text-slate-400">{dayItem.focus}</span>
                   </div>
 
-                  {/* EXECUTION DIRECTIVE */}
-                  <div className="bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800/60 text-xs text-zinc-300 flex items-start space-x-2">
-                    <span className="text-amber-400 font-bold font-mono text-[11px] shrink-0">DIRECTIVE:</span>
-                    <span className="italic text-zinc-400 text-[11px]">{ex.cue}</span>
+                  {/* EXERCISES TABLE */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-[10px] font-mono uppercase text-slate-500 border-b border-slate-800/60 pb-2">
+                          <th className="py-2.5 px-3">Movement</th>
+                          <th className="py-2.5 px-3">Sets</th>
+                          <th className="py-2.5 px-3">Rep Range</th>
+                          <th className="py-2.5 px-3">Intensity (RPE)</th>
+                          <th className="py-2.5 px-3">Rest Interval</th>
+                          <th className="py-2.5 px-3">Execution Directive</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/40">
+                        {dayItem.exercises.map((ex, exIdx) => (
+                          <tr key={exIdx} className="hover:bg-slate-900/40 transition">
+                            <td className="py-3 px-3 font-bold text-white uppercase">{ex.name}</td>
+                            <td className="py-3 px-3 font-mono text-indigo-300 font-semibold">{ex.sets}</td>
+                            <td className="py-3 px-3 font-mono text-slate-200">{ex.reps}</td>
+                            <td className="py-3 px-3 font-mono text-amber-400 font-bold">{ex.rpe}</td>
+                            <td className="py-3 px-3 font-mono text-slate-400">{ex.rest}</td>
+                            <td className="py-3 px-3 text-[11px] text-slate-400 italic">{ex.tip}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
+
                 </div>
               ))}
             </div>
 
-            {/* QUICK BRIDGE ACTION FOOTER */}
-            <div className="pt-3 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
-              <span className="text-zinc-400 text-[11px]">Ready to begin today's assigned training block?</span>
-              {onLaunchRoutineInTracker && (
-                <button
-                  type="button"
-                  onClick={onLaunchRoutineInTracker}
-                  className="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 text-zinc-950 font-black px-4 py-2.5 rounded-xl transition flex items-center justify-center space-x-2 shadow-lg shadow-amber-400/20"
-                >
-                  <Play className="h-4 w-4 fill-zinc-950" />
-                  <span>Start Live Workout Tracker</span>
-                </button>
-              )}
-            </div>
-
           </div>
-
         </div>
-
-      </div>
+      )}
 
     </div>
   )
