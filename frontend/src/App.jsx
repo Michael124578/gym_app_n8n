@@ -21,6 +21,8 @@ import MobilityRecoveryGuide from './components/MobilityRecoveryGuide'
 import BarbellWarmupCalculator from './components/BarbellWarmupCalculator'
 import CoachingChat from './components/CoachingChat'
 import POSInvoiceGenerator from './components/POSInvoiceGenerator'
+import MuscleRecoveryInsights from './components/MuscleRecoveryInsights'
+import PrintableWorkoutSheet from './components/PrintableWorkoutSheet'
 import TrainerDashboard from './pages/TrainerDashboard'
 import MemberPortal from './pages/MemberPortal'
 import Login from './pages/Login'
@@ -159,6 +161,12 @@ export default function App() {
                   initialExercise={selectedExerciseForWorkout} 
                 />
               )}
+              {activeTab === 'recovery_insights' && (
+                <MuscleRecoveryInsights session={session} />
+              )}
+              {activeTab === 'printable_sheets' && (
+                <PrintableWorkoutSheet session={session} />
+              )}
               {activeTab === 'warmup_calc' && (
                 <BarbellWarmupCalculator 
                   onSendToTracker={() => setActiveTab('workout_tracker')} 
@@ -240,6 +248,12 @@ export default function App() {
               {activeTab === 'coaching_chat' && (
                 <CoachingChat session={session} userRole={role} />
               )}
+              {activeTab === 'recovery_insights' && (
+                <MuscleRecoveryInsights session={session} />
+              )}
+              {activeTab === 'printable_sheets' && (
+                <PrintableWorkoutSheet session={session} />
+              )}
               {activeTab === 'occupancy' && (
                 <GymOccupancyHeatmap userRole={role} />
               )}
@@ -281,6 +295,12 @@ export default function App() {
               )}
               {activeTab === 'coaching_chat' && (
                 <CoachingChat session={session} userRole={role} />
+              )}
+              {activeTab === 'printable_sheets' && (
+                <PrintableWorkoutSheet session={session} />
+              )}
+              {activeTab === 'recovery_insights' && (
+                <MuscleRecoveryInsights session={session} />
               )}
               {activeTab === 'exercises' && (
                 <ExerciseLibrary 
