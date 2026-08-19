@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   TrendingUp, TrendingDown, DollarSign, Activity, Users, Calendar, 
   Clock, ArrowUpRight, ArrowDownRight, Download, RefreshCw, Zap, 
-  ShieldAlert, CheckCircle2, Sparkles, Filter, BarChart3, CreditCard, 
+  ShieldAlert, CheckCircle2, Filter, BarChart3, CreditCard, 
   Search, FileSpreadsheet, Phone, Mail, ChevronRight, AlertTriangle
 } from 'lucide-react'
 import { formatReadableDate } from '../utils/dateUtils'

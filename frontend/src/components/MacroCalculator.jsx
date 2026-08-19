@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Calculator, Flame, Droplet, Dumbbell, Sparkles, CheckCircle2, 
+  Calculator, Flame, Droplet, Dumbbell, CheckCircle2, 
   Save, RefreshCw, PieChart as PieIcon, Scale, HeartPulse, Utensils
 } from 'lucide-react'
 import DailyNutritionDiary from './DailyNutritionDiary'

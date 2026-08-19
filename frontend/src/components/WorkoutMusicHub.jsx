@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
-  Headphones, Play, Pause, Disc, Volume2, Sparkles, 
+  Headphones, Play, Pause, Disc, Volume2, 
   Flame, Radio, Music, ExternalLink, Zap, Heart
 } from 'lucide-react'
 

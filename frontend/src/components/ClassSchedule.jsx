@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Calendar, Clock, Users, Flame, Plus, CheckCircle, XCircle, 
-  MapPin, UserCheck, Search, Filter, Sparkles, ChevronRight, X, AlertCircle 
+  MapPin, UserCheck, Search, Filter, ChevronRight, X, AlertCircle 
 } from 'lucide-react'
 
 // Default classes seed if database table is initially unpopulated

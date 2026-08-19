@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Wrench, AlertTriangle, CheckCircle2, Clock, Plus, Trash2, Dumbbell, ShieldAlert, Sparkles, X } from 'lucide-react'
+import { Wrench, AlertTriangle, CheckCircle2, Clock, Plus, Trash2, Dumbbell, ShieldAlert, X } from 'lucide-react'
 
 export default function EquipmentMaintenance({ userRole }) {
   const [tickets, setTickets] = useState([])

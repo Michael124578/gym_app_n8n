@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  KeyRound, Lock, Unlock, ShieldCheck, Sparkles, UserCheck, 
+  KeyRound, Lock, Unlock, ShieldCheck, UserCheck, 
   AlertCircle, RefreshCw, X, CheckCircle2, Shield, Info 
 } from 'lucide-react'
 

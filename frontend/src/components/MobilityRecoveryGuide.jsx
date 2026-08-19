@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Heart, Play, Pause, RotateCcw, CheckCircle2, 
-  Sparkles, Flame, ShieldCheck, Dumbbell, Clock, 
+  Flame, ShieldCheck, Dumbbell, Clock, 
   Volume2, VolumeX, ChevronRight, Activity, Zap
 } from 'lucide-react'
 

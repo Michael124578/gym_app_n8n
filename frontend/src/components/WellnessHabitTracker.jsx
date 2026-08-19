@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Droplet, CheckCircle2, Flame, Moon, Footprints, 
-  Sparkles, Award, RotateCcw, Plus, Utensils, Heart, 
+  Award, RotateCcw, Plus, Utensils, Heart, 
   Pill, ShieldCheck, Zap
 } from 'lucide-react'
 

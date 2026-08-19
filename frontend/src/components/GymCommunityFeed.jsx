@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Flame, Trophy, Megaphone, Heart, MessageSquare, Award, 
-  Sparkles, Send, Plus, Pin, AlertCircle, Calendar, CheckCircle2, X 
+  Send, Plus, Pin, AlertCircle, Calendar, CheckCircle2, X,
+  Flame, Trophy, MessageSquare, ThumbsUp, Heart, Share2, Megaphone, User, Award
 } from 'lucide-react'
 
 const DEFAULT_POSTS = [

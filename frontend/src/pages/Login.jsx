@@ -5,7 +5,7 @@ import {
   Dumbbell, ChevronRight, Flame, Zap,
   CheckCircle2, Trophy, KeyRound, Activity,
   Eye, EyeOff, Radio, Shield, Users, Clock,
-  MapPin, Award, Check, Sparkles, ChevronDown,
+  MapPin, Award, Check, ChevronDown,
   Layers, Play, Phone, HelpCircle
 } from 'lucide-react'
 

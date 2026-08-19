@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Play, Pause, RotateCcw, Plus, Trash2, CheckCircle2, 
-  Flame, Trophy, Dumbbell, Timer, Calculator, Sparkles, 
+  Flame, Trophy, Dumbbell, Timer, Calculator, Layers, 
   ChevronRight, Award, Zap, Volume2, VolumeX, ShieldAlert,
   ArrowRight, Check, X
 } from 'lucide-react'

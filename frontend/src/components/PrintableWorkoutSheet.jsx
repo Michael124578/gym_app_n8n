@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { 
   FileText, Download, Printer, Plus, Trash2, 
-  QrCode, Dumbbell, Sparkles, CheckSquare, 
+  QrCode, Dumbbell, CheckSquare, 
   Layers, User, Calendar, Clock, Award
 } from 'lucide-react'
 import { toPng } from 'html-to-image'

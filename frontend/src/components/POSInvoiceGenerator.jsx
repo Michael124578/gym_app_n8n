@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Receipt, Download, Printer, Plus, Trash2, 
-  QrCode, CheckCircle2, ShieldCheck, Sparkles, 
+  QrCode, CheckCircle2, ShieldCheck, 
   Building2, CreditCard, Calendar, User, ShoppingBag
 } from 'lucide-react'
 import { toPng } from 'html-to-image'

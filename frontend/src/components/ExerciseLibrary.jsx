@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Dumbbell, Search, Filter, Play, CheckCircle2, AlertTriangle, 
-  Sparkles, Flame, Eye, Layers, ChevronRight, X, Plus, Info, 
+  Flame, Eye, Layers, ChevronRight, X, Plus, Info, 
   RotateCcw, Target, ShieldCheck, Zap
 } from 'lucide-react'
 

@@ -6,7 +6,7 @@ import {
 } from 'recharts'
 import { 
   Users, Activity, Radio, Clock, ShieldCheck, 
-  AlertCircle, Sparkles, Flame, Dumbbell, Heart, 
+  AlertCircle, Flame, Dumbbell, Heart, 
   Coffee, RefreshCw
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'

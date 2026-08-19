@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Utensils, Plus, Trash2, Search, Sparkles, Flame, 
+  Utensils, Plus, Trash2, Search, Flame, 
   CheckCircle2, PieChart, ChevronRight, X, RotateCcw, 
   Apple, Dumbbell, Coffee, Sun, Moon, Zap, Scale
 } from 'lucide-react'

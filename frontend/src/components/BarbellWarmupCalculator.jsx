@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Calculator, Dumbbell, Play, CheckCircle2, RotateCcw, 
-  Sparkles, Flame, ShieldCheck, ArrowRight, Layers, Trophy
+  Flame, ShieldCheck, ArrowRight, Layers, Trophy
 } from 'lucide-react'
 
 export default function BarbellWarmupCalculator({ onSendToTracker }) {

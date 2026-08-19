@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Activity, Zap, ShieldCheck, Clock, Flame, 
-  RotateCcw, Sparkles, AlertCircle, CheckCircle2, 
+  RotateCcw, AlertCircle, CheckCircle2, 
   TrendingUp, BarChart2, Dumbbell, Layers
 } from 'lucide-react'
 import { 

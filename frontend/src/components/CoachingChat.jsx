@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   MessageSquare, Send, User, Award, ShieldCheck, 
-  Sparkles, Flame, Check, CheckCheck, Clock, 
+  Flame, Check, CheckCheck, Clock, 
   Video, Paperclip, ChevronRight, Search, Circle
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'

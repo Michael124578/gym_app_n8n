@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Award, CheckCircle2, UserCheck, Calendar, PlusCircle, Trash2, UserPlus, Sparkles, Users, Clock } from 'lucide-react'
+import { Award, CheckCircle2, UserCheck, Calendar, PlusCircle, Trash2, UserPlus, Users, Clock } from 'lucide-react'
 import AddTrainerModal from './AddTrainerModal'
 
 export default function TrainerManagement({ session, userRole }) {

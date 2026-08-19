@@ -6,7 +6,7 @@ import {
 } from 'recharts'
 import { 
   TrendingUp, TrendingDown, Scale, Activity, Plus, 
-  Trash2, Sparkles, Image, CheckCircle2, ChevronLeft, 
+  Trash2, Image, CheckCircle2, ChevronLeft, 
   ChevronRight, Calendar, Ruler, Award, ShieldCheck
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'

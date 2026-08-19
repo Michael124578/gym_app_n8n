@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  ShoppingBag, ShoppingCart, Plus, Minus, Trash2, CheckCircle2, 
-  Sparkles, Tag, DollarSign, Search, Filter, X, CreditCard, 
-  Receipt, ArrowRight, Package, ShieldCheck 
+  ShoppingBag, Plus, Trash2, CheckCircle2, Package, 
+  Tag, DollarSign, Search, Filter, X, CreditCard, 
+  Minus, Receipt, ArrowRight, ShieldCheck, ShoppingCart
 } from 'lucide-react'
 
 const DEFAULT_PRODUCTS = [
