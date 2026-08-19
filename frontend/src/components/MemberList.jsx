@@ -30,57 +30,63 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
     setTimeout(() => setToastMessage(null), 3500)
   }
 
-  const fetchMembersAndStats = useCallback(async () => {
-    setLoading(true)
-
-    const { data: memberData } = await supabase
-      .from('members')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (memberData) setMembers(memberData)
-
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
-
-    const { data: todayCheckIns } = await supabase
-      .from('check_ins')
-      .select('checked_in_at')
-      .gte('checked_in_at', startOfToday.toISOString())
-
-    if (todayCheckIns) {
-      setTodayCheckInsCount(todayCheckIns.length)
-
-      const hoursCount = {}
-      todayCheckIns.forEach((item) => {
-        const hour = new Date(item.checked_in_at).getHours()
-        hoursCount[hour] = (hoursCount[hour] || 0) + 1
-      })
-
-      let maxHour = null
-      let maxCount = 0
-      Object.keys(hoursCount).forEach((h) => {
-        if (hoursCount[h] > maxCount) {
-          maxCount = hoursCount[h]
-          maxHour = h
-        }
-      })
-
-      if (maxHour !== null) {
-        setPeakHour(`${maxHour % 12 || 12}:00 ${maxHour >= 12 ? 'PM' : 'AM'}`)
-      }
+  const fetchMembersAndStats = useCallback(async (isInitial = false) => {
+    if (isInitial && members.length === 0) {
+      setLoading(true)
     }
 
-    setLoading(false)
-  }, [])
+    try {
+      const { data: memberData } = await supabase
+        .from('members')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (memberData) setMembers(memberData)
+
+      const startOfToday = new Date()
+      startOfToday.setHours(0, 0, 0, 0)
+
+      const { data: todayCheckIns } = await supabase
+        .from('check_ins')
+        .select('checked_in_at')
+        .gte('checked_in_at', startOfToday.toISOString())
+
+      if (todayCheckIns) {
+        setTodayCheckInsCount(todayCheckIns.length)
+
+        const hoursCount = {}
+        todayCheckIns.forEach((item) => {
+          const hour = new Date(item.checked_in_at).getHours()
+          hoursCount[hour] = (hoursCount[hour] || 0) + 1
+        })
+
+        let maxHour = null
+        let maxCount = 0
+        Object.keys(hoursCount).forEach((h) => {
+          if (hoursCount[h] > maxCount) {
+            maxCount = hoursCount[h]
+            maxHour = h
+          }
+        })
+
+        if (maxHour !== null) {
+          setPeakHour(`${maxHour % 12 || 12}:00 ${maxHour >= 12 ? 'PM' : 'AM'}`)
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching members:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [members.length])
 
   useEffect(() => {
-    fetchMembersAndStats()
+    fetchMembersAndStats(true)
 
     const memberChannel = supabase
       .channel('realtime-members')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, () => {
-        fetchMembersAndStats()
+        fetchMembersAndStats(false)
       })
       .subscribe()
 

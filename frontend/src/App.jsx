@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import AddMemberModal from './components/AddMemberModal'
 import MemberList from './components/MemberList'
 import QRScanner from './components/QRScanner'
@@ -29,52 +29,42 @@ import Login from './pages/Login'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import { supabase } from './lib/supabaseClient'
-import { 
-  QrCode, Dumbbell, Wrench, Users, Award, BarChart3, 
-  Calendar, ShoppingBag, Megaphone, User, KeyRound, Calculator,
-  Target, Activity, Scale, Radio, Droplet, Headphones, Flame, Layers
-} from 'lucide-react'
+import { Dumbbell } from 'lucide-react'
 
 export default function App() {
-  const [session, setSession] = useState(null)
-  const [role, setRole] = useState(null)
+  // Synchronous restoration from localStorage prevents tab-switch reload flicker
+  const [session, setSession] = useState(() => {
+    try {
+      const saved = localStorage.getItem('iron_gym_cached_session')
+      return saved ? JSON.parse(saved) : null
+    } catch (e) {
+      return null
+    }
+  })
+
+  const [role, setRole] = useState(() => {
+    return localStorage.getItem('iron_gym_cached_role') || null
+  })
+
+  const [activeTab, setActiveTabState] = useState(() => {
+    return localStorage.getItem('iron_gym_active_tab') || null
+  })
+
+  const [isAuthLoading, setIsAuthLoading] = useState(() => !session)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [activeTab, setActiveTab] = useState(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [selectedExerciseForWorkout, setSelectedExerciseForWorkout] = useState(null)
 
-  useEffect(() => {
-    // 1. Initial Session Check (Runs ONCE on app load)
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      if (currentSession) {
-        setSession(currentSession)
-        detectRole(currentSession, 'INITIAL_LOAD')
-      }
-    })
-
-    // 2. Auth Event Listener (Handles explicit login/logout while ignoring tab-switch token refreshes)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      // IGNORE background focus / token refresh events to prevent tab resets
-      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        if (currentSession) setSession(currentSession)
-        return
-      }
-
-      if (currentSession) {
-        setSession(currentSession)
-        detectRole(currentSession, event)
-      } else {
-        setSession(null)
-        setRole(null)
-        setActiveTab(null)
-      }
-    })
-
-    return () => subscription.unsubscribe()
+  const handleSetActiveTab = useCallback((tab) => {
+    if (!tab) return
+    setActiveTabState(tab)
+    localStorage.setItem('iron_gym_active_tab', tab)
   }, [])
 
-  const detectRole = async (userSession, authEvent) => {
+  const detectRole = useCallback(async (userSession, authEvent = 'CHECK') => {
+    if (!userSession?.user) return
+
     const email = userSession.user?.email || ''
     let detectedRole = 'member'
 
@@ -91,44 +81,136 @@ export default function App() {
     }
 
     setRole(detectedRole)
+    localStorage.setItem('iron_gym_cached_role', detectedRole)
 
-    // ONLY set the default tab on initial load or explicit SIGNED_IN event.
-    // Never reset activeTab if the user is already on a tab.
-    setActiveTab((prevTab) => {
+    // Preserve the active tab if valid, otherwise set default for role
+    setActiveTabState((prevTab) => {
+      const savedTab = localStorage.getItem('iron_gym_active_tab')
+      if (savedTab) return savedTab
       if (prevTab && authEvent !== 'SIGNED_IN') return prevTab
-      if (detectedRole === 'admin') return 'members'
-      if (detectedRole === 'trainer') return 'trainer_dashboard'
-      return 'portal'
+      
+      let defaultTab = 'portal'
+      if (detectedRole === 'admin') defaultTab = 'members'
+      else if (detectedRole === 'trainer') defaultTab = 'trainer_dashboard'
+
+      localStorage.setItem('iron_gym_active_tab', defaultTab)
+      return defaultTab
     })
-  }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    // 1. Initial Session Check (Runs ONCE on app load)
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      if (!mounted) return
+      if (currentSession) {
+        setSession(currentSession)
+        localStorage.setItem('iron_gym_cached_session', JSON.stringify(currentSession))
+        detectRole(currentSession, 'INITIAL_LOAD')
+      } else {
+        setSession(null)
+        setRole(null)
+        localStorage.removeItem('iron_gym_cached_session')
+        localStorage.removeItem('iron_gym_cached_role')
+        localStorage.removeItem('iron_gym_active_tab')
+      }
+      setIsAuthLoading(false)
+    })
+
+    // 2. Auth Event Listener (Handles explicit login/logout while ignoring tab-switch token refreshes)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (!mounted) return
+
+      // IGNORE background focus / token refresh events to prevent tab resets
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        if (currentSession) {
+          setSession(currentSession)
+          localStorage.setItem('iron_gym_cached_session', JSON.stringify(currentSession))
+        }
+        return
+      }
+
+      if (event === 'SIGNED_OUT' || !currentSession) {
+        setSession(null)
+        setRole(null)
+        setActiveTabState(null)
+        localStorage.removeItem('iron_gym_cached_session')
+        localStorage.removeItem('iron_gym_cached_role')
+        localStorage.removeItem('iron_gym_active_tab')
+        setIsAuthLoading(false)
+        return
+      }
+
+      if (currentSession) {
+        setSession(currentSession)
+        localStorage.setItem('iron_gym_cached_session', JSON.stringify(currentSession))
+        detectRole(currentSession, event)
+        setIsAuthLoading(false)
+      }
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [detectRole])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setSession(null)
     setRole(null)
-    setActiveTab(null)
+    setActiveTabState(null)
+    localStorage.removeItem('iron_gym_cached_session')
+    localStorage.removeItem('iron_gym_cached_role')
+    localStorage.removeItem('iron_gym_active_tab')
   }
 
-  if (!session && !role) {
-    return <Login onLoginSuccess={(s, detectedRole) => {
-      setSession(s)
-      setRole(detectedRole)
-      if (detectedRole === 'admin') setActiveTab('members')
-      else if (detectedRole === 'trainer') setActiveTab('trainer_dashboard')
-      else setActiveTab('portal')
-    }} />
+  // Initial Auth Loading Screen (Prevents flickering Login screen on page load or tab return)
+  if (isAuthLoading && !session) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
+        <div className="bg-indigo-600/20 border border-indigo-500/30 p-4 rounded-3xl animate-pulse">
+          <Dumbbell className="h-8 w-8 text-indigo-400 animate-spin" />
+        </div>
+        <p className="text-xs font-mono font-bold uppercase tracking-widest text-slate-400">
+          Syncing Iron Terminal...
+        </p>
+      </div>
+    )
   }
+
+  // Unauthenticated -> Landing / Login Page
+  if (!session) {
+    return (
+      <Login 
+        onLoginSuccess={(s, detectedRole) => {
+          setSession(s)
+          setRole(detectedRole)
+          localStorage.setItem('iron_gym_cached_session', JSON.stringify(s))
+          localStorage.setItem('iron_gym_cached_role', detectedRole)
+
+          let initialTab = 'portal'
+          if (detectedRole === 'admin') initialTab = 'members'
+          else if (detectedRole === 'trainer') initialTab = 'trainer_dashboard'
+
+          handleSetActiveTab(initialTab)
+        }} 
+      />
+    )
+  }
+
+  const currentActiveTab = activeTab || (role === 'admin' ? 'members' : role === 'trainer' ? 'trainer_dashboard' : 'portal')
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex relative overflow-x-hidden selection:bg-indigo-500 selection:text-white">
       
       {/* SIDEBAR NAVIGATION */}
       <Sidebar
-        activeTab={activeTab || (role === 'admin' ? 'members' : role === 'trainer' ? 'trainer_dashboard' : 'portal')}
-        setActiveTab={setActiveTab}
+        activeTab={currentActiveTab}
+        setActiveTab={handleSetActiveTab}
         role={role}
         onRegisterClick={() => setIsModalOpen(true)}
-        onLogout={handleLogout}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
       />
@@ -148,83 +230,136 @@ export default function App() {
           {/* MEMBER ROLE VIEWS */}
           {role === 'member' && (
             <div className="w-full flex-1">
-              {(activeTab === 'portal' || !activeTab) && (
+              {(currentActiveTab === 'portal' || !currentActiveTab) && (
                 <MemberPortal 
                   session={session} 
-                  onLogout={handleLogout} 
-                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  onNavigateTab={(tab) => handleSetActiveTab(tab)}
                 />
               )}
-              {activeTab === 'workout_tracker' && (
+              {currentActiveTab === 'workout_tracker' && (
                 <LiveWorkoutTracker 
                   session={session} 
                   initialExercise={selectedExerciseForWorkout} 
                 />
               )}
-              {activeTab === 'recovery_insights' && (
+              {currentActiveTab === 'recovery_insights' && (
                 <MuscleRecoveryInsights session={session} />
               )}
-              {activeTab === 'printable_sheets' && (
+              {currentActiveTab === 'printable_sheets' && (
                 <PrintableWorkoutSheet session={session} />
               )}
-              {activeTab === 'warmup_calc' && (
+              {currentActiveTab === 'warmup_calc' && (
                 <BarbellWarmupCalculator 
-                  onSendToTracker={() => setActiveTab('workout_tracker')} 
+                  onSendToTracker={() => handleSetActiveTab('workout_tracker')} 
                 />
               )}
-              {activeTab === 'mobility' && (
+              {currentActiveTab === 'mobility' && (
                 <MobilityRecoveryGuide />
               )}
-              {activeTab === 'exercises' && (
+              {currentActiveTab === 'exercises' && (
                 <ExerciseLibrary 
                   onSelectExerciseForWorkout={(ex) => {
                     setSelectedExerciseForWorkout(ex)
-                    setActiveTab('workout_tracker')
+                    handleSetActiveTab('workout_tracker')
                   }} 
                 />
               )}
-              {activeTab === 'ai_generator' && (
+              {currentActiveTab === 'ai_generator' && (
                 <AiRoutineGenerator 
-                  onLaunchRoutineInTracker={() => setActiveTab('workout_tracker')} 
+                  onLaunchRoutineInTracker={() => handleSetActiveTab('workout_tracker')} 
                 />
               )}
-              {activeTab === 'body_vault' && (
+              {currentActiveTab === 'body_vault' && (
                 <BodyProgressVault session={session} />
               )}
-              {activeTab === 'wellness' && (
+              {currentActiveTab === 'wellness' && (
                 <WellnessHabitTracker session={session} />
               )}
-              {activeTab === 'coaching_chat' && (
+              {currentActiveTab === 'coaching_chat' && (
                 <CoachingChat session={session} userRole={role} />
               )}
-              {activeTab === 'invoices' && (
+              {currentActiveTab === 'invoices' && (
                 <POSInvoiceGenerator session={session} />
               )}
-              {activeTab === 'occupancy' && (
+              {currentActiveTab === 'occupancy' && (
                 <GymOccupancyHeatmap userRole={role} />
               )}
-              {activeTab === 'music' && (
+              {currentActiveTab === 'music' && (
                 <WorkoutMusicHub />
               )}
-              {activeTab === 'classes' && (
-                <ClassSchedule session={session} userRole={role} />
-              )}
-              {activeTab === 'shop' && (
-                <GymShop session={session} userRole={role} />
-              )}
-              {activeTab === 'community' && (
-                <GymCommunityFeed session={session} userRole={role} />
-              )}
-              {activeTab === 'nutrition' && (
+              {currentActiveTab === 'nutrition' && (
                 <MacroCalculator session={session} />
               )}
-              {activeTab === 'lockers' && (
+              {currentActiveTab === 'classes' && (
+                <ClassSchedule session={session} userRole={role} />
+              )}
+              {currentActiveTab === 'shop' && (
+                <GymShop session={session} userRole={role} />
+              )}
+              {currentActiveTab === 'lockers' && (
                 <LockerManagement session={session} userRole={role} />
               )}
-              {activeTab === 'trainers' && (
+              {currentActiveTab === 'community' && (
+                <GymCommunityFeed session={session} userRole={role} />
+              )}
+              {currentActiveTab === 'trainers' && (
                 <TrainerManagement session={session} userRole={role} />
               )}
-              {activeTab === 'maintenance' && (
+            </div>
+          )}
+
+          {/* TRAINER ROLE VIEWS */}
+          {role === 'trainer' && (
+            <div className="w-full flex-1">
+              {(currentActiveTab === 'trainer_dashboard' || !currentActiveTab) && (
+                <TrainerDashboard session={session} />
+              )}
+              {currentActiveTab === 'coaching_chat' && (
+                <CoachingChat session={session} userRole={role} />
+              )}
+              {currentActiveTab === 'printable_sheets' && (
+                <PrintableWorkoutSheet session={session} />
+              )}
+              {currentActiveTab === 'recovery_insights' && (
+                <MuscleRecoveryInsights session={session} />
+              )}
+              {currentActiveTab === 'ai_generator' && (
+                <AiRoutineGenerator 
+                  onLaunchRoutineInTracker={() => handleSetActiveTab('workout_tracker')} 
+                />
+              )}
+              {currentActiveTab === 'exercises' && (
+                <ExerciseLibrary 
+                  onSelectExerciseForWorkout={(ex) => {
+                    setSelectedExerciseForWorkout(ex)
+                    handleSetActiveTab('workout_tracker')
+                  }} 
+                />
+              )}
+              {currentActiveTab === 'workout_tracker' && (
+                <LiveWorkoutTracker 
+                  session={session} 
+                  initialExercise={selectedExerciseForWorkout} 
+                />
+              )}
+              {currentActiveTab === 'warmup_calc' && (
+                <BarbellWarmupCalculator 
+                  onSendToTracker={() => handleSetActiveTab('workout_tracker')} 
+                />
+              )}
+              {currentActiveTab === 'mobility' && (
+                <MobilityRecoveryGuide />
+              )}
+              {currentActiveTab === 'nutrition' && (
+                <MacroCalculator session={session} />
+              )}
+              {currentActiveTab === 'classes' && (
+                <ClassSchedule session={session} userRole={role} />
+              )}
+              {currentActiveTab === 'community' && (
+                <GymCommunityFeed session={session} userRole={role} />
+              )}
+              {currentActiveTab === 'maintenance' && (
                 <EquipmentMaintenance userRole={role} />
               )}
             </div>
@@ -233,276 +368,63 @@ export default function App() {
           {/* ADMIN ROLE VIEWS */}
           {role === 'admin' && (
             <div className="w-full flex-1">
-              {(activeTab === 'members' || !activeTab) && (
+              {(currentActiveTab === 'members' || !currentActiveTab) && (
                 <MemberList 
                   refreshTrigger={refreshTrigger} 
-                  onOpenAddMemberModal={() => setIsModalOpen(true)} 
+                  onOpenAddMemberModal={() => setIsModalOpen(true)}
                 />
               )}
-              {activeTab === 'scanner' && (
+              {currentActiveTab === 'scanner' && (
                 <QRScanner onScanComplete={() => setRefreshTrigger((prev) => prev + 1)} />
               )}
-              {activeTab === 'analytics' && (
+              {currentActiveTab === 'analytics' && (
                 <AdminAnalytics />
               )}
-              {activeTab === 'invoices' && (
+              {currentActiveTab === 'invoices' && (
                 <POSInvoiceGenerator session={session} />
               )}
-              {activeTab === 'coaching_chat' && (
-                <CoachingChat session={session} userRole={role} />
-              )}
-              {activeTab === 'recovery_insights' && (
-                <MuscleRecoveryInsights session={session} />
-              )}
-              {activeTab === 'printable_sheets' && (
-                <PrintableWorkoutSheet session={session} />
-              )}
-              {activeTab === 'occupancy' && (
+              {currentActiveTab === 'occupancy' && (
                 <GymOccupancyHeatmap userRole={role} />
               )}
-              {activeTab === 'exercises' && (
-                <ExerciseLibrary />
-              )}
-              {activeTab === 'classes' && (
+              {currentActiveTab === 'classes' && (
                 <ClassSchedule session={session} userRole={role} />
               )}
-              {activeTab === 'shop' && (
+              {currentActiveTab === 'shop' && (
                 <GymShop session={session} userRole={role} />
               )}
-              {activeTab === 'community' && (
-                <GymCommunityFeed session={session} userRole={role} />
-              )}
-              {activeTab === 'lockers' && (
+              {currentActiveTab === 'lockers' && (
                 <LockerManagement session={session} userRole={role} />
               )}
-              {activeTab === 'maintenance' && (
+              {currentActiveTab === 'maintenance' && (
                 <EquipmentMaintenance userRole={role} />
               )}
-              {activeTab === 'trainers' && (
+              {currentActiveTab === 'trainers' && (
                 <TrainerManagement session={session} userRole={role} />
               )}
-
-              <AddMemberModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onMemberAdded={() => setRefreshTrigger((prev) => prev + 1)}
-              />
-            </div>
-          )}
-
-          {/* TRAINER ROLE VIEWS */}
-          {role === 'trainer' && (
-            <div className="w-full flex-1">
-              {(activeTab === 'trainer_dashboard' || !activeTab) && (
-                <TrainerDashboard session={session} />
-              )}
-              {activeTab === 'coaching_chat' && (
+              {currentActiveTab === 'coaching_chat' && (
                 <CoachingChat session={session} userRole={role} />
               )}
-              {activeTab === 'printable_sheets' && (
-                <PrintableWorkoutSheet session={session} />
-              )}
-              {activeTab === 'recovery_insights' && (
-                <MuscleRecoveryInsights session={session} />
-              )}
-              {activeTab === 'exercises' && (
-                <ExerciseLibrary 
-                  onSelectExerciseForWorkout={(ex) => {
-                    setSelectedExerciseForWorkout(ex)
-                    setActiveTab('workout_tracker')
-                  }} 
-                />
-              )}
-              {activeTab === 'ai_generator' && (
-                <AiRoutineGenerator 
-                  onLaunchRoutineInTracker={() => setActiveTab('workout_tracker')} 
-                />
-              )}
-              {activeTab === 'workout_tracker' && (
-                <LiveWorkoutTracker 
-                  session={session} 
-                  initialExercise={selectedExerciseForWorkout} 
-                />
-              )}
-              {activeTab === 'warmup_calc' && (
-                <BarbellWarmupCalculator 
-                  onSendToTracker={() => setActiveTab('workout_tracker')} 
-                />
-              )}
-              {activeTab === 'mobility' && (
-                <MobilityRecoveryGuide />
-              )}
-              {activeTab === 'classes' && (
-                <ClassSchedule session={session} userRole={role} />
-              )}
-              {activeTab === 'community' && (
+              {currentActiveTab === 'community' && (
                 <GymCommunityFeed session={session} userRole={role} />
               )}
-              {activeTab === 'nutrition' && (
-                <MacroCalculator session={session} />
-              )}
-              {activeTab === 'maintenance' && (
-                <EquipmentMaintenance userRole={role} />
+              {currentActiveTab === 'exercises' && (
+                <ExerciseLibrary />
               )}
             </div>
           )}
+
         </main>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-2xl border-t border-slate-800 flex justify-around items-center py-2 px-1 shadow-2xl">
-        {role === 'member' && (
-          <>
-            <button
-              onClick={() => setActiveTab('portal')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
-                activeTab === 'portal' || !activeTab ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <User className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Pass</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('classes')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
-                activeTab === 'classes' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Calendar className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Classes</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('shop')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
-                activeTab === 'shop' ? 'text-emerald-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <ShoppingBag className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Shop</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('community')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
-                activeTab === 'community' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Megaphone className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Feed</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('nutrition')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
-                activeTab === 'nutrition' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Calculator className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Macros</span>
-            </button>
-          </>
-        )}
-
-        {role === 'admin' && (
-          <>
-            <button
-              onClick={() => setActiveTab('members')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
-                activeTab === 'members' || !activeTab ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Users className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Roster</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('scanner')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
-                activeTab === 'scanner' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <QrCode className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Gate</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
-                activeTab === 'analytics' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <BarChart3 className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Analytics</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('classes')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
-                activeTab === 'classes' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Calendar className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Classes</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('shop')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition ${
-                activeTab === 'shop' ? 'text-emerald-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <ShoppingBag className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">POS</span>
-            </button>
-          </>
-        )}
-
-        {role === 'trainer' && (
-          <>
-            <button
-              onClick={() => setActiveTab('trainer_dashboard')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'trainer_dashboard' || !activeTab ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Award className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Clients</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('classes')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'classes' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Calendar className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Schedule</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('community')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'community' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Megaphone className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Feed</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('nutrition')}
-              className={`flex flex-col items-center py-1 px-3 rounded-xl transition ${
-                activeTab === 'nutrition' ? 'text-indigo-400 font-extrabold' : 'text-slate-400'
-              }`}
-            >
-              <Calculator className="h-5 w-5 mb-0.5" />
-              <span className="text-[9px] uppercase font-mono">Macros</span>
-            </button>
-          </>
-        )}
-      </div>
+      {/* REGISTER MEMBER MODAL (FOR ADMINS) */}
+      <AddMemberModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onMemberAdded={() => {
+          setRefreshTrigger((prev) => prev + 1)
+          setIsModalOpen(false)
+        }}
+      />
     </div>
   )
 }

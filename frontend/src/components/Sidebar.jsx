@@ -223,25 +223,15 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* SYSTEM STATUS & LOGOUT FOOTER */}
-        <div className="pt-3 mt-2 border-t border-slate-800/80 shrink-0 space-y-2">
-          <div className="px-2 flex items-center justify-between text-[9px] font-mono text-slate-500">
-            <span className="flex items-center space-x-1">
+        {/* SYSTEM STATUS FOOTER */}
+        <div className="pt-3 mt-2 border-t border-slate-800/80 shrink-0">
+          <div className="px-2 py-1 flex items-center justify-between text-[9px] font-mono text-slate-500 bg-slate-900/60 rounded-xl border border-slate-800/60">
+            <span className="flex items-center space-x-1.5">
               <Zap className="h-2.5 w-2.5 text-emerald-400" />
               <span>Iron OS v2.5</span>
             </span>
             <span className="text-emerald-400 font-bold">100% ONLINE</span>
           </div>
-
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-rose-400 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-rose-500/30 transition cursor-pointer"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Exit System</span>
-            </button>
-          )}
         </div>
       </aside>
     </>
