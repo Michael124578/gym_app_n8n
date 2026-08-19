@@ -17,6 +17,10 @@ import GymOccupancyHeatmap from './components/GymOccupancyHeatmap'
 import WellnessHabitTracker from './components/WellnessHabitTracker'
 import WorkoutMusicHub from './components/WorkoutMusicHub'
 import AiRoutineGenerator from './components/AiRoutineGenerator'
+import MobilityRecoveryGuide from './components/MobilityRecoveryGuide'
+import BarbellWarmupCalculator from './components/BarbellWarmupCalculator'
+import CoachingChat from './components/CoachingChat'
+import POSInvoiceGenerator from './components/POSInvoiceGenerator'
 import TrainerDashboard from './pages/TrainerDashboard'
 import MemberPortal from './pages/MemberPortal'
 import Login from './pages/Login'
@@ -155,6 +159,14 @@ export default function App() {
                   initialExercise={selectedExerciseForWorkout} 
                 />
               )}
+              {activeTab === 'warmup_calc' && (
+                <BarbellWarmupCalculator 
+                  onSendToTracker={() => setActiveTab('workout_tracker')} 
+                />
+              )}
+              {activeTab === 'mobility' && (
+                <MobilityRecoveryGuide />
+              )}
               {activeTab === 'exercises' && (
                 <ExerciseLibrary 
                   onSelectExerciseForWorkout={(ex) => {
@@ -173,6 +185,12 @@ export default function App() {
               )}
               {activeTab === 'wellness' && (
                 <WellnessHabitTracker session={session} />
+              )}
+              {activeTab === 'coaching_chat' && (
+                <CoachingChat session={session} userRole={role} />
+              )}
+              {activeTab === 'invoices' && (
+                <POSInvoiceGenerator session={session} />
               )}
               {activeTab === 'occupancy' && (
                 <GymOccupancyHeatmap userRole={role} />
@@ -216,6 +234,12 @@ export default function App() {
               {activeTab === 'analytics' && (
                 <AdminAnalytics />
               )}
+              {activeTab === 'invoices' && (
+                <POSInvoiceGenerator session={session} />
+              )}
+              {activeTab === 'coaching_chat' && (
+                <CoachingChat session={session} userRole={role} />
+              )}
               {activeTab === 'occupancy' && (
                 <GymOccupancyHeatmap userRole={role} />
               )}
@@ -255,6 +279,9 @@ export default function App() {
               {(activeTab === 'trainer_dashboard' || !activeTab) && (
                 <TrainerDashboard session={session} />
               )}
+              {activeTab === 'coaching_chat' && (
+                <CoachingChat session={session} userRole={role} />
+              )}
               {activeTab === 'exercises' && (
                 <ExerciseLibrary 
                   onSelectExerciseForWorkout={(ex) => {
@@ -273,6 +300,14 @@ export default function App() {
                   session={session} 
                   initialExercise={selectedExerciseForWorkout} 
                 />
+              )}
+              {activeTab === 'warmup_calc' && (
+                <BarbellWarmupCalculator 
+                  onSendToTracker={() => setActiveTab('workout_tracker')} 
+                />
+              )}
+              {activeTab === 'mobility' && (
+                <MobilityRecoveryGuide />
               )}
               {activeTab === 'classes' && (
                 <ClassSchedule session={session} userRole={role} />

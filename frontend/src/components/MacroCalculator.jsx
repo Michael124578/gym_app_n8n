@@ -2,10 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Calculator, Flame, Droplet, Dumbbell, Sparkles, CheckCircle2, 
-  Save, RefreshCw, PieChart as PieIcon, Scale, HeartPulse 
+  Save, RefreshCw, PieChart as PieIcon, Scale, HeartPulse, Utensils
 } from 'lucide-react'
+import DailyNutritionDiary from './DailyNutritionDiary'
 
 export default function MacroCalculator({ session }) {
+  const [activeView, setActiveView] = useState('diary') // 'diary' | 'calculator'
   const [gender, setGender] = useState('male') // 'male', 'female'
   const [age, setAge] = useState('26')
   const [weightKg, setWeightKg] = useState('78')
@@ -119,35 +121,67 @@ export default function MacroCalculator({ session }) {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      
-      {/* HEADER BANNER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-950/80 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl shadow-xl">
-        <div>
-          <div className="flex items-center space-x-2">
-            <span className="p-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl">
-              <Calculator className="h-5 w-5" />
-            </span>
-            <h2 className="text-xl font-black text-white tracking-tight">MACRO & NUTRITION ENGINE</h2>
-            <span className="text-[10px] uppercase font-mono px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">
-              ATHLETE SCIENCE
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Precision daily caloric & macronutrient targets tailored to your muscle hypertrophy and body composition goals
-          </p>
-        </div>
+    <div className="space-y-6 animate-fadeIn max-w-6xl mx-auto">
+      {/* NUTRITION NAVIGATION TABS */}
+      <div className="flex bg-slate-900 p-1.5 rounded-2xl border border-slate-800 w-fit max-w-full">
+        <button
+          type="button"
+          onClick={() => setActiveView('diary')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+            activeView === 'diary'
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Utensils className="h-4 w-4" />
+          <span>Daily Food Diary & Meal Logger</span>
+        </button>
 
         <button
-          onClick={handleSaveProfile}
-          className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-600/25 flex items-center space-x-2 transition"
+          type="button"
+          onClick={() => setActiveView('calculator')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+            activeView === 'calculator'
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+              : 'text-slate-400 hover:text-white'
+          }`}
         >
-          <Save className="h-4 w-4" />
-          <span>Save to Profile</span>
+          <Calculator className="h-4 w-4" />
+          <span>TDEE & Macro Split Calculator</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {activeView === 'diary' ? (
+        <DailyNutritionDiary session={session} />
+      ) : (
+        <>
+          {/* HEADER HERO */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800/80 p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xl">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="p-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl">
+                  <Calculator className="h-5 w-5" />
+                </span>
+                <h2 className="text-xl font-black text-white tracking-tight">MACRO & NUTRITION ENGINE</h2>
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">
+                  ATHLETE SCIENCE
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Precision daily caloric & macronutrient targets tailored to your muscle hypertrophy and body composition goals
+              </p>
+            </div>
+
+            <button
+              onClick={handleSaveProfile}
+              className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-600/25 flex items-center space-x-2 transition"
+            >
+              <Save className="h-4 w-4" />
+              <span>Save to Profile</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* INPUT CONFIGURATION PANEL (5 COLS) */}
         <div className="lg:col-span-5 bg-slate-950/80 backdrop-blur-xl border border-slate-800/80 p-6 rounded-3xl shadow-xl space-y-4 text-xs">
@@ -361,6 +395,8 @@ export default function MacroCalculator({ session }) {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* TOAST NOTIFICATION */}
       <AnimatePresence>

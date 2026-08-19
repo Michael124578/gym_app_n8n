@@ -3,7 +3,8 @@ import {
   Users, QrCode, BarChart3, PlusCircle, LogOut, Shield, 
   X, User, Wrench, Dumbbell, Award, Calendar, ShoppingBag, 
   Megaphone, KeyRound, Calculator, Sparkles, Target, Activity,
-  Scale, Radio, Droplet, Headphones, Flame
+  Scale, Radio, Droplet, Headphones, Flame, Heart, MessageSquare, 
+  Receipt, Layers
 } from 'lucide-react'
 
 export default function Sidebar({ 
@@ -19,10 +20,12 @@ export default function Sidebar({
     { id: 'members', label: 'Member Roster', icon: Users },
     { id: 'scanner', label: 'QR Gate Scanner', icon: QrCode },
     { id: 'analytics', label: 'Analytics & Revenue', icon: BarChart3 },
+    { id: 'invoices', label: 'POS & Invoices', icon: Receipt },
     { id: 'occupancy', label: 'Live Gym Traffic', icon: Radio },
     { id: 'classes', label: 'Group Classes', icon: Calendar },
     { id: 'shop', label: 'Fuel Bar & POS', icon: ShoppingBag },
     { id: 'exercises', label: 'Exercise Library', icon: Target },
+    { id: 'coaching_chat', label: 'Coaching Messages', icon: MessageSquare },
     { id: 'community', label: 'Community Feed', icon: Megaphone },
     { id: 'lockers', label: 'Digital Lockers', icon: KeyRound },
     { id: 'maintenance', label: 'Equipment & Repairs', icon: Wrench },
@@ -31,28 +34,35 @@ export default function Sidebar({
 
   const trainerNavItems = [
     { id: 'trainer_dashboard', label: 'Coach Dashboard', icon: Award },
+    { id: 'coaching_chat', label: 'Client Messages', icon: MessageSquare },
     { id: 'exercises', label: 'Exercise Library', icon: Target },
     { id: 'ai_generator', label: 'AI Routine Builder', icon: Sparkles },
     { id: 'workout_tracker', label: 'Live Workout Logger', icon: Flame },
+    { id: 'warmup_calc', label: 'Warmup Calculator', icon: Layers },
+    { id: 'mobility', label: 'Mobility & Warmup', icon: Heart },
     { id: 'classes', label: 'Group Classes', icon: Calendar },
     { id: 'community', label: 'Community Feed', icon: Megaphone },
-    { id: 'nutrition', label: 'Macro Calculator', icon: Calculator },
+    { id: 'nutrition', label: 'Food Diary & Macros', icon: Calculator },
     { id: 'maintenance', label: 'Report Machine Issue', icon: Wrench },
   ]
 
   const memberNavItems = [
     { id: 'portal', label: 'Pass & Workouts', icon: User },
     { id: 'workout_tracker', label: 'Live Workout Tracker', icon: Flame },
+    { id: 'warmup_calc', label: 'Warmup Calculator', icon: Layers },
     { id: 'exercises', label: 'Exercise Library', icon: Target },
+    { id: 'mobility', label: 'Mobility & Warmup', icon: Heart },
     { id: 'ai_generator', label: 'AI Routine Builder', icon: Sparkles },
     { id: 'body_vault', label: 'Body Progress Vault', icon: Scale },
     { id: 'wellness', label: 'Hydration & Habits', icon: Droplet },
+    { id: 'nutrition', label: 'Food Diary & Macros', icon: Calculator },
+    { id: 'coaching_chat', label: 'Coach Direct Chat', icon: MessageSquare },
     { id: 'occupancy', label: 'Live Gym Heatmap', icon: Radio },
     { id: 'music', label: 'Workout Beats Hub', icon: Headphones },
+    { id: 'invoices', label: 'Receipts & Invoices', icon: Receipt },
     { id: 'classes', label: 'Book Classes', icon: Calendar },
     { id: 'shop', label: 'Fuel Bar & Shop', icon: ShoppingBag },
     { id: 'community', label: 'Community Feed', icon: Megaphone },
-    { id: 'nutrition', label: 'Macro Calculator', icon: Calculator },
     { id: 'lockers', label: 'Digital Lockers', icon: KeyRound },
     { id: 'trainers', label: 'Hire a Trainer', icon: Dumbbell },
     { id: 'maintenance', label: 'Report Machine Issue', icon: Wrench },
