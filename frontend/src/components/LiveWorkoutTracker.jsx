@@ -7,6 +7,7 @@ import {
   ArrowRight, Check, X
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import PrCelebrationModal from './PrCelebrationModal'
 
 // Web Audio API Synth Chime for Rest Timer Alert
 const playChimeSound = () => {
@@ -163,6 +164,13 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
           const willBeCompleted = !s.completed
           if (willBeCompleted) {
             startRestTimer(restDuration)
+            if (s.isPR || s.weight >= 85) {
+              setPrModalData({
+                exerciseName: ex.name,
+                weight: s.weight,
+                reps: s.reps
+              })
+            }
           }
           return { ...s, completed: willBeCompleted }
         })
@@ -1087,6 +1095,16 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* PR CELEBRATION MODAL */}
+      <PrCelebrationModal
+        isOpen={!!prModalData}
+        onClose={() => setPrModalData(null)}
+        exerciseName={prModalData?.exerciseName}
+        weight={prModalData?.weight}
+        reps={prModalData?.reps}
+      />
+
     </div>
   )
 }
