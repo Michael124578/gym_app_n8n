@@ -35,6 +35,40 @@ export default function Login({ onLoginSuccess }) {
   const [demoPassScanned, setDemoPassScanned] = useState(false)
   const [simulatedTurnstileTime, setSimulatedTurnstileTime] = useState(new Date().toLocaleTimeString())
 
+  // Developer Laptop Device Verification Check
+  const isDeveloperLaptop = () => {
+    if (typeof window === 'undefined') return false
+
+    // 1. Vite Dev Environment Mode (npm run dev on your laptop)
+    if (import.meta.env.DEV) return true
+
+    // 2. Local Machine Hostnames (DESKTOP-85DEG21, localhost, 127.0.0.1)
+    const hostname = window.location.hostname.toLowerCase()
+    if (
+      hostname === 'localhost' || 
+      hostname === '127.0.0.1' || 
+      hostname === 'desktop-85deg21' || 
+      hostname.includes('desktop-85deg21')
+    ) {
+      return true
+    }
+
+    // 3. Persistent Browser Token for your developer laptop
+    const devToken = localStorage.getItem('iron_gym_dev_device_token')
+    if (devToken === 'authorized_dev_laptop_85DEG21') return true
+
+    return false
+  }
+
+  const handleDeveloperSecretUnlock = () => {
+    const key = window.prompt('Enter Developer Laptop Device Authorization Key:')
+    if (key === 'iron85deg21' || key === '85deg21') {
+      localStorage.setItem('iron_gym_dev_device_token', 'authorized_dev_laptop_85DEG21')
+      alert('Developer Laptop Authorized! Demo credentials unlocked for this browser.')
+      setShowDemoLogins(true)
+    }
+  }
+
   // ESC Listener to close Modal
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -902,7 +936,11 @@ export default function Login({ onLoginSuccess }) {
 
             {/* Modal Header */}
             <div className="text-center mb-6">
-              <div className="inline-flex bg-gradient-to-tr from-indigo-600 to-amber-500 p-3.5 rounded-2xl shadow-lg shadow-indigo-600/30 mb-3">
+              <div 
+                className="inline-flex bg-gradient-to-tr from-indigo-600 to-amber-500 p-3.5 rounded-2xl shadow-lg shadow-indigo-600/30 mb-3 cursor-pointer select-none"
+                onDoubleClick={handleDeveloperSecretUnlock}
+                title="Developer Laptop: Double click to authorize device key"
+              >
                 <Dumbbell className="h-7 w-7 text-white" />
               </div>
               <h2 className="text-xl font-black uppercase text-white tracking-tight">
@@ -971,37 +1009,39 @@ export default function Login({ onLoginSuccess }) {
               </PillButton>
             </form>
 
-            {/* Collapsible Demo Fill Bar for Testing */}
-            <div className="mt-6 pt-4 border-t border-slate-800/80">
-              <button
-                type="button"
-                onClick={() => setShowDemoLogins(!showDemoLogins)}
-                className="w-full text-center text-[10px] font-mono text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider flex items-center justify-center space-x-1"
-              >
-                <KeyRound className="h-3 w-3" />
-                <span>{showDemoLogins ? 'Hide Demo Logins' : 'Show Demo Testing Credentials'}</span>
-              </button>
+            {/* Collapsible Demo Fill Bar for Testing (RESTRICTED TO DEVELOPER LAPTOP DESKTOP-85DEG21 ONLY) */}
+            {isDeveloperLaptop() && (
+              <div className="mt-6 pt-4 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => setShowDemoLogins(!showDemoLogins)}
+                  className="w-full text-center text-[10px] font-mono text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider flex items-center justify-center space-x-1 cursor-pointer"
+                >
+                  <KeyRound className="h-3 w-3" />
+                  <span>{showDemoLogins ? 'Hide Demo Logins' : 'Show Demo Testing Credentials (Developer Laptop)'}</span>
+                </button>
 
-              {showDemoLogins && (
-                <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
-                  <button
-                    type="button"
-                    onClick={() => fillDemoAccount('admin@irongym.com', '123456789')}
-                    className="p-2 bg-slate-950 border border-slate-800 hover:border-indigo-500/50 rounded-lg text-slate-300 text-center font-mono"
-                  >
-                    Staff Admin
-                  </button>
+                {showDemoLogins && (
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => fillDemoAccount('admin@irongym.com', '123456789')}
+                      className="p-2 bg-slate-950 border border-slate-800 hover:border-indigo-500/50 rounded-lg text-slate-300 text-center font-mono cursor-pointer"
+                    >
+                      Staff Admin
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => fillDemoAccount('coach1@irongym.com', '123456789')}
-                    className="p-2 bg-slate-950 border border-slate-800 hover:border-amber-500/50 rounded-lg text-slate-300 text-center font-mono"
-                  >
-                    Coach Account
-                  </button>
-                </div>
-              )}
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => fillDemoAccount('coach1@irongym.com', '123456789')}
+                      className="p-2 bg-slate-950 border border-slate-800 hover:border-amber-500/50 rounded-lg text-slate-300 text-center font-mono cursor-pointer"
+                    >
+                      Coach Account
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
           </div>
         </div>
