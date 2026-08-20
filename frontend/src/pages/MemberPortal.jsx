@@ -16,6 +16,108 @@ import MembershipCard from '../components/MembershipCard'
 import GuestPassGenerator from '../components/GuestPassGenerator'
 import MemberAttendanceCalendar from '../components/MemberAttendanceCalendar'
 
+function WorkoutPRTracker({
+  splitType,
+  setSplitType,
+  exerciseName,
+  setExerciseName,
+  weightKg,
+  setWeightKg,
+  onLogWorkout,
+  onDeleteWorkout,
+  workouts = []
+}) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div className="flex items-center space-x-3">
+          <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-2xl text-amber-400">
+            <Dumbbell className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-white uppercase tracking-tight">Personal Records & Strength Vault</h3>
+            <p className="text-xs text-slate-400">Log hypertrophy PRs, 1RM milestones, and track session volume load.</p>
+          </div>
+        </div>
+
+        {/* SPLIT TYPE SELECTOR PILLS */}
+        <div className="flex space-x-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+          {['Push', 'Pull', 'Legs', 'Full Body'].map((split) => (
+            <button
+              key={split}
+              type="button"
+              onClick={() => setSplitType(split)}
+              className={`px-3 py-1 rounded-lg text-xs font-bold uppercase transition ${
+                splitType === split ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {split}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* QUICK LOG FORM */}
+      <form onSubmit={onLogWorkout} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <input
+          type="text"
+          required
+          placeholder="Exercise (e.g. Incline DB Bench)"
+          value={exerciseName}
+          onChange={(e) => setExerciseName(e.target.value)}
+          className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 transition"
+        />
+        <input
+          type="number"
+          required
+          step="0.5"
+          placeholder="Weight (kg)"
+          value={weightKg}
+          onChange={(e) => setWeightKg(e.target.value)}
+          className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-indigo-500 transition"
+        />
+        <button
+          type="submit"
+          className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-xl transition flex items-center justify-center space-x-2 shadow-lg cursor-pointer"
+        >
+          <Dumbbell className="h-4 w-4" />
+          <span>Record PR Milestone</span>
+        </button>
+      </form>
+
+      {/* RECENT LOGGED PRs LIST */}
+      {workouts.length > 0 ? (
+        <div className="space-y-2 pt-2">
+          {workouts.slice(0, 5).map((w) => (
+            <div key={w.id} className="p-3 bg-slate-950/70 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs">
+              <div className="flex items-center space-x-3">
+                <span className="text-[10px] font-mono uppercase bg-slate-800 px-2 py-0.5 rounded text-indigo-300 border border-slate-700">
+                  {w.split_type || splitType}
+                </span>
+                <span className="font-bold text-white">{w.exercise_name}</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <span className="font-mono text-amber-400 font-extrabold text-sm">{w.weight_kg} kg</span>
+                <button
+                  type="button"
+                  onClick={() => onDeleteWorkout(w.id)}
+                  className="text-slate-500 hover:text-rose-400 transition cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-slate-500 font-mono italic text-center py-2">
+          No personal records logged yet. Use the form above to record your top lifts!
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function MemberPortal({ session, onLogout, onNavigateTab }) {
   const [member, setMember] = useState(null)
   const [checkIns, setCheckIns] = useState([])

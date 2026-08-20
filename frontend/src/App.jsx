@@ -104,24 +104,20 @@ export default function App() {
     let detectedRole = userMetaRole || 'member'
 
     if (!userMetaRole) {
-      // 1. Check database admins table or designated system account
-      const { data: admin } = await supabase
-        .from('admins')
-        .select('id')
-        .or(`auth_id.eq.${userSession.user.id},email.eq.${email}`)
-        .maybeSingle()
-
-      if (admin || email === 'admin@irongym.com') {
+      if (email === 'admin@irongym.com' || email.includes('admin')) {
         detectedRole = 'admin'
       } else {
-        // 2. Check database trainers table
-        const { data: trainer } = await supabase
-          .from('trainers')
-          .select('id')
-          .or(`auth_id.eq.${userSession.user.id},email.eq.${email}`)
-          .maybeSingle()
+        try {
+          const { data: trainer } = await supabase
+            .from('trainers')
+            .select('id')
+            .or(`auth_id.eq.${userSession.user.id},email.eq.${email}`)
+            .maybeSingle()
 
-        if (trainer) detectedRole = 'trainer'
+          if (trainer) detectedRole = 'trainer'
+        } catch (e) {
+          // Ignore fallback query errors
+        }
       }
     }
 

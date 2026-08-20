@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
-import { UserPlus, CreditCard, AlertCircle, Eye, EyeOff, Phone, Mail, User, Lock, Calendar, ShieldCheck, Check } from 'lucide-react'
+import { UserPlus, CreditCard, AlertCircle, Eye, EyeOff, Phone, Mail, User, Lock, ShieldCheck, Check, Lock as LockIcon } from 'lucide-react'
 
 export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
   const [fullName, setFullName] = useState('')
@@ -44,7 +45,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     const presets = {
       'Day Pass': { amount: '250', days: 1 },
       'Monthly Pass': { amount: '1200', days: 30 },
-      '3-Month VIP': { amount: '3000', days: 90 },
+      '3-Month VIP': { amount: '3200', days: 90 },
       'Annual Pass': { amount: '9600', days: 365 }
     }
     if (presets[plan]) {
@@ -52,6 +53,8 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
       setDurationDays(presets[plan].days)
     }
   }
+
+  const isCustomPass = planName === 'Custom Pass'
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -62,8 +65,15 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     const cleanPhone = phone.trim()
 
     try {
-      // 1. Create Auth User directly via authenticated client
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // 1. Create Isolated Non-Persisted Supabase Auth Client to PREVENT ADMIN LOGOUT
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yprqvpkkatdgvfldxlni.supabase.co'
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcnF2cGtrYXRkZ3ZmbGR4bG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzNTQ5ODAsImV4cCI6MjA1NTkzMDk4MH0.g7wM7W1_92yE02yN2Q573Xg7X87Xg7X87Xg7X8'
+      
+      const isolatedAuthClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      })
+
+      const { data: authData, error: authError } = await isolatedAuthClient.auth.signUp({
         email: cleanEmail,
         password: password,
         options: { data: { full_name: fullName.trim(), phone: cleanPhone } }
@@ -77,7 +87,7 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
       const expiryDate = new Date()
       expiryDate.setDate(expiryDate.getDate() + parseInt(durationDays, 10))
 
-      // 2. Insert into public.members
+      // 2. Insert into public.members using active Admin client session
       const { data: member, error: memberError } = await supabase
         .from('members')
         .insert([{
@@ -249,52 +259,70 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
             </div>
           </div>
 
-          {/* PLAN SELECTOR PILLS */}
+          {/* PLAN SELECTOR PILLS WITH CUSTOM PASS OPTION */}
           <div>
             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Membership Tier</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {[
                 { name: 'Day Pass', desc: '1 Day' },
                 { name: 'Monthly Pass', desc: '30 Days' },
                 { name: '3-Month VIP', desc: '90 Days' },
-                { name: 'Annual Pass', desc: '365 Days' }
+                { name: 'Annual Pass', desc: '365 Days' },
+                { name: 'Custom Pass', desc: 'Custom' }
               ].map(p => (
                 <button
                   key={p.name}
                   type="button"
                   onClick={() => handlePlanChange(p.name)}
-                  className={`p-2.5 rounded-xl text-left border transition cursor-pointer ${
+                  className={`p-2 rounded-xl text-left border transition cursor-pointer ${
                     planName === p.name 
                       ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg' 
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <p className="font-bold text-[11px] uppercase truncate">{p.name}</p>
-                  <p className="text-[10px] font-mono text-slate-500">{p.desc}</p>
+                  <p className="font-bold text-[10px] uppercase truncate">{p.name}</p>
+                  <p className="text-[9px] font-mono text-slate-500">{p.desc}</p>
                 </button>
               ))}
             </div>
           </div>
 
+          {/* PAYMENT & DURATION FIELDS (LOCKED FOR PRESETS, EDITABLE ONLY FOR CUSTOM PASS) */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Payment Amount (EGP)</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Payment Amount (EGP)</label>
+                {!isCustomPass && <span className="text-[9px] font-mono text-slate-500 flex items-center gap-1"><LockIcon className="h-2.5 w-2.5" /> Preset Locked</span>}
+              </div>
               <input
                 type="number"
                 required
+                readOnly={!isCustomPass}
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-emerald-400 font-mono font-bold focus:outline-none focus:border-indigo-500 transition"
+                onChange={(e) => isCustomPass && setAmount(e.target.value)}
+                className={`w-full border rounded-xl px-4 py-3 text-xs font-mono font-bold transition ${
+                  isCustomPass 
+                    ? 'bg-slate-950 border-indigo-500 text-emerald-400 focus:outline-none' 
+                    : 'bg-slate-950/50 border-slate-800/80 text-emerald-400/80 cursor-not-allowed select-none'
+                }`}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Duration (Days)</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Duration (Days)</label>
+                {!isCustomPass && <span className="text-[9px] font-mono text-slate-500 flex items-center gap-1"><LockIcon className="h-2.5 w-2.5" /> Preset Locked</span>}
+              </div>
               <input
                 type="number"
                 required
+                readOnly={!isCustomPass}
                 value={durationDays}
-                onChange={(e) => setDurationDays(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-200 font-mono font-bold focus:outline-none focus:border-indigo-500 transition"
+                onChange={(e) => isCustomPass && setDurationDays(e.target.value)}
+                className={`w-full border rounded-xl px-4 py-3 text-xs font-mono font-bold transition ${
+                  isCustomPass 
+                    ? 'bg-slate-950 border-indigo-500 text-slate-200 focus:outline-none' 
+                    : 'bg-slate-950/50 border-slate-800/80 text-slate-400/80 cursor-not-allowed select-none'
+                }`}
               />
             </div>
           </div>
