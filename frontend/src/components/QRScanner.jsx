@@ -211,6 +211,41 @@ export default function QRScanner({ onScanComplete }) {
     setLoading(true)
     let memberQueryId = scannedValue
 
+    // Handle Demo Simulator Triggers
+    if (scannedValue === 'demo_vip_pass') {
+      playAudioFeedback(true)
+      triggerTerminalFlash('success')
+      dispatchTurnstileWebhook({
+        event: 'GATE_ENTRY_GRANTED',
+        member_name: 'Captain Alex Vance',
+        plan_name: 'VIP Titanium Annual Pass'
+      })
+      setScanResult({
+        success: true,
+        member: { full_name: 'Captain Alex Vance', plan_name: 'VIP Titanium Annual Pass', email: 'alex.vance@irongym.com' },
+        message: 'Turnstile Unlocked! Welcome, Captain Alex Vance.'
+      })
+      if (onScanComplete) onScanComplete()
+      setLoading(false)
+      return
+    }
+
+    if (scannedValue === 'demo_expired_pass') {
+      playAudioFeedback(false)
+      triggerTerminalFlash('error')
+      dispatchTurnstileWebhook({
+        event: 'ACCESS_DENIED',
+        reason: 'MEMBERSHIP_EXPIRED'
+      })
+      setScanResult({
+        success: false,
+        member: { full_name: 'Jordan Miller', plan_name: 'Monthly Pass (Expired)', email: 'jordan@example.com' },
+        message: 'Membership Pass Expired. Please renew at front desk or mobile app.'
+      })
+      setLoading(false)
+      return
+    }
+
     // Parse dynamic TOTP pass format: PASS-{idPrefix}-{timeStep}-{tokenPart}
     if (scannedValue.startsWith('PASS-')) {
       const parts = scannedValue.split('-')
@@ -648,10 +683,49 @@ export default function QRScanner({ onScanComplete }) {
           )}
         </AnimatePresence>
 
-        {/* ACTIVE CAMERA / SCAN RESULT */}
+        {/* ACTIVE CAMERA / SCAN RESULT WITH CYBER LASER RETICLE OVERLAY */}
         {!scanResult && (
-          <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-inner">
-            <div id={scannerElementId} className="w-full"></div>
+          <div className="space-y-3">
+            <div className="relative rounded-3xl overflow-hidden border border-slate-800/90 bg-slate-950 shadow-2xl group">
+              {/* LASER HUD CORNER BRACKETS */}
+              <div className="absolute top-4 left-4 h-6 w-6 border-t-2 border-l-2 border-indigo-400 z-20 pointer-events-none rounded-tl-lg" />
+              <div className="absolute top-4 right-4 h-6 w-6 border-t-2 border-r-2 border-indigo-400 z-20 pointer-events-none rounded-tr-lg" />
+              <div className="absolute bottom-4 left-4 h-6 w-6 border-b-2 border-l-2 border-indigo-400 z-20 pointer-events-none rounded-bl-lg" />
+              <div className="absolute bottom-4 right-4 h-6 w-6 border-b-2 border-r-2 border-indigo-400 z-20 pointer-events-none rounded-br-lg" />
+
+              {/* LASER SCANNING BEAM */}
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent z-20 pointer-events-none shadow-[0_0_15px_#22d3ee] animate-bounce opacity-75" />
+
+              <div id={scannerElementId} className="w-full"></div>
+            </div>
+
+            {/* LIVE SIMULATOR DEMO PASS SHORTCUTS */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-950/80 border border-slate-800 rounded-2xl">
+              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest flex items-center space-x-1.5">
+                <Radio className="h-3 w-3 text-indigo-400 animate-pulse" />
+                <span>Instant Terminal Test Simulator</span>
+              </span>
+
+              <div className="flex items-center gap-2">
+                <PillButton
+                  onClick={() => processCheckIn('demo_vip_pass')}
+                  theme="emerald"
+                  icon={ShieldCheck}
+                  size="sm"
+                >
+                  Simulate VIP Entry
+                </PillButton>
+
+                <PillButton
+                  onClick={() => processCheckIn('demo_expired_pass')}
+                  theme="crimson"
+                  icon={AlertTriangle}
+                  size="sm"
+                >
+                  Simulate Expired Pass
+                </PillButton>
+              </div>
+            </div>
           </div>
         )}
 

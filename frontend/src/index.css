@@ -112,3 +112,36 @@ body {
     font-size: 14px;
   }
 }
+
+/* Futuristic Cyber HUD Styling Overrides for HTML5-QRCode */
+#html5-qrcode-button-camera-permission,
+#html5-qrcode-button-file-selection {
+  background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899) !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 10px 20px !important;
+  border-radius: 9999px !important;
+  font-weight: 800 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  cursor: pointer !important;
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+#html5-qrcode-button-camera-permission:hover,
+#html5-qrcode-button-file-selection:hover {
+  transform: scale(1.05) !important;
+  box-shadow: 0 12px 30px rgba(99, 102, 241, 0.5) !important;
+}
+
+#qr-reader-container {
+  border: none !important;
+  background: transparent !important;
+}
+
+#qr-reader-container video {
+  border-radius: 1.25rem !important;
+  object-fit: cover !important;
+}
