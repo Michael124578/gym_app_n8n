@@ -232,10 +232,10 @@ export default function PrintableWorkoutSheet({ session }) {
       </div>
 
       {/* PRINTABLE HIGH-CONTRAST LOG SHEET PREVIEW */}
-      <div className="flex justify-center">
+      <div className="flex justify-center overflow-x-auto no-scrollbar">
         <div
           ref={printRef}
-          className="w-full max-w-4xl bg-slate-950 border-2 border-slate-800 rounded-3xl p-8 sm:p-10 shadow-2xl space-y-6 text-slate-100"
+          className="w-full max-w-4xl bg-slate-950 border-2 border-slate-800 rounded-3xl p-4 sm:p-8 lg:p-10 shadow-2xl space-y-6 text-slate-100 min-w-[300px]"
         >
           {/* HEADER */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-slate-800 pb-6 gap-4">

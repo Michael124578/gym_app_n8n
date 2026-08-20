@@ -93,3 +93,22 @@ body {
 .pill-btn-pink {
   background: linear-gradient(90deg, #9333ea, #d946ef, #f43f5e);
 }
+
+/* Mobile UI & Touch UX Enhancements */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 640px) {
+  html, body {
+    font-size: 14px;
+  }
+}

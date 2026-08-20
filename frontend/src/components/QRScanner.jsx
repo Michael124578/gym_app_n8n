@@ -477,7 +477,7 @@ export default function QRScanner({ onScanComplete }) {
       )}
 
       {/* SCANNER CONTAINER */}
-      <div className={`bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl transition-all duration-300 w-full ${
+      <div className={`bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl transition-all duration-300 w-full ${
         flashEffect === 'success' ? 'ring-4 ring-emerald-500/50' : flashEffect === 'error' ? 'ring-4 ring-rose-500/50' : ''
       }`}>
         

@@ -280,10 +280,10 @@ export default function POSInvoiceGenerator({ session }) {
         </div>
 
         {/* RIGHT: LIVE BRANDED INVOICE PREVIEW (EXPORT TARGET) */}
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-7 overflow-x-auto no-scrollbar">
           <div
             ref={invoiceRef}
-            className="bg-slate-950 border border-slate-800 rounded-3xl p-8 shadow-2xl text-slate-100 space-y-8 relative overflow-hidden"
+            className="bg-slate-950 border border-slate-800 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl text-slate-100 space-y-6 sm:space-y-8 relative overflow-hidden min-w-[300px]"
           >
             {/* INVOICE BRAND HEADER */}
             <div className="flex justify-between items-start border-b border-slate-800 pb-6">

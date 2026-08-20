@@ -316,23 +316,23 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
       </div>
 
       {/* ATHLETE DIRECTORY CONTAINER */}
-      <div className="bg-slate-900/90 border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+      <div className="bg-slate-900/90 border border-slate-800/80 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl space-y-5">
         
         {/* DIRECTORY HEADER & PRIMARY ACTIONS */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
           <div>
             <div className="flex items-center space-x-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <h2 className="text-lg sm:text-2xl font-black text-white uppercase tracking-tight">
                 Athlete Directory & Access Control
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Showing <span className="text-white font-bold font-mono">{filteredMembers.length}</span> of <span className="text-slate-300 font-mono">{members.length}</span> athlete passes in database.
+              Showing <span className="text-white font-bold font-mono">{filteredMembers.length}</span> of <span className="text-slate-300 font-mono">{members.length}</span> athlete passes.
             </p>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             {onOpenAddMemberModal && (
               <PillButton
                 onClick={onOpenAddMemberModal}
@@ -356,10 +356,10 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
         </div>
 
         {/* SEARCH & FILTER CONTROLS TOOLBAR */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           
           {/* SEARCH BAR */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 w-full max-w-md">
             <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 pointer-events-none" />
             <input
               type="text"
@@ -379,8 +379,8 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
             )}
           </div>
 
-          {/* SEGMENTED FILTER CAPSULE TABS */}
-          <div className="flex items-center gap-2 overflow-x-auto py-1 shrink-0">
+          {/* SEGMENTED FILTER CAPSULE TABS (SWIPEABLE NO-SCROLLBAR ON MOBILE) */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 shrink-0">
             <PillFilter
               active={statusFilter === 'all'}
               onClick={() => setStatusFilter('all')}
