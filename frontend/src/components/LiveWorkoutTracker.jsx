@@ -7,9 +7,11 @@ import {
   ArrowRight, Check, X
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { jsPDF } from 'jspdf'
 import { FileText, Sparkles } from 'lucide-react'
 import PillButton from './PillButton'
+import MuscleHeatmap from './MuscleHeatmap'
+import { playChime, triggerHaptic } from '../utils/audioUtils'
+import { extractTargetMusclesFromExercises } from '../utils/muscleUtils'
 
 function EmbeddedPrModal({ isOpen, onClose, exerciseName, weight, reps }) {
   if (!isOpen) return null
@@ -60,35 +62,6 @@ function EmbeddedPrModal({ isOpen, onClose, exerciseName, weight, reps }) {
   )
 }
 
-// Web Audio API Synth Chime for Rest Timer Alert
-const playChimeSound = () => {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext
-    if (!AudioContext) return
-    const ctx = new AudioContext()
-    
-    // Play a friendly 2-tone melodic beep
-    const now = ctx.currentTime
-    const osc1 = ctx.createOscillator()
-    const gain1 = ctx.createGain()
-    
-    osc1.type = 'sine'
-    osc1.frequency.setValueAtTime(587.33, now) // D5
-    osc1.frequency.setValueAtTime(880, now + 0.15) // A5
-    
-    gain1.gain.setValueAtTime(0.3, now)
-    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6)
-    
-    osc1.connect(gain1)
-    gain1.connect(ctx.destination)
-    
-    osc1.start(now)
-    osc1.stop(now + 0.6)
-  } catch (e) {
-    console.error('Audio playback error', e)
-  }
-}
-
 export default function LiveWorkoutTracker({ session, initialExercise }) {
   // WORKOUT SESSION STATE
   const [isSessionActive, setIsSessionActive] = useState(false)
@@ -127,8 +100,13 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
   const [isRestActive, setIsRestActive] = useState(false)
   const [audioEnabled, setAudioEnabled] = useState(true)
 
-  // ACTIVE TOOL TAB: 'workout' | 'plates' | 'one_rm'
+  // ACTIVE TOOL TAB: 'workout' | 'heatmap' | 'plates' | 'one_rm'
   const [activeTab, setActiveTab] = useState('workout')
+
+  // DYNAMIC TARGET MUSCLES FOR HEATMAP
+  const activeSessionMuscles = React.useMemo(() => {
+    return extractTargetMusclesFromExercises(exercises)
+  }, [exercises])
 
   // BARBELL PLATE CALCULATOR STATE
   const [targetWeight, setTargetWeight] = useState(225)
@@ -162,6 +140,28 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
     return () => clearInterval(interval)
   }, [isSessionActive, isTimerRunning])
 
+  // SCREEN WAKE LOCK EFFECT (PREVENT SLEEP DURING WORKOUT)
+  useEffect(() => {
+    let wakeLock = null
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && isSessionActive) {
+          wakeLock = await navigator.wakeLock.request('screen')
+        }
+      } catch (err) {
+        console.debug('Wake lock request failed', err)
+      }
+    }
+    if (isSessionActive) {
+      requestWakeLock()
+    }
+    return () => {
+      if (wakeLock) {
+        wakeLock.release().catch(() => {})
+      }
+    }
+  }, [isSessionActive])
+
   // REST COUNTDOWN EFFECT
   useEffect(() => {
     let restInterval = null
@@ -169,7 +169,8 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
       restInterval = setInterval(() => {
         setRestTimeLeft((prev) => {
           if (prev <= 1) {
-            if (audioEnabled) playChimeSound()
+            if (audioEnabled) playChime()
+            triggerHaptic([150, 75, 150])
             setIsRestActive(false)
             return 0
           }
@@ -328,8 +329,9 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
     }
   }
 
-  const handleExportLogSheetPDF = () => {
+  const handleExportLogSheetPDF = async () => {
     try {
+      const { jsPDF } = await import('jspdf')
       const doc = new jsPDF()
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(18)
@@ -659,8 +661,21 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
 
         <button
           type="button"
+          onClick={() => setActiveTab('heatmap')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
+            activeTab === 'heatmap'
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Layers className="h-4 w-4" />
+          <span>Muscle Target Map</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('plates')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'plates'
               ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
               : 'text-slate-400 hover:text-white'
@@ -673,7 +688,7 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
         <button
           type="button"
           onClick={() => setActiveTab('one_rm')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
             activeTab === 'one_rm'
               ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
               : 'text-slate-400 hover:text-white'
@@ -683,6 +698,16 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
           <span>1RM & Strength Standards</span>
         </button>
       </div>
+
+      {/* TAB: MUSCLE TARGET HEATMAP */}
+      {activeTab === 'heatmap' && (
+        <div className="max-w-2xl mx-auto space-y-6">
+          <MuscleHeatmap
+            activeMuscles={activeSessionMuscles}
+            title="Session Muscle Activation Heatmap"
+          />
+        </div>
+      )}
 
       {/* TAB 1: ACTIVE WORKOUT LOGGER */}
       {activeTab === 'workout' && (

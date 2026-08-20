@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import MobileBottomDock from './components/MobileBottomDock'
+import CommandPalette from './components/CommandPalette'
 import Login from './pages/Login'
 import { supabase } from './lib/supabaseClient'
 import { Dumbbell } from 'lucide-react'
@@ -69,9 +70,25 @@ export default function App() {
 
   const [isAuthLoading, setIsAuthLoading] = useState(() => !session)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [selectedExerciseForWorkout, setSelectedExerciseForWorkout] = useState(null)
+
+  // GLOBAL KEYBOARD LISTENER FOR COMMAND PALETTE (Ctrl+K, Cmd+K, or /)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setIsCommandPaletteOpen((prev) => !prev)
+      } else if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault()
+        setIsCommandPaletteOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [])
 
   const handleSetActiveTab = useCallback((tab) => {
     if (!tab) return
@@ -83,18 +100,29 @@ export default function App() {
     if (!userSession?.user) return
 
     const email = userSession.user?.email || ''
-    let detectedRole = 'member'
+    const userMetaRole = userSession.user?.app_metadata?.role || userSession.user?.user_metadata?.role
+    let detectedRole = userMetaRole || 'member'
 
-    if (email === 'admin@irongym.com' || email.includes('admin')) {
-      detectedRole = 'admin'
-    } else {
-      const { data: trainer } = await supabase
-        .from('trainers')
+    if (!userMetaRole) {
+      // 1. Check database admins table or designated system account
+      const { data: admin } = await supabase
+        .from('admins')
         .select('id')
         .or(`auth_id.eq.${userSession.user.id},email.eq.${email}`)
         .maybeSingle()
 
-      if (trainer) detectedRole = 'trainer'
+      if (admin || email === 'admin@irongym.com') {
+        detectedRole = 'admin'
+      } else {
+        // 2. Check database trainers table
+        const { data: trainer } = await supabase
+          .from('trainers')
+          .select('id')
+          .or(`auth_id.eq.${userSession.user.id},email.eq.${email}`)
+          .maybeSingle()
+
+        if (trainer) detectedRole = 'trainer'
+      }
     }
 
     setRole(detectedRole)
@@ -240,6 +268,7 @@ export default function App() {
           role={role}
           onLogout={handleLogout}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         />
 
         <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1 flex flex-col mb-16 lg:mb-0">
@@ -447,6 +476,15 @@ export default function App() {
           />
         )}
       </Suspense>
+
+      {/* GLOBAL SPOTLIGHT COMMAND PALETTE */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        activeTab={currentActiveTab}
+        setActiveTab={handleSetActiveTab}
+        role={role}
+      />
     </div>
   )
 }

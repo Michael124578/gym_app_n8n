@@ -5,6 +5,7 @@ import {
   Award, RotateCcw, Plus, Utensils, Heart, 
   Pill, ShieldCheck, Zap
 } from 'lucide-react'
+import { triggerHaptic } from '../utils/audioUtils'
 
 export default function WellnessHabitTracker({ session }) {
   // WATER TRACKER STATE
@@ -41,6 +42,7 @@ export default function WellnessHabitTracker({ session }) {
   }, [habits])
 
   const addWater = (amount) => {
+    triggerHaptic(30)
     setWaterMl(prev => Math.min(waterGoal * 2, prev + amount))
   }
 
@@ -49,6 +51,7 @@ export default function WellnessHabitTracker({ session }) {
   }
 
   const toggleHabit = (id) => {
+    triggerHaptic(40)
     setHabits(prev => prev.map(h => h.id === id ? { ...h, completed: !h.completed } : h))
   }
 

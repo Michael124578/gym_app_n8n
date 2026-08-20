@@ -9,7 +9,7 @@ const LOGO_ICONS = {
   flame: Flame
 }
 
-export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, onToggleSidebar }) {
+export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, onToggleSidebar, onOpenCommandPalette }) {
   const [timeString, setTimeString] = useState('')
   
   const [branding, setBranding] = useState(() => {
@@ -92,21 +92,34 @@ export default function Navbar({ title = 'IRON GYM', subtitle, role, onLogout, o
         </div>
       </div>
 
-      {/* CENTER: TELEMETRY & LIVE TIME PULSE */}
-      <div className="hidden md:flex items-center space-x-3 bg-slate-900/90 border border-slate-800/90 px-4 py-1.5 rounded-full shadow-inner">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-        </span>
-        <span className="text-[10px] font-mono font-bold text-slate-300 uppercase tracking-widest flex items-center space-x-1.5">
-          <Wifi className="h-3 w-3 text-emerald-400" />
-          <span>Turnstile Active</span>
-        </span>
-        <span className="h-3 w-px bg-slate-800" />
-        <span className="text-[10px] font-mono font-bold text-indigo-300 flex items-center space-x-1">
-          <Clock className="h-3 w-3 text-indigo-400" />
-          <span>{timeString || 'LIVE'}</span>
-        </span>
+      {/* CENTER: TELEMETRY & COMMAND PALETTE BUTTON */}
+      <div className="hidden md:flex items-center space-x-3">
+        {onOpenCommandPalette && (
+          <button
+            onClick={onOpenCommandPalette}
+            className="flex items-center space-x-2.5 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800/90 hover:border-indigo-500/50 text-slate-400 hover:text-slate-200 transition cursor-pointer text-xs shadow-inner group"
+            title="Open Command Search (Ctrl + K or /)"
+          >
+            <span className="text-[11px] font-medium text-slate-400 group-hover:text-white">Quick Jump...</span>
+            <kbd className="text-[9px] font-mono bg-slate-800/90 px-1.5 py-0.5 rounded text-indigo-300 border border-slate-700/80">⌘K</kbd>
+          </button>
+        )}
+
+        <div className="flex items-center space-x-3 bg-slate-900/90 border border-slate-800/90 px-4 py-1.5 rounded-full shadow-inner">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          <span className="text-[10px] font-mono font-bold text-slate-300 uppercase tracking-widest flex items-center space-x-1.5">
+            <Wifi className="h-3 w-3 text-emerald-400" />
+            <span>Turnstile Active</span>
+          </span>
+          <span className="h-3 w-px bg-slate-800" />
+          <span className="text-[10px] font-mono font-bold text-indigo-300 flex items-center space-x-1">
+            <Clock className="h-3 w-3 text-indigo-400" />
+            <span>{timeString || 'LIVE'}</span>
+          </span>
+        </div>
       </div>
 
       {/* RIGHT: ROLE BADGE & LOGOUT */}

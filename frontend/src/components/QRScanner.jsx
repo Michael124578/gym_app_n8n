@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import PillButton from './PillButton'
 import PillFilter from './PillFilter'
+import { playSuccessChime, playErrorBuzz, triggerHaptic } from '../utils/audioUtils'
 
 export default function QRScanner({ onScanComplete }) {
   const [scanResult, setScanResult] = useState(null)
@@ -62,90 +63,17 @@ export default function QRScanner({ onScanComplete }) {
     setTimeout(() => setFlashEffect(null), 1200)
   }
 
-  // Web Audio Synthesizer Profiles
+  // Web Audio Synthesizer Profiles & Haptic Feedback
   const playAudioFeedback = (isSuccess, forcedProfile = null) => {
+    triggerHaptic(isSuccess ? [100, 50, 100] : [200, 100, 200])
+
     const profile = forcedProfile || soundProfile
     if (profile === 'silent') return
 
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      if (!AudioCtx) return
-      const ctx = new AudioCtx()
-      if (ctx.state === 'suspended') ctx.resume()
-
-      const now = ctx.currentTime
-
-      if (profile === 'titanium_chime') {
-        // Tri-tone major harmonic chime
-        if (isSuccess) {
-          const notes = [523.25, 659.25, 783.99] // C5, E5, G5
-          notes.forEach((freq, idx) => {
-            const osc = ctx.createOscillator()
-            const gain = ctx.createGain()
-            osc.type = 'sine'
-            osc.frequency.setValueAtTime(freq, now + idx * 0.08)
-            gain.gain.setValueAtTime(0.18, now + idx * 0.08)
-            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.45)
-            osc.connect(gain)
-            gain.connect(ctx.destination)
-            osc.start(now + idx * 0.08)
-            osc.stop(now + idx * 0.08 + 0.45)
-          })
-        } else {
-          // Low error buzz
-          const osc = ctx.createOscillator()
-          const gain = ctx.createGain()
-          osc.type = 'sawtooth'
-          osc.frequency.setValueAtTime(220, now)
-          gain.gain.setValueAtTime(0.2, now)
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35)
-          osc.connect(gain)
-          gain.connect(ctx.destination)
-          osc.start(now)
-          osc.stop(now + 0.35)
-        }
-      } else if (profile === 'cyber_pulse') {
-        // High cyber blip
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = isSuccess ? 'sine' : 'sawtooth'
-        osc.frequency.setValueAtTime(isSuccess ? 880 : 220, now)
-        if (isSuccess) osc.frequency.setValueAtTime(1174.66, now + 0.08)
-        gain.gain.setValueAtTime(0.22, now)
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3)
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.start(now)
-        osc.stop(now + 0.3)
-      } else if (profile === 'sub_bass') {
-        // Deep acoustic kick / sub drop
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(isSuccess ? 140 : 80, now)
-        osc.frequency.exponentialRampToValueAtTime(isSuccess ? 55 : 35, now + 0.25)
-        gain.gain.setValueAtTime(0.35, now)
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3)
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.start(now)
-        osc.stop(now + 0.3)
-      } else if (profile === 'laser_ping') {
-        // Laser down-sweep ping
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(isSuccess ? 1760 : 330, now)
-        osc.frequency.exponentialRampToValueAtTime(isSuccess ? 440 : 110, now + 0.18)
-        gain.gain.setValueAtTime(0.25, now)
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22)
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.start(now)
-        osc.stop(now + 0.22)
-      }
-    } catch (e) {
-      console.warn('Audio feedback blocked', e)
+    if (isSuccess) {
+      playSuccessChime()
+    } else {
+      playErrorBuzz()
     }
   }
 
@@ -319,15 +247,50 @@ export default function QRScanner({ onScanComplete }) {
       return
     }
 
-    // 2. Check Standard Member
-    let query = supabase.from('members').select('*')
-    if (scannedValue.startsWith('PASS-')) {
-      query = query.ilike('id', `${memberQueryId}%`)
-    } else {
-      query = query.or(`id.eq.${scannedValue},qr_code_token.eq.${scannedValue}`)
+    // 2. Check Standard Member with Offline Fallback
+    let member = null
+    let error = null
+
+    try {
+      let query = supabase.from('members').select('*')
+      if (scannedValue.startsWith('PASS-')) {
+        query = query.ilike('id', `${memberQueryId}%`)
+      } else {
+        query = query.or(`id.eq.${scannedValue},qr_code_token.eq.${scannedValue}`)
+      }
+
+      const res = await query.maybeSingle()
+      member = res.data
+      error = res.error
+
+      // Cache verified active member pass for offline resilience
+      if (member && member.status === 'active') {
+        try {
+          const cachedMap = JSON.parse(localStorage.getItem('iron_gym_cached_member_passes') || '{}')
+          cachedMap[member.id] = member
+          if (member.qr_code_token) cachedMap[member.qr_code_token] = member
+          localStorage.setItem('iron_gym_cached_member_passes', JSON.stringify(cachedMap))
+        } catch (e) {}
+      }
+    } catch (e) {
+      error = e
     }
 
-    const { data: member, error } = await query.maybeSingle()
+    // Offline Fallback Lookup if network is unavailable or request fails
+    if ((error || !member) && typeof window !== 'undefined') {
+      try {
+        const cachedMap = JSON.parse(localStorage.getItem('iron_gym_cached_member_passes') || '{}')
+        const lookupId = scannedValue.startsWith('PASS-') ? memberQueryId : scannedValue
+        const offlineMatch = Object.values(cachedMap).find((m) => 
+          m.id?.toLowerCase().includes(lookupId.toLowerCase()) || 
+          m.qr_code_token === scannedValue
+        )
+        if (offlineMatch) {
+          member = offlineMatch
+          error = null
+        }
+      } catch (e) {}
+    }
 
     if (error || !member) {
       playAudioFeedback(false)
