@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { motion } from 'framer-motion'
 import { 
   DollarSign, TrendingUp, Users, Activity, Zap, 
   CreditCard, ArrowUpRight, ArrowDownRight 
 } from 'lucide-react'
 
-export default function AnalyticsStatCards({
+const AnalyticsStatCards = memo(function AnalyticsStatCards({
   revenueGrowthPct,
   totalRevenue,
   timeRange,
@@ -140,4 +140,6 @@ export default function AnalyticsStatCards({
       </motion.div>
     </div>
   )
-}
+})
+
+export default AnalyticsStatCards

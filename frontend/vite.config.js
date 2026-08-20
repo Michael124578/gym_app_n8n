@@ -21,6 +21,7 @@ export default defineConfig({
           'vendor-charts': ['recharts'],
           'vendor-icons': ['lucide-react'],
           'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-pdf': ['jspdf'],
           'vendor-media': ['qrcode.react', 'html-to-image']
         }
       }

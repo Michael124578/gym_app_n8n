@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { Download, RefreshCw, FileSpreadsheet, Activity, AlertTriangle } from 'lucide-react'
 
-export default function AnalyticsHeader({
+const AnalyticsHeader = memo(function AnalyticsHeader({
   timeRange,
   setTimeRange,
   lastUpdated,
@@ -93,4 +93,6 @@ export default function AnalyticsHeader({
       </div>
     </div>
   )
-}
+})
+
+export default AnalyticsHeader

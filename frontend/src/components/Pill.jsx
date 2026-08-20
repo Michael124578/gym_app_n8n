@@ -133,4 +133,4 @@ const Pill = forwardRef(({
 })
 
 Pill.displayName = 'Pill'
-export default Pill
+export default memo(Pill)
