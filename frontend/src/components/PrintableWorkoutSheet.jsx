@@ -8,6 +8,7 @@ import {
 import { toPng } from 'html-to-image'
 import { jsPDF } from 'jspdf'
 import { QRCodeSVG } from 'qrcode.react'
+import PillButton from './PillButton'
 
 const PRESET_ROUTINES = [
   {
@@ -155,34 +156,34 @@ export default function PrintableWorkoutSheet({ session }) {
 
           {/* ACTIONS */}
           <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
-            <button
-              type="button"
+            <PillButton
               onClick={() => window.print()}
-              className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold px-4 py-3 rounded-2xl transition flex items-center space-x-2 shadow-xl cursor-pointer"
+              theme="amber"
+              icon={Printer}
+              size="sm"
             >
-              <Printer className="h-4 w-4" />
-              <span>Print</span>
-            </button>
+              Print
+            </PillButton>
 
-            <button
-              type="button"
+            <PillButton
               onClick={handleDownloadPDF}
               disabled={isExporting}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl shadow-xl shadow-emerald-600/30 transition flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+              theme="teal"
+              icon={FileText}
+              size="sm"
             >
-              <FileText className="h-4 w-4" />
-              <span>{isExporting && exportFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF'}</span>
-            </button>
+              {isExporting && exportFormat === 'pdf' ? 'Generating PDF...' : 'Download PDF'}
+            </PillButton>
 
-            <button
-              type="button"
+            <PillButton
               onClick={handleDownloadSheet}
               disabled={isExporting}
-              className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl shadow-xl shadow-indigo-600/30 transition flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+              theme="purple"
+              icon={Download}
+              size="sm"
             >
-              <Download className="h-4 w-4" />
-              <span>{isExporting && exportFormat === 'png' ? 'Exporting...' : 'PNG Image'}</span>
-            </button>
+              {isExporting && exportFormat === 'png' ? 'Exporting...' : 'PNG Image'}
+            </PillButton>
           </div>
         </div>
       </div>

@@ -73,3 +73,23 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #6366f1;
 }
+
+/* Futuristic Pill Capsule Button Utilities */
+.pill-btn-lime {
+  background: linear-gradient(90deg, #a3e635, #facc15, #10b981);
+}
+.pill-btn-cyan {
+  background: linear-gradient(90deg, #22d3ee, #38bdf8, #f43f5e);
+}
+.pill-btn-purple {
+  background: linear-gradient(90deg, #6366f1, #a855f7, #f43f5e);
+}
+.pill-btn-amber {
+  background: linear-gradient(90deg, #a855f7, #ec4899, #fbbf24);
+}
+.pill-btn-teal {
+  background: linear-gradient(90deg, #2dd4bf, #34d399, #06b6d4);
+}
+.pill-btn-pink {
+  background: linear-gradient(90deg, #9333ea, #d946ef, #f43f5e);
+}

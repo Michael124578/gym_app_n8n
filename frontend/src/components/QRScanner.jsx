@@ -8,6 +8,7 @@ import {
   Radio, Clock, AlertTriangle, ArrowRight, UserCheck,
   Volume2, VolumeX, Send, Wifi, Settings, Sliders
 } from 'lucide-react'
+import PillButton from './PillButton'
 
 export default function QRScanner({ onScanComplete }) {
   const [scanResult, setScanResult] = useState(null)
@@ -706,13 +707,14 @@ export default function QRScanner({ onScanComplete }) {
               )}
 
               <div className="pt-2">
-                <button
-                  type="button"
+                <PillButton
                   onClick={handleScanNext}
-                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition shadow-xl shadow-indigo-600/30 cursor-pointer"
+                  theme="lime"
+                  icon={ArrowRight}
+                  size="md"
                 >
-                  Scan Next Athlete →
-                </button>
+                  Scan Next Athlete
+                </PillButton>
               </div>
             </div>
           </motion.div>

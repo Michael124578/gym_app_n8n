@@ -9,6 +9,8 @@ import {
   Layers, Play, Phone, HelpCircle
 } from 'lucide-react'
 
+import PillButton from '../components/PillButton'
+
 export default function Login({ onLoginSuccess }) {
   // Preloader State
   const [isLoading, setIsLoading] = useState(true)
@@ -281,13 +283,14 @@ export default function Login({ onLoginSuccess }) {
           </nav>
 
           <div className="flex items-center space-x-3">
-            <button
+            <PillButton
               onClick={handleOpenAuth}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center space-x-2 border border-indigo-400/30"
+              theme="cyan"
+              icon={ArrowRight}
+              size="sm"
             >
-              <span>Member Sign In</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
+              Member Sign In
+            </PillButton>
           </div>
         </div>
       </header>
@@ -316,21 +319,24 @@ export default function Login({ onLoginSuccess }) {
             </div>
 
             {/* ACTION BUTTONS */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-              <button
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+              <PillButton
                 onClick={handleOpenAuth}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider px-8 py-4 rounded-2xl shadow-xl shadow-indigo-600/30 transition flex items-center justify-center space-x-2 group border border-indigo-400/30"
+                theme="lime"
+                icon={ChevronRight}
+                size="lg"
               >
-                <span>Access Member Terminal</span>
-                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
-              </button>
+                Access Member Terminal
+              </PillButton>
 
-              <button
+              <PillButton
                 onClick={() => scrollToSection('plans')}
-                className="bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs uppercase tracking-wider px-7 py-4 rounded-2xl border border-slate-800 transition flex items-center justify-center space-x-2"
+                theme="purple"
+                icon={Layers}
+                size="lg"
               >
-                <span>Explore Memberships</span>
-              </button>
+                Explore Memberships
+              </PillButton>
             </div>
 
             {/* LIVE TELEMETRY STATS */}
@@ -953,14 +959,16 @@ export default function Login({ onLoginSuccess }) {
                 </div>
               </div>
 
-              <button
+              <PillButton
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition shadow-lg shadow-indigo-600/25 disabled:opacity-50 flex items-center justify-center space-x-2"
+                theme="pink"
+                icon={ChevronRight}
+                fullWidth
+                size="lg"
               >
-                <span>{isSubmitting ? 'Authenticating...' : 'Sign In to Portal'}</span>
-                <ChevronRight className="h-4 w-4" />
-              </button>
+                {isSubmitting ? 'Authenticating...' : 'Sign In to Portal'}
+              </PillButton>
             </form>
 
             {/* Collapsible Demo Fill Bar for Testing */}

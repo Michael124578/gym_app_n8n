@@ -8,6 +8,7 @@ import {
   CreditCard, Calendar, Mail, Phone, ExternalLink, QrCode, Sparkles
 } from 'lucide-react'
 import { formatReadableDate } from '../utils/dateUtils'
+import PillButton from './PillButton'
 
 export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
   const [members, setMembers] = useState([])
@@ -332,25 +333,24 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
 
           <div className="flex items-center space-x-3">
             {onOpenAddMemberModal && (
-              <button
-                type="button"
+              <PillButton
                 onClick={onOpenAddMemberModal}
-                className="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-lg shadow-indigo-600/30 border border-indigo-400/30 uppercase tracking-wider"
+                theme="lime"
+                icon={Plus}
+                size="sm"
               >
-                <Plus className="h-4 w-4" />
-                <span>Register Athlete</span>
-              </button>
+                Register Athlete
+              </PillButton>
             )}
 
-            <button
-              type="button"
+            <PillButton
               onClick={exportMembersCSV}
-              className="bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-md"
-              title="Export Athlete Roster as CSV"
+              theme="teal"
+              icon={Download}
+              size="sm"
             >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Export CSV</span>
-            </button>
+              Export CSV
+            </PillButton>
           </div>
         </div>
 
