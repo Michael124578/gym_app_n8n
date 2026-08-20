@@ -1009,39 +1009,36 @@ export default function Login({ onLoginSuccess }) {
               </PillButton>
             </form>
 
-            {/* Collapsible Demo Fill Bar for Testing (RESTRICTED TO DEVELOPER LAPTOP DESKTOP-85DEG21 ONLY) */}
-            {isDeveloperLaptop() && (
-              <div className="mt-6 pt-4 border-t border-slate-800/80">
+            {/* Sleek Quick Demo Accounts Bar (1-Click Auto Fill) */}
+            <div className="mt-6 pt-5 border-t border-slate-800/80">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-indigo-400 font-bold flex items-center space-x-1.5">
+                  <KeyRound className="h-3.5 w-3.5 text-amber-400" />
+                  <span>Quick Demo Testing Credentials</span>
+                </span>
+                <span className="text-[9px] font-mono text-slate-500 uppercase">1-Click Auto Fill</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setShowDemoLogins(!showDemoLogins)}
-                  className="w-full text-center text-[10px] font-mono text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider flex items-center justify-center space-x-1 cursor-pointer"
+                  onClick={() => fillDemoAccount('admin@irongym.com', '123456789')}
+                  className="group relative p-2.5 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-indigo-500/60 rounded-xl text-slate-200 text-center transition flex flex-col items-center cursor-pointer shadow-md"
                 >
-                  <KeyRound className="h-3 w-3" />
-                  <span>{showDemoLogins ? 'Hide Demo Logins' : 'Show Demo Testing Credentials (Developer Laptop)'}</span>
+                  <span className="text-[11px] font-black uppercase text-indigo-300 group-hover:text-white transition">Staff Admin</span>
+                  <span className="text-[9px] font-mono text-slate-500 mt-0.5">admin@irongym.com</span>
                 </button>
 
-                {showDemoLogins && (
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
-                    <button
-                      type="button"
-                      onClick={() => fillDemoAccount('admin@irongym.com', '123456789')}
-                      className="p-2 bg-slate-950 border border-slate-800 hover:border-indigo-500/50 rounded-lg text-slate-300 text-center font-mono cursor-pointer"
-                    >
-                      Staff Admin
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => fillDemoAccount('coach1@irongym.com', '123456789')}
-                      className="p-2 bg-slate-950 border border-slate-800 hover:border-amber-500/50 rounded-lg text-slate-300 text-center font-mono cursor-pointer"
-                    >
-                      Coach Account
-                    </button>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('coach1@irongym.com', '123456789')}
+                  className="group relative p-2.5 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/60 rounded-xl text-slate-200 text-center transition flex flex-col items-center cursor-pointer shadow-md"
+                >
+                  <span className="text-[11px] font-black uppercase text-amber-300 group-hover:text-white transition">Coach Account</span>
+                  <span className="text-[9px] font-mono text-slate-500 mt-0.5">coach1@irongym.com</span>
+                </button>
               </div>
-            )}
+            </div>
 
           </div>
         </div>

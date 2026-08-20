@@ -38,6 +38,7 @@ const Pill = forwardRef(({
   children,
   className = '',
   type = 'button',
+  fullWidth = false,
   ...props
 }, ref) => {
 
@@ -47,26 +48,27 @@ const Pill = forwardRef(({
     if (onClick) onClick(e)
   }
 
-  // Theme Gradients
-  const themes = {
-    lime: 'pill-btn-lime border-lime-400/40 text-lime-300',
-    cyan: 'pill-btn-cyan border-cyan-400/40 text-cyan-300',
-    purple: 'pill-btn-purple border-purple-400/40 text-purple-300',
-    amber: 'pill-btn-amber border-amber-400/40 text-amber-300',
-    teal: 'pill-btn-teal border-teal-400/40 text-teal-300',
-    pink: 'pill-btn-pink border-pink-400/40 text-pink-300',
-    crimson: 'bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 border-rose-400/40 text-rose-200',
-    emerald: 'bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 border-emerald-400/40 text-emerald-200',
-    indigo: 'bg-gradient-to-r from-indigo-500 via-purple-500 to-violet-600 border-indigo-400/40 text-indigo-200'
+  // Modern Solid & Vibrant Gradient Capsule Themes
+  const buttonThemes = {
+    lime: 'bg-gradient-to-r from-emerald-400 via-lime-400 to-amber-300 text-slate-950 shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-lime-300/50 font-black',
+    cyan: 'bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-500 text-slate-950 shadow-cyan-500/25 hover:shadow-cyan-500/40 border border-cyan-300/50 font-black',
+    purple: 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-purple-500/25 hover:shadow-purple-500/40 border border-purple-400/30',
+    amber: 'bg-gradient-to-r from-amber-400 via-orange-400 to-rose-500 text-slate-950 shadow-amber-500/25 hover:shadow-amber-500/40 border border-amber-300/50 font-black',
+    teal: 'bg-gradient-to-r from-teal-400 via-emerald-400 to-cyan-500 text-slate-950 shadow-teal-500/25 hover:shadow-teal-500/40 border border-teal-300/50 font-black',
+    pink: 'bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white shadow-pink-500/25 hover:shadow-pink-500/40 border border-pink-400/30 font-black',
+    crimson: 'bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 text-white shadow-rose-500/25 hover:shadow-rose-500/40 border border-rose-400/30',
+    emerald: 'bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 text-slate-950 shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-emerald-300/50 font-black',
+    indigo: 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-indigo-500/25 hover:shadow-indigo-500/40 border border-indigo-400/30',
+    dark: 'bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700/80 hover:border-slate-600 shadow-xl'
   }
 
-  const selectedTheme = themes[theme] || themes.indigo
+  const selectedTheme = buttonThemes[theme] || buttonThemes.indigo
 
   // Sizes
   const sizeClasses = {
-    sm: 'px-3 py-1.5 text-[11px]',
-    md: 'px-4 py-2 text-xs',
-    lg: 'px-5 py-2.5 text-sm'
+    sm: 'px-3.5 py-1.5 text-[11px] space-x-1.5',
+    md: 'px-5 py-2.5 text-xs space-x-2',
+    lg: 'px-6 py-3 text-sm space-x-2.5'
   }
 
   // FILTER VARIANT
@@ -75,26 +77,27 @@ const Pill = forwardRef(({
       <motion.button
         ref={ref}
         type={type}
-        whileHover={{ scale: disabled ? 1 : 1.03 }}
+        whileHover={{ scale: disabled ? 1 : 1.04 }}
         whileTap={{ scale: disabled ? 1 : 0.96 }}
         disabled={disabled || isLoading}
         onClick={handleClick}
         className={`
-          relative inline-flex items-center space-x-2 font-mono font-bold uppercase tracking-wider rounded-full transition-all duration-200 cursor-pointer border select-none
+          relative inline-flex items-center justify-center font-mono font-bold uppercase tracking-wider rounded-full transition-all duration-200 cursor-pointer border select-none backdrop-blur-md shadow-md
           ${sizeClasses[size] || sizeClasses.md}
           ${active 
-            ? `${selectedTheme} bg-slate-950 shadow-lg` 
-            : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+            ? `${selectedTheme} shadow-lg scale-[1.02]` 
+            : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
           }
+          ${fullWidth ? 'w-full' : ''}
           ${className}
         `}
         {...props}
       >
-        {active && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />}
-        {Icon && <Icon className={`h-3.5 w-3.5 ${active ? 'text-white' : 'text-slate-400'}`} />}
+        {active && <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse shrink-0" />}
+        {Icon && <Icon className={`h-3.5 w-3.5 ${active ? 'text-current' : 'text-slate-400'}`} />}
         <span>{children}</span>
         {count !== undefined && count !== null && (
-          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${active ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
+          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${active ? 'bg-black/20 text-current' : 'bg-slate-800 text-slate-400'}`}>
             {count}
           </span>
         )}
@@ -102,32 +105,34 @@ const Pill = forwardRef(({
     )
   }
 
-  // BUTTON VARIANT
+  // BUTTON VARIANT (SLEEK FULL-BLEED GRADIENT CAPSULE)
   return (
     <motion.button
       ref={ref}
       type={type}
-      whileHover={{ scale: disabled || isLoading ? 1 : 1.04 }}
-      whileTap={{ scale: disabled || isLoading ? 1 : 0.95 }}
+      whileHover={{ scale: disabled || isLoading ? 1 : 1.03, y: disabled || isLoading ? 0 : -1 }}
+      whileTap={{ scale: disabled || isLoading ? 1 : 0.97, y: 0 }}
       disabled={disabled || isLoading}
       onClick={handleClick}
       className={`
-        pill-button-wrapper relative inline-flex items-center justify-center font-mono font-black uppercase tracking-wider rounded-full transition-all duration-300 shadow-xl cursor-pointer select-none
+        relative inline-flex items-center justify-center font-mono font-extrabold uppercase tracking-wider rounded-full transition-all duration-300 shadow-xl cursor-pointer select-none backdrop-blur-md overflow-hidden group
         ${sizeClasses[size] || sizeClasses.md}
         ${selectedTheme}
+        ${fullWidth ? 'w-full' : ''}
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${className}
       `}
       {...props}
     >
-      <span className="pill-button-inner bg-slate-950 rounded-full flex items-center justify-center space-x-2 px-3 py-1 text-white w-full h-full">
-        {isLoading ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
-        ) : Icon ? (
-          <Icon className="h-3.5 w-3.5 text-indigo-300" />
-        ) : null}
-        <span>{children}</span>
-      </span>
+      {/* Subtle shine overlay effect on hover */}
+      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
+      
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin text-current shrink-0" />
+      ) : Icon ? (
+        <Icon className="h-4 w-4 text-current shrink-0" />
+      ) : null}
+      <span className="relative z-10 leading-none">{children}</span>
     </motion.button>
   )
 })
