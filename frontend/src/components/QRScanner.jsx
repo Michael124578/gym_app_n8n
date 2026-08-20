@@ -9,6 +9,7 @@ import {
   Volume2, VolumeX, Send, Wifi, Settings, Sliders
 } from 'lucide-react'
 import PillButton from './PillButton'
+import PillFilter from './PillFilter'
 
 export default function QRScanner({ onScanComplete }) {
   const [scanResult, setScanResult] = useState(null)
@@ -496,39 +497,35 @@ export default function QRScanner({ onScanComplete }) {
           </div>
 
           <div className="flex items-center space-x-2">
-            <button
-              type="button"
+            <PillButton
               onClick={() => setShowSettings(!showSettings)}
-              className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center space-x-1.5 text-xs font-bold ${
-                showSettings ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800'
-              }`}
-              title="Configure Sound & Gate Webhooks"
+              theme="purple"
+              icon={Sliders}
+              size="sm"
             >
-              <Sliders className="h-4 w-4" />
-              <span className="hidden sm:inline">Gate Config</span>
-            </button>
+              Gate Config
+            </PillButton>
 
-            <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
-              <button
-                type="button"
+            <div className="flex items-center gap-1.5">
+              <PillFilter
+                active={gateMode === 'entry'}
                 onClick={() => setGateMode('entry')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                  gateMode === 'entry' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'
-                }`}
+                theme="indigo"
+                icon={EntryIcon}
+                size="sm"
               >
-                <EntryIcon className="h-3.5 w-3.5" />
-                <span>Entry</span>
-              </button>
-              <button
-                type="button"
+                Entry
+              </PillFilter>
+
+              <PillFilter
+                active={gateMode === 'exit'}
                 onClick={() => setGateMode('exit')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                  gateMode === 'exit' ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30' : 'text-slate-400 hover:text-white'
-                }`}
+                theme="amber"
+                icon={ExitIcon}
+                size="sm"
               >
-                <ExitIcon className="h-3.5 w-3.5" />
-                <span>Exit</span>
-              </button>
+                Exit
+              </PillFilter>
             </div>
           </div>
         </div>

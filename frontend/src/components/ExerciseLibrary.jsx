@@ -5,6 +5,7 @@ import {
   Flame, Eye, Layers, ChevronRight, X, Plus, Info, 
   RotateCcw, Target, ShieldCheck, Zap
 } from 'lucide-react'
+import PillFilter from './PillFilter'
 
 export const EXERCISE_DATABASE = [
   // CHEST
@@ -831,18 +832,15 @@ export default function ExerciseLibrary({ onSelectExerciseForWorkout }) {
             </span>
             <div className="flex flex-wrap gap-2">
               {MUSCLE_GROUPS.map((m) => (
-                <button
+                <PillFilter
                   key={m.id}
-                  type="button"
+                  active={selectedMuscle === m.id}
                   onClick={() => setSelectedMuscle(m.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition duration-150 ${
-                    selectedMuscle === m.id
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                      : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
-                  }`}
+                  theme="indigo"
+                  size="sm"
                 >
                   {m.name}
-                </button>
+                </PillFilter>
               ))}
             </div>
           </div>
@@ -856,18 +854,15 @@ export default function ExerciseLibrary({ onSelectExerciseForWorkout }) {
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {EQUIPMENT_LIST.map((eq) => (
-                  <button
+                  <PillFilter
                     key={eq}
-                    type="button"
+                    active={selectedEquipment === eq}
                     onClick={() => setSelectedEquipment(eq)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                      selectedEquipment === eq
-                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
-                        : 'text-slate-400 hover:text-white bg-slate-950/60'
-                    }`}
+                    theme="cyan"
+                    size="sm"
                   >
                     {eq}
-                  </button>
+                  </PillFilter>
                 ))}
               </div>
             </div>
@@ -879,18 +874,15 @@ export default function ExerciseLibrary({ onSelectExerciseForWorkout }) {
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {DIFFICULTY_LIST.map((diff) => (
-                  <button
+                  <PillFilter
                     key={diff}
-                    type="button"
+                    active={selectedDifficulty === diff}
                     onClick={() => setSelectedDifficulty(diff)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                      selectedDifficulty === diff
-                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
-                        : 'text-slate-400 hover:text-white bg-slate-950/60'
-                    }`}
+                    theme="amber"
+                    size="sm"
                   >
                     {diff}
-                  </button>
+                  </PillFilter>
                 ))}
               </div>
             </div>

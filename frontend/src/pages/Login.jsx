@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 
 import PillButton from '../components/PillButton'
+import PillFilter from '../components/PillFilter'
 
 export default function Login({ onLoginSuccess }) {
   // Preloader State
@@ -517,16 +518,15 @@ export default function Login({ onLoginSuccess }) {
                 { id: 'recovery', label: 'Recovery' },
                 { id: 'turf', label: 'Sprint Turf' }
               ].map(cat => (
-                <button
+                <PillFilter
                   key={cat.id}
+                  active={activeFacilityCategory === cat.id}
                   onClick={() => setActiveFacilityCategory(cat.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition ${activeFacilityCategory === cat.id
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
+                  theme="indigo"
+                  size="md"
                 >
                   {cat.label}
-                </button>
+                </PillFilter>
               ))}
             </div>
           </div>

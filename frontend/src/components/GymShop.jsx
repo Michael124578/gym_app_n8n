@@ -6,6 +6,8 @@ import {
   Tag, DollarSign, Search, Filter, X, CreditCard, 
   Minus, Receipt, ArrowRight, ShieldCheck, ShoppingCart
 } from 'lucide-react'
+import PillButton from './PillButton'
+import PillFilter from './PillFilter'
 
 const DEFAULT_PRODUCTS = [
   {
@@ -330,36 +332,30 @@ export default function GymShop({ session, userRole }) {
             </button>
           )}
 
-          <button
+          <PillButton
             onClick={() => setIsCartOpen(true)}
-            className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-emerald-600/25 flex items-center space-x-2 transition relative"
+            theme="emerald"
+            icon={ShoppingCart}
+            size="sm"
           >
-            <ShoppingCart className="h-4 w-4" />
-            <span>Cart</span>
-            {cartTotalItems > 0 && (
-              <span className="px-2 py-0.5 bg-white text-emerald-950 font-black text-[10px] rounded-full">
-                {cartTotalItems}
-              </span>
-            )}
-          </button>
+            Cart {cartTotalItems > 0 ? `(${cartTotalItems})` : ''}
+          </PillButton>
         </div>
       </div>
 
       {/* CATEGORY SELECTOR & SEARCH */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-950/60 border border-slate-800/80 p-3 rounded-2xl">
-        <div className="flex items-center space-x-1 overflow-x-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-2 overflow-x-auto py-1 md:py-0">
           {CATEGORIES.map(cat => (
-            <button
+            <PillFilter
               key={cat}
+              active={selectedCategory === cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                selectedCategory === cat
-                  ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/40'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
+              theme="emerald"
+              size="sm"
             >
               {cat}
-            </button>
+            </PillFilter>
           ))}
         </div>
 

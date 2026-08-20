@@ -5,6 +5,8 @@ import {
   Calendar, Clock, Users, Flame, Plus, CheckCircle, XCircle, 
   MapPin, UserCheck, Search, Filter, ChevronRight, X, AlertCircle, Trash2
 } from 'lucide-react'
+import PillButton from './PillButton'
+import PillFilter from './PillFilter'
 
 // Default classes seed if database table is initially unpopulated
 const DEFAULT_CLASSES = [
@@ -309,13 +311,14 @@ export default function ClassSchedule({ session, userRole }) {
           </button>
 
           {(userRole === 'admin' || userRole === 'trainer') && (
-            <button
+            <PillButton
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-2xl shadow-lg shadow-indigo-600/25 flex items-center space-x-2 transition"
+              theme="lime"
+              icon={Plus}
+              size="sm"
             >
-              <Plus className="h-4 w-4" />
-              <span>Schedule Class</span>
-            </button>
+              Schedule Class
+            </PillButton>
           )}
         </div>
       </div>
@@ -330,7 +333,7 @@ export default function ClassSchedule({ session, userRole }) {
               <button
                 key={day}
                 onClick={() => setSelectedDay(day)}
-                className={`py-3 px-2 rounded-2xl border text-center transition-all ${
+                className={`py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-gradient-to-b from-indigo-600 to-indigo-700 text-white border-indigo-500 shadow-lg shadow-indigo-600/25 scale-[1.02]'
                     : 'bg-slate-950/70 border-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-900/80'
@@ -346,19 +349,17 @@ export default function ClassSchedule({ session, userRole }) {
 
       {/* SEARCH & CATEGORY FILTERS */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-950/60 border border-slate-800/80 p-3 rounded-2xl">
-        <div className="flex items-center space-x-1 overflow-x-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-2 overflow-x-auto py-1 md:py-0">
           {CATEGORIES.map(cat => (
-            <button
+            <PillFilter
               key={cat}
+              active={selectedCategory === cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                selectedCategory === cat
-                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
+              theme="cyan"
+              size="sm"
             >
               {cat}
-            </button>
+            </PillFilter>
           ))}
         </div>
 

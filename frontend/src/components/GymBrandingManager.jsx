@@ -5,6 +5,7 @@ import {
   Save, CheckCircle2, RotateCcw, Plus, Trash2, Dumbbell, 
   Crown, Zap, Shield, Flame, Globe, Mail, Phone, ExternalLink
 } from 'lucide-react'
+import PillFilter from './PillFilter'
 
 const PRESET_BRANCHES = [
   { id: 'b1', name: 'Cairo Flagship Arena', address: 'Nasr City, Olympic District, Cairo', phone: '+20 2 2401 8899', isPrimary: true },
@@ -221,21 +222,17 @@ export default function GymBrandingManager() {
             {/* COLOR ACCENTS */}
             <div>
               <label className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-2">Accent Color Palette</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              <div className="flex flex-wrap gap-2">
                 {THEME_ACCENTS.map((t) => (
-                  <button
+                  <PillFilter
                     key={t.id}
-                    type="button"
+                    active={branding.accent === t.id}
                     onClick={() => handleSaveBranding({ accent: t.id })}
-                    className={`p-3 rounded-2xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
-                      branding.accent === t.id 
-                        ? 'bg-slate-950 border-indigo-500 ring-2 ring-indigo-500/40 text-white shadow-lg' 
-                        : 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:text-white'
-                    }`}
+                    theme={t.id}
+                    size="sm"
                   >
-                    <span className={`h-4 w-4 rounded-full bg-gradient-to-tr ${t.gradient} shrink-0`} />
-                    <span className="text-xs font-bold">{t.label}</span>
-                  </button>
+                    {t.label}
+                  </PillFilter>
                 ))}
               </div>
             </div>
@@ -243,23 +240,20 @@ export default function GymBrandingManager() {
             {/* LOGO ICON BADGES */}
             <div>
               <label className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-2">Facility Logo Icon Crest</label>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {LOGO_ICONS.map((i) => {
                   const Icon = i.icon
                   return (
-                    <button
+                    <PillFilter
                       key={i.id}
-                      type="button"
+                      active={branding.iconId === i.id}
                       onClick={() => handleSaveBranding({ iconId: i.id })}
-                      className={`p-3 rounded-2xl border text-center transition flex flex-col items-center justify-center space-y-1.5 cursor-pointer ${
-                        branding.iconId === i.id 
-                          ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg' 
-                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
-                      }`}
+                      theme="indigo"
+                      icon={Icon}
+                      size="sm"
                     >
-                      <Icon className="h-5 w-5 text-indigo-400" />
-                      <span className="text-[10px] font-bold uppercase">{i.label}</span>
-                    </button>
+                      {i.label}
+                    </PillFilter>
                   )
                 })}
               </div>

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { formatReadableDate } from '../utils/dateUtils'
 import PillButton from './PillButton'
+import PillFilter from './PillFilter'
 
 export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
   const [members, setMembers] = useState([])
@@ -378,55 +379,46 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
             )}
           </div>
 
-          {/* SEGMENTED FILTER TABS */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800/90 shrink-0 overflow-x-auto">
-            <button
-              type="button"
+          {/* SEGMENTED FILTER CAPSULE TABS */}
+          <div className="flex items-center gap-2 overflow-x-auto py-1 shrink-0">
+            <PillFilter
+              active={statusFilter === 'all'}
               onClick={() => setStatusFilter('all')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
-                statusFilter === 'all' 
-                  ? 'bg-indigo-600 text-white shadow-md' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              theme="indigo"
+              count={members.length}
+              size="sm"
             >
-              All ({members.length})
-            </button>
-            <button
-              type="button"
+              All Athletes
+            </PillFilter>
+
+            <PillFilter
+              active={statusFilter === 'active'}
               onClick={() => setStatusFilter('active')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
-                statusFilter === 'active' 
-                  ? 'bg-emerald-600 text-white shadow-md' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              theme="emerald"
+              count={activeMembersCount}
+              size="sm"
             >
-              Active ({activeMembersCount})
-            </button>
-            <button
-              type="button"
+              Active
+            </PillFilter>
+
+            <PillFilter
+              active={statusFilter === 'expiring_soon'}
               onClick={() => setStatusFilter('expiring_soon')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 flex items-center space-x-1.5 ${
-                statusFilter === 'expiring_soon' 
-                  ? 'bg-amber-600 text-white shadow-md' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              theme="amber"
+              count={expiringSoonCount}
+              size="sm"
             >
-              <span>Expiring</span>
-              {expiringSoonCount > 0 && (
-                <span className="text-[9px] bg-slate-900 px-1.5 py-0.5 rounded-md font-mono font-black">{expiringSoonCount}</span>
-              )}
-            </button>
-            <button
-              type="button"
+              Expiring Soon
+            </PillFilter>
+
+            <PillFilter
+              active={statusFilter === 'expired'}
               onClick={() => setStatusFilter('expired')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
-                statusFilter === 'expired' 
-                  ? 'bg-rose-600 text-white shadow-md' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              theme="rose"
+              size="sm"
             >
-              Expired
-            </button>
+              Expired Pass
+            </PillFilter>
           </div>
 
         </div>
