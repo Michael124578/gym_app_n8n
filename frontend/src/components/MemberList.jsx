@@ -10,6 +10,7 @@ import {
 import { formatReadableDate } from '../utils/dateUtils'
 import PillButton from './PillButton'
 import PillFilter from './PillFilter'
+import RetentionRiskRadar from './RetentionRiskRadar'
 
 export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
   const [members, setMembers] = useState([])
@@ -314,6 +315,12 @@ export default function MemberList({ refreshTrigger, onOpenAddMemberModal }) {
         </div>
 
       </div>
+
+      {/* MEMBER RETENTION & AT-RISK RADAR */}
+      <RetentionRiskRadar 
+        members={members} 
+        onRenewMember={(member) => setEditingMember(member)} 
+      />
 
       {/* ATHLETE DIRECTORY CONTAINER */}
       <div className="bg-slate-900/90 border border-slate-800/80 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl space-y-5">
