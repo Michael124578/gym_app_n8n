@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
+import MobileBottomDock from './components/MobileBottomDock'
 import Login from './pages/Login'
 import { supabase } from './lib/supabaseClient'
 import { Dumbbell } from 'lucide-react'
@@ -439,6 +440,14 @@ export default function App() {
 
         </main>
       </div>
+
+      {/* MOBILE BOTTOM APP DOCK */}
+      <MobileBottomDock
+        activeTab={currentActiveTab}
+        setActiveTab={handleSetActiveTab}
+        role={role}
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+      />
 
       {/* REGISTER MEMBER MODAL (FOR ADMINS) */}
       <Suspense fallback={null}>
