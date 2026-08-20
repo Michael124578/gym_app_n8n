@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iron-gym-v1'
+const CACHE_NAME = 'iron-gym-v2'
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -28,12 +28,15 @@ self.addEventListener('activate', (event) => {
   )
 })
 
-// Fetch Handler with Network-First fallback for API and Cache-First for Assets
+// Fetch Handler with Safe Fallback Responses (Ensures valid Response object is ALWAYS returned)
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
 
-  // Skip non-GET requests or browser extension URLs
+  // Skip non-GET requests or browser extension/external URLs
   if (event.request.method !== 'GET' || !url.protocol.startsWith('http')) return
+
+  // Don't intercept Supabase API requests or external OAuth
+  if (url.hostname.includes('supabase.co') || url.pathname.startsWith('/auth/')) return
 
   // Cache-First strategy for static assets and scripts
   if (
@@ -55,13 +58,15 @@ self.addEventListener('fetch', (event) => {
             })
           }
           return networkResponse
-        }).catch(() => cachedResponse)
+        }).catch(() => {
+          return new Response('', { status: 404, statusText: 'Not Found' })
+        })
       })
     )
     return
   }
 
-  // Network-First strategy with Cache Fallback for document navigation
+  // Network-First strategy with Safe Cache Fallback for document navigation
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
@@ -73,13 +78,19 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse
       })
-      .catch(() => {
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html')
-          }
-          return null
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request)
+        if (cachedResponse) return cachedResponse
+
+        if (event.request.mode === 'navigate') {
+          const fallbackIndex = await caches.match('/index.html')
+          if (fallbackIndex) return fallbackIndex
+        }
+
+        return new Response('Offline: Resource not available in cache.', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'text/plain' }
         })
       })
   )

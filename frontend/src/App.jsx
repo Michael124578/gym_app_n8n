@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar'
 import MobileBottomDock from './components/MobileBottomDock'
 import CommandPalette from './components/CommandPalette'
 import Login from './pages/Login'
+import ErrorBoundary from './components/ErrorBoundary'
 import { supabase } from './lib/supabaseClient'
 import { Dumbbell } from 'lucide-react'
 
@@ -89,6 +90,13 @@ export default function App() {
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
   }, [])
+
+  // Automatic URL hash cleanup to keep URLs pristine without # hashes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    }
+  }, [activeTab, session])
 
   const handleSetActiveTab = useCallback((tab) => {
     if (!tab) return
@@ -269,12 +277,13 @@ export default function App() {
 
         <main className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1 flex flex-col mb-16 lg:mb-0">
           
-          <Suspense fallback={<TabLoadingSkeleton />}>
-            {/* MEMBER ROLE VIEWS */}
-            {role === 'member' && (
-              <div className="w-full flex-1">
-                {(currentActiveTab === 'portal' || !currentActiveTab) && (
-                  <MemberPortal 
+          <ErrorBoundary onResetTab={() => handleSetActiveTab(role === 'admin' ? 'members' : (role === 'trainer' ? 'trainer_dashboard' : 'portal'))}>
+            <Suspense fallback={<TabLoadingSkeleton />}>
+              {/* MEMBER ROLE VIEWS */}
+              {role === 'member' && (
+                <div className="w-full flex-1">
+                  {(currentActiveTab === 'portal' || !currentActiveTab) && (
+                    <MemberPortal 
                     session={session} 
                     onNavigateTab={(tab) => handleSetActiveTab(tab)}
                   />
@@ -447,6 +456,7 @@ export default function App() {
               </div>
             )}
           </Suspense>
+        </ErrorBoundary>
 
         </main>
       </div>

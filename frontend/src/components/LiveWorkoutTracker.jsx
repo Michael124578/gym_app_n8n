@@ -119,8 +119,9 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
   const [calcExerciseType, setCalcExerciseType] = useState('bench')
   const [userBodyweight, setUserBodyweight] = useState(80)
 
-  // SUMMARY MODAL
+  // SUMMARY & PR MODALS
   const [summaryData, setSummaryData] = useState(null)
+  const [prModalData, setPrModalData] = useState(null)
 
   // Handle incoming initial exercise from ExerciseLibrary
   useEffect(() => {
