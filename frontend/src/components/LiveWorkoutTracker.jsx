@@ -7,7 +7,58 @@ import {
   ArrowRight, Check, X
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import PrCelebrationModal from './PrCelebrationModal'
+import { jsPDF } from 'jspdf'
+import { FileText, Sparkles } from 'lucide-react'
+import PillButton from './PillButton'
+
+function EmbeddedPrModal({ isOpen, onClose, exerciseName, weight, reps }) {
+  if (!isOpen) return null
+  const estimatedOneRepMax = Math.round((weight || 0) * (1 + (reps || 0) / 30))
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div className="absolute w-96 h-96 bg-amber-500/20 rounded-full blur-3xl pointer-events-none animate-pulse" />
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.8, opacity: 0, y: 20 }}
+          className="relative bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl space-y-6 overflow-hidden"
+        >
+          <div className="relative mx-auto w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-500 to-amber-600 p-0.5 shadow-xl shadow-amber-500/30 flex items-center justify-center">
+            <div className="w-full h-full bg-slate-950 rounded-[22px] flex items-center justify-center">
+              <Trophy className="h-10 w-10 text-amber-400 animate-bounce" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 inline-block">
+              ⚡ NEW PERSONAL RECORD UNLOCKED
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight pt-2">
+              {exerciseName || 'Bench Press'}
+            </h2>
+            <p className="text-xs text-slate-400">You broke your previous 1RM threshold.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800 font-mono">
+            <div className="border-r border-slate-800 pr-2">
+              <span className="text-[10px] text-slate-500 uppercase block">Log Weight & Reps</span>
+              <span className="text-xl font-black text-amber-400">{weight} KG × {reps}</span>
+            </div>
+            <div className="pl-2">
+              <span className="text-[10px] text-slate-500 uppercase block">Est. 1RM Potential</span>
+              <span className="text-xl font-black text-emerald-400">{estimatedOneRepMax} KG</span>
+            </div>
+          </div>
+          <div className="pt-2">
+            <PillButton onClick={onClose} theme="amber" icon={Sparkles} size="md" className="w-full justify-center">
+              Claim PR Badge & Continue
+            </PillButton>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  )
+}
 
 // Web Audio API Synth Chime for Rest Timer Alert
 const playChimeSound = () => {
@@ -277,6 +328,57 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
     }
   }
 
+  const handleExportLogSheetPDF = () => {
+    try {
+      const doc = new jsPDF()
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.text('IRON GYM — OFFICIAL WORKOUT LOG SHEET', 14, 20)
+      
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Routine Title: ${workoutTitle}`, 14, 28)
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 34)
+      doc.text(`Athlete: ${session?.user?.email || 'Registered Athlete'}`, 14, 40)
+      
+      doc.setLineWidth(0.5)
+      doc.line(14, 44, 196, 44)
+
+      let y = 52
+      exercises.forEach((ex, idx) => {
+        if (y > 260) {
+          doc.addPage()
+          y = 20
+        }
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(11)
+        doc.text(`${idx + 1}. ${ex.name.toUpperCase()} (Target Sets: ${ex.targetSets || 3})`, 14, y)
+        y += 6
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.text('Set #   |   Target Weight   |   Reps   |   RPE   |   [ ] Completed Checkbox', 18, y)
+        y += 5
+        doc.line(18, y, 196, y)
+        y += 5
+
+        ex.sets.forEach((set) => {
+          if (y > 270) {
+            doc.addPage()
+            y = 20
+          }
+          doc.text(`Set ${set.setNum}     ${set.weight} KG           ${set.reps} reps     @ RPE ${set.rpe}     [ ${set.completed ? 'X' : '  '} ]`, 18, y)
+          y += 6
+        })
+        y += 6
+      })
+
+      doc.save(`${workoutTitle.replace(/\s+/g, '_')}_Log_Sheet.pdf`)
+    } catch (err) {
+      console.error('Failed to generate log sheet PDF:', err)
+    }
+  }
+
   // ----------------------------------------------------
   // BARBELL PLATE CALCULATOR LOGIC
   // ----------------------------------------------------
@@ -395,11 +497,21 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
 
           {/* ACTIVE WORKOUT CONTROLS */}
           <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={handleExportLogSheetPDF}
+              className="bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-2xl transition flex items-center space-x-2 cursor-pointer shadow-lg"
+              title="Export printable gym log sheet with checkboxes & notes"
+            >
+              <FileText className="h-4 w-4 text-indigo-400" />
+              <span>Export PDF Log</span>
+            </button>
+
             {!isSessionActive ? (
               <button
                 type="button"
                 onClick={startSession}
-                className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider px-6 py-3.5 rounded-2xl shadow-xl shadow-indigo-600/30 transition flex items-center space-x-2"
+                className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider px-6 py-3.5 rounded-2xl shadow-xl shadow-indigo-600/30 transition flex items-center space-x-2 cursor-pointer"
               >
                 <Play className="h-4 w-4 fill-white" />
                 <span>Start Live Session</span>
@@ -422,7 +534,7 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
                 <button
                   type="button"
                   onClick={finishSession}
-                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl shadow-lg shadow-emerald-600/20 transition flex items-center space-x-2"
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl shadow-lg shadow-emerald-600/20 transition flex items-center space-x-2 cursor-pointer"
                 >
                   <Check className="h-4 w-4" />
                   <span>Finish Workout</span>
@@ -1097,7 +1209,7 @@ export default function LiveWorkoutTracker({ session, initialExercise }) {
       </AnimatePresence>
 
       {/* PR CELEBRATION MODAL */}
-      <PrCelebrationModal
+      <EmbeddedPrModal
         isOpen={!!prModalData}
         onClose={() => setPrModalData(null)}
         exerciseName={prModalData?.exerciseName}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { supabaseAdminAuth } from '../utils/supabaseAdmin'
 import { UserPlus, CreditCard, AlertCircle, Eye, EyeOff, Phone, Mail, User, Lock, Calendar, ShieldCheck, Check } from 'lucide-react'
 
 export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
@@ -63,8 +62,8 @@ export default function AddMemberModal({ isOpen, onClose, onMemberAdded }) {
     const cleanPhone = phone.trim()
 
     try {
-      // 1. Create Auth User directly via non-persisted Admin Auth client
-      const { data: authData, error: authError } = await supabaseAdminAuth.auth.signUp({
+      // 1. Create Auth User directly via authenticated client
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: password,
         options: { data: { full_name: fullName.trim(), phone: cleanPhone } }

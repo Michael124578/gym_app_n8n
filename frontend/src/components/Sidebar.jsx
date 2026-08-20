@@ -54,8 +54,7 @@ export default function Sidebar({
       items: [
         { id: 'trainer_dashboard', label: 'Athlete Roster & MRR', icon: Award, badge: 'MRR' },
         { id: 'coaching_chat', label: 'Client Direct Chat', icon: MessageSquare },
-        { id: 'printable_sheets', label: 'Printable Gym Sheets', icon: FileText },
-        { id: 'recovery_insights', label: 'Recovery & Volume Map', icon: Activity },
+        { id: 'recovery_insights', label: 'Recovery Hub & Insights', icon: Activity, badge: 'MAP' },
       ]
     },
     {
@@ -65,7 +64,6 @@ export default function Sidebar({
         { id: 'exercises', label: 'Exercise Atlas', icon: Target },
         { id: 'workout_tracker', label: 'Live Workout Logger', icon: Flame, badge: '1RM' },
         { id: 'warmup_calc', label: 'Warmup Calculator', icon: Layers },
-        { id: 'mobility', label: 'Mobility & Prep', icon: Heart },
         { id: 'nutrition', label: 'Food Diary & Macros', icon: Calculator },
       ]
     },
@@ -85,7 +83,7 @@ export default function Sidebar({
       items: [
         { id: 'portal', label: 'Digital Gate Pass', icon: User, badge: 'PASS' },
         { id: 'workout_tracker', label: 'Live Workout Logger', icon: Flame, badge: 'LIVE' },
-        { id: 'recovery_insights', label: 'Recovery & Volume Map', icon: Activity, badge: 'MAP' },
+        { id: 'recovery_insights', label: 'Recovery Hub & Insights', icon: Activity, badge: 'MAP' },
         { id: 'body_vault', label: 'Body Progress Vault', icon: Scale },
       ]
     },
@@ -93,10 +91,8 @@ export default function Sidebar({
       title: 'Training Tools',
       items: [
         { id: 'warmup_calc', label: 'Barbell Warmup Ramp', icon: Layers },
-        { id: 'mobility', label: 'Mobility Protocols', icon: Heart },
         { id: 'ai_generator', label: 'Program Architect', icon: Layers },
         { id: 'exercises', label: 'Exercise Atlas', icon: Target },
-        { id: 'printable_sheets', label: 'Printable Gym Logs', icon: FileText },
         { id: 'nutrition', label: 'Food Diary & Macros', icon: Calculator },
         { id: 'wellness', label: 'Hydration & Habits', icon: Droplet },
       ]
@@ -106,7 +102,6 @@ export default function Sidebar({
       items: [
         { id: 'coaching_chat', label: 'Coach 1-on-1 Chat', icon: MessageSquare },
         { id: 'occupancy', label: 'Live Floor Traffic', icon: Radio },
-        { id: 'music', label: 'Workout Beats Hub', icon: Headphones },
         { id: 'classes', label: 'Book Class Sessions', icon: Calendar },
         { id: 'shop', label: 'Pro Shop & Fuel Bar', icon: ShoppingBag },
         { id: 'invoices', label: 'Receipts & Invoices', icon: Receipt },

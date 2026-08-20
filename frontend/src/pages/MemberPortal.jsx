@@ -12,9 +12,8 @@ import {
 import { toPng } from 'html-to-image'
 import { formatLocalDate } from '../utils/dateUtils'
 
-import MemberPassCard from '../components/MemberPassCard'
+import MembershipCard from '../components/MembershipCard'
 import GuestPassGenerator from '../components/GuestPassGenerator'
-import WorkoutPRTracker from '../components/WorkoutPRTracker'
 import MemberAttendanceCalendar from '../components/MemberAttendanceCalendar'
 
 export default function MemberPortal({ session, onLogout, onNavigateTab }) {
@@ -452,20 +451,8 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
               <div className="p-2.5 rounded-xl bg-emerald-600/20 text-emerald-400 group-hover:scale-110 transition">
                 <Activity className="h-5 w-5" />
               </div>
-              <span className="text-xs font-black uppercase text-white">Recovery Map</span>
+              <span className="text-xs font-black uppercase text-white">Recovery Hub</span>
               <span className="text-[10px] font-mono text-slate-500">Volume Load</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onNavigateTab('printable_sheets')}
-              className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-2xl flex flex-col items-center text-center space-y-2 transition group shadow-xl cursor-pointer"
-            >
-              <div className="p-2.5 rounded-xl bg-indigo-600/20 text-indigo-400 group-hover:scale-110 transition">
-                <FileText className="h-5 w-5" />
-              </div>
-              <span className="text-xs font-black uppercase text-white">Printable Logs</span>
-              <span className="text-[10px] font-mono text-slate-500">PDF Sheets</span>
             </button>
 
             <button
@@ -485,7 +472,7 @@ export default function MemberPortal({ session, onLogout, onNavigateTab }) {
 
       {/* PASS & GUEST MODULAR CALLS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        <MemberPassCard 
+        <MembershipCard 
           member={member} 
           cardRef={cardRef} 
           onDownload={handleDownloadPass} 

@@ -22,14 +22,11 @@ const LiveWorkoutTracker = lazy(() => import('./components/LiveWorkoutTracker'))
 const BodyProgressVault = lazy(() => import('./components/BodyProgressVault'))
 const GymOccupancyHeatmap = lazy(() => import('./components/GymOccupancyHeatmap'))
 const WellnessHabitTracker = lazy(() => import('./components/WellnessHabitTracker'))
-const WorkoutMusicHub = lazy(() => import('./components/WorkoutMusicHub'))
 const AiRoutineGenerator = lazy(() => import('./components/AiRoutineGenerator'))
-const MobilityRecoveryGuide = lazy(() => import('./components/MobilityRecoveryGuide'))
 const BarbellWarmupCalculator = lazy(() => import('./components/BarbellWarmupCalculator'))
 const CoachingChat = lazy(() => import('./components/CoachingChat'))
 const POSInvoiceGenerator = lazy(() => import('./components/POSInvoiceGenerator'))
-const MuscleRecoveryInsights = lazy(() => import('./components/MuscleRecoveryInsights'))
-const PrintableWorkoutSheet = lazy(() => import('./components/PrintableWorkoutSheet'))
+const RecoveryHub = lazy(() => import('./components/RecoveryHub'))
 const TrainerDashboard = lazy(() => import('./pages/TrainerDashboard'))
 const MemberPortal = lazy(() => import('./pages/MemberPortal'))
 const GymBrandingManager = lazy(() => import('./components/GymBrandingManager'))
@@ -263,19 +260,13 @@ export default function App() {
                     initialExercise={selectedExerciseForWorkout} 
                   />
                 )}
-                {currentActiveTab === 'recovery_insights' && (
-                  <MuscleRecoveryInsights session={session} />
-                )}
-                {currentActiveTab === 'printable_sheets' && (
-                  <PrintableWorkoutSheet session={session} />
+                {(currentActiveTab === 'recovery_insights' || currentActiveTab === 'mobility') && (
+                  <RecoveryHub session={session} />
                 )}
                 {currentActiveTab === 'warmup_calc' && (
                   <BarbellWarmupCalculator 
                     onSendToTracker={() => handleSetActiveTab('workout_tracker')} 
                   />
-                )}
-                {currentActiveTab === 'mobility' && (
-                  <MobilityRecoveryGuide />
                 )}
                 {currentActiveTab === 'exercises' && (
                   <ExerciseLibrary 
@@ -304,9 +295,6 @@ export default function App() {
                 )}
                 {currentActiveTab === 'occupancy' && (
                   <GymOccupancyHeatmap userRole={role} />
-                )}
-                {currentActiveTab === 'music' && (
-                  <WorkoutMusicHub />
                 )}
                 {currentActiveTab === 'nutrition' && (
                   <MacroCalculator session={session} />
@@ -338,11 +326,8 @@ export default function App() {
                 {currentActiveTab === 'coaching_chat' && (
                   <CoachingChat session={session} userRole={role} />
                 )}
-                {currentActiveTab === 'printable_sheets' && (
-                  <PrintableWorkoutSheet session={session} />
-                )}
-                {currentActiveTab === 'recovery_insights' && (
-                  <MuscleRecoveryInsights session={session} />
+                {(currentActiveTab === 'recovery_insights' || currentActiveTab === 'mobility') && (
+                  <RecoveryHub session={session} />
                 )}
                 {currentActiveTab === 'ai_generator' && (
                   <AiRoutineGenerator 

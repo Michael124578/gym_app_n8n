@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { ShieldCheck, RefreshCw } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { ShieldCheck, Download, RefreshCw } from 'lucide-react'
 
-export default function MembershipCard({ member }) {
+export default function MembershipCard({ member, cardRef, onDownload, onZoom }) {
   const [totpToken, setTotpToken] = useState('')
   const [timeLeft, setTimeLeft] = useState(30)
 
@@ -35,52 +36,76 @@ export default function MembershipCard({ member }) {
   if (!member) return null
 
   return (
-    <div className="w-full max-w-sm mx-auto bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 border border-slate-800/80 rounded-3xl p-6 shadow-2xl text-white relative overflow-hidden group">
-      <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4">
-        <span className="text-[10px] font-extrabold tracking-widest text-indigo-400 uppercase flex items-center space-x-1">
-          <ShieldCheck className="h-3.5 w-3.5 mr-1 text-indigo-400" />
-          Dynamic Digital Pass
+    <div 
+      ref={cardRef} 
+      className="bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 border border-slate-800/80 p-6 sm:p-7 rounded-3xl flex flex-col justify-between shadow-2xl relative overflow-hidden w-full text-white group"
+    >
+      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* CARD TOP HEADER */}
+      <div className="flex justify-between items-center border-b border-slate-800/80 pb-3 mb-4 relative z-10">
+        <span className="text-[10px] sm:text-xs font-black tracking-widest text-indigo-400 uppercase flex items-center space-x-1">
+          <ShieldCheck className="h-4 w-4 mr-1 text-indigo-400" />
+          IRON GYM DYNAMIC DIGITAL PASS
         </span>
-        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-          member.status === 'active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400'
+        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
+          member.status === 'active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
         }`}>
-          {member.status}
+          {member.status || 'Active'}
         </span>
       </div>
 
-      <div className="flex flex-col items-center justify-center space-y-4">
-        <div className="bg-white p-3 rounded-2xl shadow-inner group-hover:scale-105 transition duration-300">
-          <QRCodeSVG 
-            value={totpToken || member.qr_code_token || member.id} 
-            size={140}
-            bgColor="#ffffff"
-            fgColor="#0f172a"
-            level="H"
-          />
-        </div>
-
-        <div className="w-full space-y-1">
-          <div className="flex justify-between text-[10px] font-mono text-slate-400">
-            <span className="flex items-center space-x-1">
-              <RefreshCw className={`h-3 w-3 ${timeLeft <= 5 ? 'animate-spin text-rose-400' : 'text-indigo-400'}`} />
-              <span>Rotates in:</span>
-            </span>
-            <span className={`font-bold ${timeLeft <= 5 ? 'text-rose-400' : 'text-slate-200'}`}>
-              {timeLeft}s
-            </span>
-          </div>
-          <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
-            <div
-              className={`h-full transition-all duration-1000 ${timeLeft <= 5 ? 'bg-rose-500' : 'bg-indigo-500'}`}
-              style={{ width: `${(timeLeft / 30) * 100}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="text-center">
-          <h3 className="text-base font-bold text-white tracking-tight">{member.full_name}</h3>
+      {/* CARD BODY */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
+        <div className="space-y-1">
+          <p className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">{member.full_name}</p>
+          <p className="text-xs text-indigo-400 font-bold uppercase">{member.plan_name || 'Annual Titan Pass'}</p>
           <p className="text-xs text-slate-400 font-mono">{member.email}</p>
+
+          <div className="pt-2 space-y-1 max-w-[180px]">
+            <div className="flex justify-between text-[10px] font-mono text-slate-400">
+              <span className="flex items-center space-x-1">
+                <RefreshCw className={`h-2.5 w-2.5 ${timeLeft <= 5 ? 'animate-spin text-rose-400' : 'text-indigo-400'}`} />
+                <span>Dynamic Cycle:</span>
+              </span>
+              <span className={`font-bold ${timeLeft <= 5 ? 'text-rose-400' : 'text-indigo-300'}`}>{timeLeft}s</span>
+            </div>
+            <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+              <div
+                className={`h-full transition-all duration-1000 ${timeLeft <= 5 ? 'bg-rose-500' : 'bg-gradient-to-r from-indigo-500 to-violet-500'}`}
+                style={{ width: `${(timeLeft / 30) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {onDownload && (
+            <div className="pt-3">
+              <button
+                type="button"
+                onClick={onDownload}
+                className="text-[11px] font-bold text-slate-400 hover:text-white inline-flex items-center space-x-1.5 transition cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5 text-indigo-400" />
+                <span>Save Pass PNG</span>
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* CLICKABLE QR CODE CONTAINER */}
+        <motion.button 
+          type="button"
+          whileHover={{ scale: 1.05 }} 
+          whileTap={{ scale: 0.95 }}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (onZoom) onZoom()
+          }}
+          className="bg-white p-3.5 rounded-2xl shadow-2xl cursor-pointer relative z-20 pointer-events-auto border-2 border-slate-200 shrink-0 self-center sm:self-auto"
+        >
+          <QRCodeSVG value={totpToken || member.qr_code_token || member.id} size={115} bgColor="#ffffff" fgColor="#090d16" level="H" />
+          <span className="block text-[8px] font-bold text-slate-600 mt-1 uppercase text-center font-mono tracking-wider">Tap to Zoom</span>
+        </motion.button>
       </div>
     </div>
   )
