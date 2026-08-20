@@ -48,18 +48,18 @@ const Pill = forwardRef(({
     if (onClick) onClick(e)
   }
 
-  // Modern Solid & Vibrant Gradient Capsule Themes
+  // Sleek, Eye-Comfortable Dark-Mode Gradients
   const buttonThemes = {
-    lime: 'bg-gradient-to-r from-emerald-400 via-lime-400 to-amber-300 text-slate-950 shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-lime-300/50 font-black',
-    cyan: 'bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-500 text-slate-950 shadow-cyan-500/25 hover:shadow-cyan-500/40 border border-cyan-300/50 font-black',
-    purple: 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-purple-500/25 hover:shadow-purple-500/40 border border-purple-400/30',
-    amber: 'bg-gradient-to-r from-amber-400 via-orange-400 to-rose-500 text-slate-950 shadow-amber-500/25 hover:shadow-amber-500/40 border border-amber-300/50 font-black',
-    teal: 'bg-gradient-to-r from-teal-400 via-emerald-400 to-cyan-500 text-slate-950 shadow-teal-500/25 hover:shadow-teal-500/40 border border-teal-300/50 font-black',
-    pink: 'bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white shadow-pink-500/25 hover:shadow-pink-500/40 border border-pink-400/30 font-black',
-    crimson: 'bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 text-white shadow-rose-500/25 hover:shadow-rose-500/40 border border-rose-400/30',
-    emerald: 'bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 text-slate-950 shadow-emerald-500/25 hover:shadow-emerald-500/40 border border-emerald-300/50 font-black',
-    indigo: 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-indigo-500/25 hover:shadow-indigo-500/40 border border-indigo-400/30',
-    dark: 'bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700/80 hover:border-slate-600 shadow-xl'
+    lime: 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white shadow-emerald-950/50 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/30 font-bold',
+    cyan: 'bg-gradient-to-r from-cyan-600 via-teal-600 to-indigo-600 text-white shadow-cyan-950/50 hover:from-cyan-500 hover:to-indigo-500 border border-cyan-400/30 font-bold',
+    purple: 'bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-700 text-white shadow-indigo-950/50 hover:from-indigo-500 hover:to-violet-600 border border-indigo-400/30 font-bold',
+    amber: 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white shadow-amber-950/50 hover:from-amber-500 hover:to-orange-500 border border-amber-400/30 font-bold',
+    teal: 'bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 text-white shadow-teal-950/50 hover:from-teal-500 hover:to-cyan-500 border border-teal-400/30 font-bold',
+    pink: 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-indigo-950/50 hover:from-indigo-500 hover:to-pink-500 border border-indigo-400/30 font-bold',
+    crimson: 'bg-gradient-to-r from-rose-700 via-red-600 to-amber-600 text-white shadow-rose-950/50 border border-rose-400/30 font-bold',
+    emerald: 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-emerald-950/50 border border-emerald-400/30 font-bold',
+    indigo: 'bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-700 text-white shadow-indigo-950/50 border border-indigo-400/30 font-bold',
+    dark: 'bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700/80 hover:border-slate-600 shadow-xl font-bold'
   }
 
   const selectedTheme = buttonThemes[theme] || buttonThemes.indigo
